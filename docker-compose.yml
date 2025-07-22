@@ -1,0 +1,82 @@
+services:
+  # MySQL Database for SuiteCRM
+  mysql:
+    image: mysql:8.0
+    platform: linux/amd64
+    container_name: suitecrm-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: suitecrm
+      MYSQL_USER: suitecrm
+      MYSQL_PASSWORD: suitecrm
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      timeout: 20s
+      retries: 10
+    networks:
+      - suitecrm-network
+
+  # SuiteCRM Backend (PHP + Apache)
+  suitecrm:
+    build:
+      context: ./docker/suitecrm
+      dockerfile: Dockerfile
+    container_name: suitecrm-backend
+    ports:
+      - "8080:80"
+    volumes:
+      - ./suitecrm:/var/www/html:rw
+    environment:
+      DATABASE_HOST: mysql
+      DATABASE_NAME: suitecrm
+      DATABASE_USER: suitecrm
+      DATABASE_PASSWORD: suitecrm
+      SUITECRM_URL: http://localhost:8080
+      SUITECRM_DATABASE_DRIVER: mysql
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/index.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - suitecrm-network
+    restart: unless-stopped
+
+  # React Frontend  
+  frontend:
+    build:
+      context: ./docker/frontend
+      dockerfile: Dockerfile
+    container_name: suitecrm-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app:rw
+      - /app/node_modules
+    environment:
+      VITE_SUITECRM_URL: http://localhost:8080
+      VITE_SUITECRM_CLIENT_ID: suitecrm_client
+    depends_on:
+      suitecrm:
+        condition: service_healthy
+    networks:
+      - suitecrm-network
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  suitecrm-network:
+    driver: bridge
