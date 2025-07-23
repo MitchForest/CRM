@@ -158,10 +158,14 @@ class ContactsController extends BaseController {
         foreach ($modules as $module => $fields) {
             $bean = \BeanFactory::newBean($module);
             
-            // Build where clause
-            $where = "parent_type = 'Contacts' AND parent_id = '$id'";
+            // Build where clause with proper escaping
+            global $db;
+            $safeId = $db->quote($id);
+            $safeParentType = $db->quote('Contacts');
+            
+            $where = "parent_type = $safeParentType AND parent_id = $safeId";
             if ($module === 'Tasks') {
-                $where = "contact_id = '$id'";
+                $where = "contact_id = $safeId";
             }
             
             $query = $bean->create_new_list_query('date_entered DESC', $where);
@@ -215,14 +219,17 @@ class ContactsController extends BaseController {
     private function getLastActivityDate($contact) {
         global $db;
         
+        $safeContactId = $db->quote($contact->id);
+        $safeParentType = $db->quote('Contacts');
+        
         $query = "SELECT MAX(date_entered) as last_date FROM (
-            SELECT date_entered FROM tasks WHERE contact_id = '{$contact->id}' AND deleted = 0
+            SELECT date_entered FROM tasks WHERE contact_id = $safeContactId AND deleted = 0
             UNION
-            SELECT date_entered FROM emails WHERE parent_type = 'Contacts' AND parent_id = '{$contact->id}' AND deleted = 0
+            SELECT date_entered FROM emails WHERE parent_type = $safeParentType AND parent_id = $safeContactId AND deleted = 0
             UNION
-            SELECT date_entered FROM calls WHERE parent_type = 'Contacts' AND parent_id = '{$contact->id}' AND deleted = 0
+            SELECT date_entered FROM calls WHERE parent_type = $safeParentType AND parent_id = $safeContactId AND deleted = 0
             UNION
-            SELECT date_entered FROM meetings WHERE parent_type = 'Contacts' AND parent_id = '{$contact->id}' AND deleted = 0
+            SELECT date_entered FROM meetings WHERE parent_type = $safeParentType AND parent_id = $safeContactId AND deleted = 0
         ) as activities";
         
         $result = $db->query($query);

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.5/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         colors="true"
+         verbose="true"
+         stopOnFailure="false"
+         stopOnError="false"
+         stopOnWarning="false"
+         convertErrorsToExceptions="true"
+         convertNoticesToExceptions="true"
+         convertWarningsToExceptions="true"
+         processIsolation="false"
+         backupGlobals="false"
+         backupStaticAttributes="false">
+    
+    <testsuites>
+        <testsuite name="Unit Tests">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Integration Tests">
+            <directory>tests/Integration</directory>
+        </testsuite>
+        <testsuite name="E2E Tests">
+            <directory>tests/E2E</directory>
+        </testsuite>
+    </testsuites>
+
+    <coverage cacheDirectory=".phpunit.cache/code-coverage"
+              processUncoveredFiles="true">
+        <include>
+            <directory suffix=".php">custom/api</directory>
+        </include>
+        <exclude>
+            <directory>custom/api/vendor</directory>
+            <file>custom/api/index.php</file>
+            <file>custom/api/routes.php</file>
+        </exclude>
+    </coverage>
+
+    <php>
+        <env name="ENVIRONMENT" value="testing"/>
+        <env name="DB_HOST" value="db"/>
+        <env name="DB_NAME" value="suitecrm_test"/>
+        <env name="DB_USER" value="root"/>
+        <env name="DB_PASSWORD" value="root"/>
+        <env name="SUITECRM_PATH" value="./suitecrm"/>
+    </php>
+</phpunit>
