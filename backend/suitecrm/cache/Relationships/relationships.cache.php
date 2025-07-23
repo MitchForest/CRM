@@ -8068,6 +8068,39 @@
       ),
     ),
   ),
+  'oauth2tokens_modified_user' => 
+  array (
+    'name' => 'oauth2tokens_modified_user',
+    'lhs_module' => 'Users',
+    'lhs_table' => 'users',
+    'lhs_key' => 'id',
+    'rhs_module' => 'OAuth2Tokens',
+    'rhs_table' => 'oauth2tokens',
+    'rhs_key' => 'modified_user_id',
+    'relationship_type' => 'one-to-many',
+  ),
+  'oauth2tokens_created_by' => 
+  array (
+    'name' => 'oauth2tokens_created_by',
+    'lhs_module' => 'Users',
+    'lhs_table' => 'users',
+    'lhs_key' => 'id',
+    'rhs_module' => 'OAuth2Tokens',
+    'rhs_table' => 'oauth2tokens',
+    'rhs_key' => 'created_by',
+    'relationship_type' => 'one-to-many',
+  ),
+  'oauth2tokens_assigned_user' => 
+  array (
+    'name' => 'oauth2tokens_assigned_user',
+    'lhs_module' => 'Users',
+    'lhs_table' => 'users',
+    'lhs_key' => 'id',
+    'rhs_module' => 'OAuth2Tokens',
+    'rhs_table' => 'oauth2tokens',
+    'rhs_key' => 'assigned_user_id',
+    'relationship_type' => 'one-to-many',
+  ),
   'leads_modified_user' => 
   array (
     'name' => 'leads_modified_user',
@@ -14086,39 +14119,6 @@
     'rhs_module' => 'TemplateSectionLine',
     'rhs_table' => 'templatesectionline',
     'rhs_key' => 'created_by',
-    'relationship_type' => 'one-to-many',
-  ),
-  'oauth2tokens_modified_user' => 
-  array (
-    'name' => 'oauth2tokens_modified_user',
-    'lhs_module' => 'Users',
-    'lhs_table' => 'users',
-    'lhs_key' => 'id',
-    'rhs_module' => 'OAuth2Tokens',
-    'rhs_table' => 'oauth2tokens',
-    'rhs_key' => 'modified_user_id',
-    'relationship_type' => 'one-to-many',
-  ),
-  'oauth2tokens_created_by' => 
-  array (
-    'name' => 'oauth2tokens_created_by',
-    'lhs_module' => 'Users',
-    'lhs_table' => 'users',
-    'lhs_key' => 'id',
-    'rhs_module' => 'OAuth2Tokens',
-    'rhs_table' => 'oauth2tokens',
-    'rhs_key' => 'created_by',
-    'relationship_type' => 'one-to-many',
-  ),
-  'oauth2tokens_assigned_user' => 
-  array (
-    'name' => 'oauth2tokens_assigned_user',
-    'lhs_module' => 'Users',
-    'lhs_table' => 'users',
-    'lhs_key' => 'id',
-    'rhs_module' => 'OAuth2Tokens',
-    'rhs_table' => 'oauth2tokens',
-    'rhs_key' => 'assigned_user_id',
     'relationship_type' => 'one-to-many',
   ),
   'oauth2clients_modified_user' => 

@@ -60,22 +60,32 @@ services:
     restart: unless-stopped
 
   # React Frontend  
-  frontend:
-    build:
-      context: ./docker/frontend
-      dockerfile: Dockerfile
-    container_name: suitecrm-frontend
+  # frontend:
+  #   build:
+  #     context: ./docker/frontend
+  #     dockerfile: Dockerfile
+  #   container_name: suitecrm-frontend
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./frontend:/app:rw
+  #     - /app/node_modules
+  #   environment:
+  #     VITE_SUITECRM_URL: http://localhost:8080
+  #     VITE_SUITECRM_CLIENT_ID: suitecrm_client
+  #   depends_on:
+  #     suitecrm:
+  #       condition: service_healthy
+  #   networks:
+  #     - suitecrm-network
+  #   restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:alpine
+    container_name: redis
     ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app:rw
-      - /app/node_modules
-    environment:
-      VITE_SUITECRM_URL: http://localhost:8080
-      VITE_SUITECRM_CLIENT_ID: suitecrm_client
-    depends_on:
-      suitecrm:
-        condition: service_healthy
+      - "6379:6379"
     networks:
       - suitecrm-network
     restart: unless-stopped

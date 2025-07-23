@@ -1,7 +1,7 @@
 <?php
 /**
- * Module Configuration Script for B2C CRM
- * Disables unnecessary SuiteCRM modules for a streamlined B2C experience
+ * Module Configuration Script for SaaS CRM
+ * Disables unnecessary SuiteCRM modules for a streamlined SaaS experience
  */
 
 // Prevent direct access
@@ -16,7 +16,7 @@ chdir($rootPath);
 
 require_once('modules/Administration/QuickRepairAndRebuild.php');
 
-// Modules to disable for B2C CRM
+// Modules to disable for SaaS CRM
 $modulesToDisable = [
     // B2B modules not needed
     'Accounts',

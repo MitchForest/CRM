@@ -1,5 +1,5 @@
 <?php
-// Headless mode configuration for B2C CRM
+// Headless mode configuration for SaaS CRM
 
 // API-specific settings
 $sugar_config['site_url'] = 'http://localhost:8080';

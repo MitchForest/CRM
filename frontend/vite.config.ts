@@ -30,10 +30,13 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      '/api/v8': {
-        target: 'http://localhost:8080/api/v8',
+      '/Api/V8': {
+        target: 'http://localhost:8080',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/v8/, ''),
+      },
+      '/Api/access_token': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
       },
       '/api': {
         target: 'http://localhost:8080/custom/api',

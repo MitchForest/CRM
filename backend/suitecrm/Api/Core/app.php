@@ -1,8 +1,5 @@
 <?php
-// Swagger needs this, but should remove - CORS
-header("Access-Control-Allow-Origin: *");
-header('Access-Control-Allow-Methods: POST, PATCH, GET, OPTIONS, PUT, DELETE');
-header('Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With');
+// CORS headers are handled by Apache configuration - removed duplicate headers
 
 // @codingStandardsIgnoreStart
 if (!defined('sugarEntry')) {

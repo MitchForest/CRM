@@ -11,7 +11,7 @@ export function Layout() {
         <SidebarInset className="flex flex-1 flex-col">
           <Header />
           <main className="flex-1 overflow-y-auto">
-            <div className="container mx-auto py-6">
+            <div className="container mx-auto py-6 px-6">
               <Outlet />
             </div>
           </main>

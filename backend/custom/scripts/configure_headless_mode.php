@@ -19,7 +19,7 @@ echo "Configuring SuiteCRM for headless mode...\n";
 // 1. Update config_override.php to disable UI elements
 $configOverride = <<<'PHP'
 <?php
-// Headless mode configuration for B2C CRM
+// Headless mode configuration for SaaS CRM
 
 // Disable UI features
 $sugar_config['disable_persistent_connections'] = false;

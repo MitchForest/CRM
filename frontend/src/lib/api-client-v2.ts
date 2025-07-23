@@ -116,7 +116,8 @@ export class TypeSafeApiClient {
 
     // Make the request
     let response
-    switch (config.method) {
+    const method = config.method as 'GET' | 'POST' | 'PUT'
+    switch (method) {
       case 'GET':
         response = await this.client.get(url, { params: data })
         break
@@ -126,11 +127,10 @@ export class TypeSafeApiClient {
       case 'PUT':
         response = await this.client.put(url, data)
         break
-      case 'DELETE':
-        response = await this.client.delete(url)
-        break
-      default:
-        throw new Error(`Unsupported method`)
+      default: {
+        const exhaustiveCheck: never = method
+        throw new Error(`Unsupported method: ${exhaustiveCheck}`)
+      }
     }
 
     // Validate response

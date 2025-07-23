@@ -78,6 +78,21 @@ const columns: ColumnDef<Lead>[] = [
     cell: ({ row }) => row.getValue('source') || '-',
   },
   {
+    accessorKey: 'ai_score',
+    header: 'AI Score',
+    cell: ({ row }) => {
+      const aiScore = row.original.ai_score
+      if (!aiScore && aiScore !== 0) return '-'
+      const score = typeof aiScore === 'number' ? aiScore : parseInt(aiScore)
+      let color = 'text-gray-600'
+      if (score >= 80) color = 'text-green-600 font-semibold'
+      else if (score >= 60) color = 'text-yellow-600'
+      else if (score >= 40) color = 'text-orange-600'
+      else color = 'text-red-600'
+      return <span className={color}>{score}</span>
+    },
+  },
+  {
     accessorKey: 'assignedUserName',
     header: 'Assigned To',
     cell: ({ row }) => row.getValue('assignedUserName') || '-',

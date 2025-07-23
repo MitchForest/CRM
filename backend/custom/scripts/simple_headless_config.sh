@@ -9,7 +9,7 @@ echo "Configuring SuiteCRM for headless/API-only mode..."
 # 1. Create config_override.php
 cat > /var/www/html/config_override.php << 'EOF'
 <?php
-// Headless mode configuration for B2C CRM
+// Headless mode configuration for SaaS CRM
 
 // API-specific settings
 $sugar_config['site_url'] = 'http://localhost:8080';

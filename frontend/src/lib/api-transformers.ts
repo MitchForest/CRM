@@ -57,7 +57,7 @@ export function transformFromJsonApi<T>(resource: JsonApiResource): T {
   }
 
   // Convert snake_case fields from SuiteCRM to camelCase for frontend
-  const transformed = mapSuiteCRMToFrontend(combined)
+  const transformed = mapSuiteCRMToFrontend(combined) as Record<string, unknown>
 
   // Handle relationships if present
   if (resource.relationships) {
@@ -80,7 +80,7 @@ export function transformFromJsonApi<T>(resource: JsonApiResource): T {
     }
     
     if (Object.keys(relationships).length > 0) {
-      transformed.relationships = relationships
+      (transformed as Record<string, unknown>).relationships = relationships
     }
   }
 
@@ -144,11 +144,11 @@ export function transformToJsonApi(
   // Convert camelCase fields from frontend to snake_case for SuiteCRM
   const snakeCaseData = mapFrontendToSuiteCRM(data)
   
-  const { id, relationships, ...attributes } = snakeCaseData
+  const { id, relationships, ...attributes } = snakeCaseData as Record<string, unknown>
   
   let resource: JsonApiResource = {
     type,
-    id: includeId && id ? id : '',
+    id: includeId && id ? String(id) : '',
     attributes
   }
 
@@ -227,10 +227,10 @@ export function extractPaginationMeta(document: JsonApiDocument): {
   const links = document.links || {}
   
   return {
-    page: meta['page-number'] || meta.page || 1,
-    pageSize: meta['page-size'] || meta.pageSize || 20,
-    totalPages: meta['total-pages'] || meta.totalPages || 1,
-    totalCount: meta['total-count'] || meta.totalCount || 0,
+    page: Number(meta['page-number'] || meta.page || 1),
+    pageSize: Number(meta['page-size'] || meta.pageSize || 20),
+    totalPages: Number(meta['total-pages'] || meta.totalPages || 1),
+    totalCount: Number(meta['total-count'] || meta.totalCount || 0),
     hasNext: !!links.next,
     hasPrevious: !!links.prev || !!links.previous
   }
@@ -268,7 +268,7 @@ export function buildJsonApiFilters(filters: Record<string, unknown>): Record<st
   // Convert filter keys to snake_case for SuiteCRM
   const snakeCaseFilters = mapFrontendToSuiteCRM(filters)
   
-  for (const [key, value] of Object.entries(snakeCaseFilters)) {
+  for (const [key, value] of Object.entries(snakeCaseFilters as Record<string, unknown>)) {
     if (value !== undefined && value !== null && value !== '') {
       if (typeof value === 'object' && value !== null && 'operator' in value && (value as Record<string, unknown>).operator && (value as Record<string, unknown>).value !== undefined) {
         // Handle complex filters like { operator: 'like', value: 'test' }
@@ -291,7 +291,7 @@ export function buildJsonApiSort(sortBy?: string, sortOrder?: 'asc' | 'desc'): s
   if (!sortBy) return undefined
   
   // Convert camelCase field name to snake_case for SuiteCRM
-  const snakeCaseSortBy = mapFrontendToSuiteCRM({ [sortBy]: true })
+  const snakeCaseSortBy = mapFrontendToSuiteCRM({ [sortBy]: true }) as Record<string, unknown>
   const fieldName = Object.keys(snakeCaseSortBy)[0]
   
   // In JSON:API, descending sort is prefixed with a minus sign

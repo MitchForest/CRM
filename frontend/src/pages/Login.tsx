@@ -51,7 +51,7 @@ export function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
-            Suite B2C CRM
+            SaaS CRM
           </CardTitle>
           <CardDescription className="text-center">
             Enter your credentials to access your account

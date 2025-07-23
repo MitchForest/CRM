@@ -1,5 +1,5 @@
 <?php
-// Headless mode configuration for B2C CRM
+// Headless mode configuration for SaaS CRM
 
 // API-specific settings
 $sugar_config['site_url'] = 'http://localhost:8080';
@@ -34,3 +34,9 @@ $sugar_config['api']['v8']['cors']['enabled'] = true;
 $sugar_config['api']['v8']['cors']['origin'] = ['http://localhost:3000', 'http://localhost:5173'];
 $sugar_config['api']['v8']['cors']['methods'] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'];
 $sugar_config['api']['v8']['cors']['headers'] = ['Content-Type', 'Authorization', 'X-Requested-With'];
+
+// Redis Cache Configuration
+$sugar_config['external_cache_disabled'] = false;
+$sugar_config['external_cache_type'] = 'redis';
+$sugar_config['external_cache_redis_host'] = 'redis';
+$sugar_config['external_cache_redis_port'] = 6379;

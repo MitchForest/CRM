@@ -8,7 +8,7 @@ echo "Setting up frontend proxy configuration..."
 
 # Create Apache configuration for proxying to Vite
 cat > /tmp/frontend-proxy.conf << 'EOF'
-# Frontend Proxy Configuration for B2C CRM
+# Frontend Proxy Configuration for SaaS CRM
 
 # Proxy all non-API requests to Vite dev server
 <IfModule mod_proxy.c>

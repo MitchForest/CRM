@@ -85,6 +85,10 @@ export interface Lead {
   assignedUserName?: string;
   convertedContactId?: string;
   convertedAt?: string;
+  // AI custom fields
+  ai_score?: number;
+  ai_score_date?: string;
+  ai_insights?: string;
   customFields?: Record<string, any>;
   createdAt?: string;
   updatedAt?: string;
