@@ -31,7 +31,8 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - ./suitecrm:/var/www/html:rw
+      - ./backend/suitecrm:/var/www/html:rw
+      - ./backend/custom:/var/www/html/custom:rw
     environment:
       DATABASE_HOST: mysql
       DATABASE_NAME: suitecrm

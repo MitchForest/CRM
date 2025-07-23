@@ -1,0 +1,3 @@
+-Never deviate from the plan without first proposing the deviaiton to the user with the reasons why and getting explicit permission
+-Definition of done is 100% completion with no type or lint errors and full implementation of requirements as per docs
+-Track work done, deviations, next steps, lessons learned, etc in your tracker doc
