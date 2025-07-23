@@ -77,7 +77,7 @@ class EmailsController extends BaseController
         
         $email = \BeanFactory::getBean('Emails', $id);
         if (!$email || empty($email->id)) {
-            return $response->json(['error' => 'Email not found'], 404);
+            return $this->notFoundResponse($response, 'Email');
         }
         
         // Mark as read if viewing
@@ -167,12 +167,12 @@ class EmailsController extends BaseController
         
         $email = \BeanFactory::getBean('Emails', $id);
         if (!$email || empty($email->id)) {
-            return $response->json(['error' => 'Email not found'], 404);
+            return $this->notFoundResponse($response, 'Email');
         }
         
         // Only allow updates to draft emails
         if ($email->status !== 'draft' && $email->status !== 'archived') {
-            return $response->json(['error' => 'Cannot update sent emails'], 400);
+            return $this->validationErrorResponse($response, 'Cannot update sent emails');
         }
         
         // Update fields
@@ -198,20 +198,20 @@ class EmailsController extends BaseController
         
         $email = \BeanFactory::getBean('Emails', $id);
         if (!$email || empty($email->id)) {
-            return $response->json(['error' => 'Email not found'], 404);
+            return $this->notFoundResponse($response, 'Email');
         }
         
         if ($email->status === 'sent') {
-            return $response->json(['error' => 'Email already sent'], 400);
+            return $this->validationErrorResponse($response, 'Email already sent');
         }
         
         // Validate required fields
         if (empty($email->to_addrs)) {
-            return $response->json(['error' => 'Recipients required'], 400);
+            return $this->validationErrorResponse($response, 'Recipients required', ['to_addrs' => ['Recipients are required to send email']]);
         }
         
         if (empty($email->name)) {
-            return $response->json(['error' => 'Subject required'], 400);
+            return $this->validationErrorResponse($response, 'Subject required', ['subject' => ['Subject is required to send email']]);
         }
         
         // In real implementation, this would use SugarPHPMailer
@@ -240,7 +240,7 @@ class EmailsController extends BaseController
         
         $email = \BeanFactory::getBean('Emails', $id);
         if (!$email || empty($email->id)) {
-            return $response->json(['error' => 'Email not found'], 404);
+            return $this->notFoundResponse($response, 'Email');
         }
         
         $email->mark_deleted($id);
@@ -258,7 +258,7 @@ class EmailsController extends BaseController
         
         $originalEmail = \BeanFactory::getBean('Emails', $id);
         if (!$originalEmail || empty($originalEmail->id)) {
-            return $response->json(['error' => 'Email not found'], 404);
+            return $this->notFoundResponse($response, 'Email');
         }
         
         // Create reply email
@@ -301,7 +301,7 @@ class EmailsController extends BaseController
         
         $originalEmail = \BeanFactory::getBean('Emails', $id);
         if (!$originalEmail || empty($originalEmail->id)) {
-            return $response->json(['error' => 'Email not found'], 404);
+            return $this->notFoundResponse($response, 'Email');
         }
         
         // Create forward email

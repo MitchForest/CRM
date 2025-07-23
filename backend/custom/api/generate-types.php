@@ -5,7 +5,12 @@
  * Usage: php generate-types.php
  */
 
-require_once __DIR__ . '/../../suitecrm/include/entryPoint.php';
+// Check if running in Docker (SuiteCRM at root) or local (SuiteCRM in subdirectory)
+if (file_exists('/var/www/html/include/entryPoint.php')) {
+    require_once '/var/www/html/include/entryPoint.php';
+} else {
+    require_once __DIR__ . '/../../suitecrm/include/entryPoint.php';
+}
 
 // Configure output paths
 $typeScriptOutputPath = __DIR__ . '/../../../frontend/src/types/api.generated.ts';

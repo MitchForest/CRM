@@ -4,15 +4,21 @@ namespace Api\Controllers;
 use Api\Request;
 use Api\Response;
 use Api\Auth\JWT;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
 class AuthController extends BaseController {
     
-    public function login(Request $request) {
-        $username = $request->get('username');
-        $password = $request->get('password');
+    public function login(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $data = $request->getParsedBody();
+        $username = $data['username'] ?? '';
+        $password = $data['password'] ?? '';
         
         if (!$username || !$password) {
-            return Response::error('Username and password required', 400);
+            return $this->validationErrorResponse($response, 'Username and password required', [
+                'username' => $username ? null : 'Required field',
+                'password' => $password ? null : 'Required field'
+            ]);
         }
         
         // Authenticate user
@@ -27,11 +33,11 @@ class AuthController extends BaseController {
         $user_row = $db->fetchByAssoc($result);
         
         if (!$user_row) {
-            return Response::unauthorized('User not found');
+            return $this->unauthorizedResponse($response, 'Invalid username or password');
         }
         
         if (!password_verify($password, $user_row['user_hash'])) {
-            return Response::unauthorized('Invalid password');
+            return $this->unauthorizedResponse($response, 'Invalid username or password');
         }
         
         // Load user bean
@@ -61,7 +67,7 @@ class AuthController extends BaseController {
         // Store refresh token in database
         $this->storeRefreshToken($current_user->id, $refreshToken);
         
-        return Response::success([
+        return $response->json([
             'accessToken' => $token,
             'refreshToken' => $refreshToken,
             'user' => [
@@ -74,23 +80,24 @@ class AuthController extends BaseController {
         ]);
     }
     
-    public function refresh(Request $request) {
-        $refreshToken = $request->get('refreshToken');
+    public function refresh(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $data = $request->getParsedBody();
+        $refreshToken = $data['refreshToken'] ?? '';
         
         if (!$refreshToken) {
-            return Response::error('Refresh token required', 400);
+            return $this->validationErrorResponse($response, 'Refresh token required', ['refreshToken' => 'Required field']);
         }
         
         try {
             $payload = JWT::decode($refreshToken);
             
-            if ($payload['type'] !== 'refresh') {
-                return Response::error('Invalid token type', 400);
+            if (($payload['type'] ?? '') !== 'refresh') {
+                return $this->validationErrorResponse($response, 'Invalid token type', ['refreshToken' => 'Must be a refresh token']);
             }
             
             // Verify refresh token in database
             if (!$this->verifyRefreshToken($payload['user_id'], $refreshToken)) {
-                return Response::unauthorized('Invalid refresh token');
+                return $this->unauthorizedResponse($response, 'Invalid refresh token');
             }
             
             // Generate new access token
@@ -106,19 +113,20 @@ class AuthController extends BaseController {
             
             $newToken = JWT::encode($newPayload);
             
-            return Response::success([
+            return $response->json([
                 'accessToken' => $newToken
             ]);
             
         } catch (\Exception $e) {
-            return Response::unauthorized($e->getMessage());
+            return $this->unauthorizedResponse($response, $e->getMessage());
         }
     }
     
-    public function logout(Request $request) {
-        $token = $request->getAuthToken();
+    public function logout(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $authHeader = $request->getHeaderLine('Authorization');
         
-        if ($token) {
+        if ($authHeader && strpos($authHeader, 'Bearer ') === 0) {
+            $token = substr($authHeader, 7);
             try {
                 $payload = JWT::decode($token);
                 $this->removeRefreshToken($payload['user_id']);
@@ -127,7 +135,7 @@ class AuthController extends BaseController {
             }
         }
         
-        return Response::success(['message' => 'Logged out successfully']);
+        return $response->json(['message' => 'Logged out successfully']);
     }
     
     private function storeRefreshToken($userId, $token) {

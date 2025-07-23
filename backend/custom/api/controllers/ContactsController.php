@@ -3,22 +3,27 @@ namespace Api\Controllers;
 
 use Api\Request;
 use Api\Response;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
 class ContactsController extends BaseController {
     
-    public function list(Request $request) {
+    public function list(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
         $bean = \BeanFactory::newBean('Contacts');
         
         // Get filters
-        $filters = $request->get('filters', []);
+        $queryParams = $request->getQueryParams();
+        $filters = $queryParams['filters'] ?? [];
         $where = $this->buildWhereClause($filters);
         
         // Get sorting
-        $sortField = $request->get('sort', 'last_name');
-        $sortOrder = $request->get('order', 'ASC');
+        $sortField = $queryParams['sort'] ?? 'last_name';
+        $sortOrder = $queryParams['order'] ?? 'ASC';
         
         // Get pagination
-        list($limit, $offset) = $this->getPaginationParams($request);
+        $page = (int)($queryParams['page'] ?? 1);
+        $limit = min((int)($queryParams['limit'] ?? 20), 100);
+        $offset = ($page - 1) * $limit;
         
         // Build query
         $query = $bean->create_new_list_query(
@@ -50,10 +55,10 @@ class ContactsController extends BaseController {
             $contacts[] = $this->formatBean($contact);
         }
         
-        return Response::success([
+        return $response->json([
             'data' => $contacts,
             'pagination' => [
-                'page' => (int)$request->get('page', 1),
+                'page' => $page,
                 'limit' => $limit,
                 'total' => (int)$total,
                 'pages' => ceil($total / $limit)
@@ -61,12 +66,12 @@ class ContactsController extends BaseController {
         ]);
     }
     
-    public function get(Request $request) {
-        $id = $request->getParam('id');
+    public function get(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $id = $request->getAttribute('id');
         $contact = \BeanFactory::getBean('Contacts', $id);
         
         if (empty($contact->id)) {
-            return Response::notFound('Contact not found');
+            return $this->notFoundResponse($response, 'Contact');
         }
         
         // Get additional data
@@ -76,72 +81,74 @@ class ContactsController extends BaseController {
         $data['lifetimeValue'] = $this->calculateLifetimeValue($contact);
         $data['lastActivityDate'] = $this->getLastActivityDate($contact);
         
-        return Response::success($data);
+        return $response->json($data);
     }
     
-    public function create(Request $request) {
+    public function create(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
         $contact = \BeanFactory::newBean('Contacts');
         
         // Set fields
+        $data = $request->getParsedBody();
         $fields = ['first_name', 'last_name', 'email1', 'phone_mobile', 'description'];
         foreach ($fields as $field) {
-            if ($request->get($field)) {
-                $contact->$field = $request->get($field);
+            if (isset($data[$field])) {
+                $contact->$field = $data[$field];
             }
         }
         
         // Validate required fields
         if (empty($contact->last_name)) {
-            return Response::error('Last name is required', 400);
+            return $this->validationErrorResponse($response, 'Last name is required', ['last_name' => 'Required field']);
         }
         
         // Save
         $contact->save();
         
-        return Response::created($this->formatBean($contact));
+        return $response->json($this->formatBean($contact), 201);
     }
     
-    public function update(Request $request) {
-        $id = $request->getParam('id');
+    public function update(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $id = $request->getAttribute('id');
         $contact = \BeanFactory::getBean('Contacts', $id);
         
         if (empty($contact->id)) {
-            return Response::notFound('Contact not found');
+            return $this->notFoundResponse($response, 'Contact');
         }
         
         // Update fields
+        $data = $request->getParsedBody();
         $fields = ['first_name', 'last_name', 'email1', 'phone_mobile', 'description'];
         foreach ($fields as $field) {
-            if ($request->get($field) !== null) {
-                $contact->$field = $request->get($field);
+            if (isset($data[$field])) {
+                $contact->$field = $data[$field];
             }
         }
         
         // Save
         $contact->save();
         
-        return Response::success($this->formatBean($contact));
+        return $response->json($this->formatBean($contact));
     }
     
-    public function delete(Request $request) {
-        $id = $request->getParam('id');
+    public function delete(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $id = $request->getAttribute('id');
         $contact = \BeanFactory::getBean('Contacts', $id);
         
         if (empty($contact->id)) {
-            return Response::notFound('Contact not found');
+            return $this->notFoundResponse($response, 'Contact');
         }
         
         $contact->mark_deleted($id);
         
-        return Response::success(['message' => 'Contact deleted successfully']);
+        return $response->json(['message' => 'Contact deleted successfully']);
     }
     
-    public function activities(Request $request) {
-        $id = $request->getParam('id');
+    public function activities(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $id = $request->getAttribute('id');
         $contact = \BeanFactory::getBean('Contacts', $id);
         
         if (empty($contact->id)) {
-            return Response::notFound('Contact not found');
+            return $this->notFoundResponse($response, 'Contact');
         }
         
         $activities = [];
@@ -195,14 +202,17 @@ class ContactsController extends BaseController {
         });
         
         // Apply pagination
-        list($limit, $offset) = $this->getPaginationParams($request);
+        $queryParams = $request->getQueryParams();
+        $page = (int)($queryParams['page'] ?? 1);
+        $limit = min((int)($queryParams['limit'] ?? 20), 100);
+        $offset = ($page - 1) * $limit;
         $total = count($activities);
         $activities = array_slice($activities, $offset, $limit);
         
-        return Response::success([
+        return $response->json([
             'data' => $activities,
             'pagination' => [
-                'page' => (int)$request->get('page', 1),
+                'page' => $page,
                 'limit' => $limit,
                 'total' => $total,
                 'pages' => ceil($total / $limit)

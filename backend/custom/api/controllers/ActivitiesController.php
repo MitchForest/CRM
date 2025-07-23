@@ -3,10 +3,12 @@ namespace Api\Controllers;
 
 use Api\Request;
 use Api\Response;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
 class ActivitiesController extends BaseController {
     
-    public function list(Request $request) {
+    public function list(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
         $activities = [];
         
         // Define modules and their fields
@@ -39,7 +41,8 @@ class ActivitiesController extends BaseController {
         ];
         
         // Get filters
-        $filters = $request->get('filters', []);
+        $queryParams = $request->getQueryParams();
+        $filters = $queryParams['filters'] ?? [];
         $typeFilter = $filters['type'] ?? null;
         $contactFilter = $filters['contact_id'] ?? null;
         $statusFilter = $filters['status'] ?? null;
@@ -124,7 +127,9 @@ class ActivitiesController extends BaseController {
         });
         
         // Pagination
-        list($limit, $offset) = $this->getPaginationParams($request);
+        $page = (int)($queryParams['page'] ?? 1);
+        $limit = min((int)($queryParams['limit'] ?? 20), 100);
+        $offset = ($page - 1) * $limit;
         $total = count($activities);
         $activities = array_slice($activities, $offset, $limit);
         
@@ -133,10 +138,10 @@ class ActivitiesController extends BaseController {
             unset($activity['timestamp']);
         }
         
-        return Response::success([
+        return $response->json([
             'data' => $activities,
             'pagination' => [
-                'page' => (int)$request->get('page', 1),
+                'page' => $page,
                 'limit' => $limit,
                 'total' => $total,
                 'pages' => ceil($total / $limit)
@@ -144,11 +149,12 @@ class ActivitiesController extends BaseController {
         ]);
     }
     
-    public function create(Request $request) {
-        $type = $request->get('type');
+    public function create(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $data = $request->getParsedBody();
+        $type = $data['type'] ?? '';
         
         if (!$type) {
-            return Response::error('Activity type is required', 400);
+            return $this->validationErrorResponse($response, 'Activity type is required', ['type' => 'Required field']);
         }
         
         $moduleMap = [
@@ -162,73 +168,73 @@ class ActivitiesController extends BaseController {
         $module = $moduleMap[$type] ?? null;
         
         if (!$module) {
-            return Response::error('Invalid activity type', 400);
+            return $this->validationErrorResponse($response, 'Invalid activity type', ['type' => 'Invalid value']);
         }
         
         $bean = \BeanFactory::newBean($module);
         
         // Set common fields
-        $bean->name = $request->get('subject', $request->get('name'));
+        $bean->name = $data['subject'] ?? $data['name'] ?? '';
         
-        if ($request->get('contact_id')) {
+        if (!empty($data['contact_id'])) {
             if ($module === 'Tasks') {
-                $bean->contact_id = $request->get('contact_id');
+                $bean->contact_id = $data['contact_id'];
             } else {
                 $bean->parent_type = 'Contacts';
-                $bean->parent_id = $request->get('contact_id');
+                $bean->parent_id = $data['contact_id'];
             }
         }
         
         // Set parent if provided
-        if ($request->get('parent_type') && $request->get('parent_id')) {
-            $bean->parent_type = $request->get('parent_type');
-            $bean->parent_id = $request->get('parent_id');
+        if (!empty($data['parent_type']) && !empty($data['parent_id'])) {
+            $bean->parent_type = $data['parent_type'];
+            $bean->parent_id = $data['parent_id'];
         }
         
         // Set type-specific fields
         switch ($module) {
             case 'Tasks':
-                $bean->status = $request->get('status', 'Not Started');
-                $bean->priority = $request->get('priority', 'Medium');
-                $bean->date_due = $request->get('date_due');
-                $bean->description = $request->get('description');
+                $bean->status = $data['status'] ?? 'Not Started';
+                $bean->priority = $data['priority'] ?? 'Medium';
+                $bean->date_due = $data['date_due'] ?? '';
+                $bean->description = $data['description'] ?? '';
                 break;
                 
             case 'Emails':
-                $bean->status = $request->get('status', 'sent');
-                $bean->date_sent = $request->get('date_sent', date('Y-m-d H:i:s'));
-                $bean->to_addrs = $request->get('to_addrs');
-                $bean->from_addr = $request->get('from_addr');
-                $bean->description_html = $request->get('body');
+                $bean->status = $data['status'] ?? 'sent';
+                $bean->date_sent = $data['date_sent'] ?? date('Y-m-d H:i:s');
+                $bean->to_addrs = $data['to_addrs'] ?? '';
+                $bean->from_addr = $data['from_addr'] ?? '';
+                $bean->description_html = $data['body'] ?? '';
                 break;
                 
             case 'Calls':
             case 'Meetings':
-                $bean->status = $request->get('status', 'Planned');
-                $bean->date_start = $request->get('date_start');
-                $bean->duration_hours = $request->get('duration_hours', 0);
-                $bean->duration_minutes = $request->get('duration_minutes', 30);
-                $bean->description = $request->get('description');
+                $bean->status = $data['status'] ?? 'Planned';
+                $bean->date_start = $data['date_start'] ?? '';
+                $bean->duration_hours = $data['duration_hours'] ?? 0;
+                $bean->duration_minutes = $data['duration_minutes'] ?? 30;
+                $bean->description = $data['description'] ?? '';
                 if ($module === 'Meetings') {
-                    $bean->location = $request->get('location');
+                    $bean->location = $data['location'] ?? '';
                 }
                 break;
                 
             case 'Notes':
-                $bean->description = $request->get('description');
+                $bean->description = $data['description'] ?? '';
                 break;
         }
         
         $bean->save();
         
-        return Response::created([
+        return $response->json([
             'id' => $bean->id,
             'type' => $type,
             'module' => $module
-        ]);
+        ], 201);
     }
     
-    public function upcoming(Request $request) {
+    public function upcoming(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
         global $db, $current_user;
         
         $activities = [];
@@ -302,7 +308,7 @@ class ActivitiesController extends BaseController {
             return strtotime($a['date']) - strtotime($b['date']);
         });
         
-        return Response::success([
+        return $response->json([
             'data' => $activities,
             'total' => count($activities),
             'date_range' => [
@@ -312,11 +318,12 @@ class ActivitiesController extends BaseController {
         ]);
     }
     
-    public function recent(Request $request) {
+    public function recent(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
         global $db, $current_user;
         
         $activities = [];
-        $limit = min((int)$request->get('limit', 50), 100);
+        $queryParams = $request->getQueryParams();
+        $limit = min((int)($queryParams['limit'] ?? 50), 100);
         
         // Define queries for recent activities
         $queries = [
@@ -364,7 +371,7 @@ class ActivitiesController extends BaseController {
             unset($activity['timestamp']);
         }
         
-        return Response::success([
+        return $response->json([
             'data' => $activities,
             'total' => count($activities)
         ]);

@@ -2,6 +2,7 @@
 namespace Api\Controllers;
 
 use Api\Response;
+use Api\DTO\Base\ErrorDTO;
 
 abstract class BaseController {
     
@@ -146,5 +147,108 @@ abstract class BaseController {
         $offset = ($page - 1) * $limit;
         
         return [$limit, $offset];
+    }
+    
+    /**
+     * Return a standardized error response using ErrorDTO
+     */
+    protected function errorResponse(Response $response, string $message, string $code, int $statusCode = 400, ?array $details = null, ?array $validation = null): Response
+    {
+        $errorDto = new ErrorDTO();
+        $errorDto->setError($message)
+                 ->setCode($code)
+                 ->setStatusCode($statusCode);
+        
+        if ($details !== null) {
+            $errorDto->setDetails($details);
+        }
+        
+        if ($validation !== null) {
+            $errorDto->setValidation($validation);
+        }
+        
+        return $response->json($errorDto->toArray(), $statusCode);
+    }
+    
+    /**
+     * Common error response methods
+     */
+    protected function notFoundResponse(Response $response, string $resource = 'Resource'): Response
+    {
+        return $this->errorResponse(
+            $response,
+            "$resource not found",
+            ErrorDTO::CODE_NOT_FOUND,
+            404
+        );
+    }
+    
+    protected function validationErrorResponse(Response $response, string $message, array $validation = []): Response
+    {
+        return $this->errorResponse(
+            $response,
+            $message,
+            ErrorDTO::CODE_VALIDATION_FAILED,
+            400,
+            null,
+            $validation
+        );
+    }
+    
+    protected function unauthorizedResponse(Response $response, string $message = 'Unauthorized'): Response
+    {
+        return $this->errorResponse(
+            $response,
+            $message,
+            ErrorDTO::CODE_UNAUTHORIZED,
+            401
+        );
+    }
+    
+    protected function forbiddenResponse(Response $response, string $message = 'Access denied'): Response
+    {
+        return $this->errorResponse(
+            $response,
+            $message,
+            ErrorDTO::CODE_FORBIDDEN,
+            403
+        );
+    }
+    
+    protected function serverErrorResponse(Response $response, string $message = 'Internal server error', ?array $details = null): Response
+    {
+        return $this->errorResponse(
+            $response,
+            $message,
+            ErrorDTO::CODE_INTERNAL_ERROR,
+            500,
+            $details
+        );
+    }
+    
+    /**
+     * Sanitize order by clause to prevent SQL injection
+     */
+    protected function sanitizeOrderBy($orderBy)
+    {
+        // Define allowed fields for ordering based on common CRM fields
+        $allowedFields = [
+            'date_start', 'date_end', 'date_entered', 'date_modified',
+            'name', 'status', 'priority', 'type', 'amount',
+            'sales_stage', 'probability', 'date_closed',
+            'first_name', 'last_name', 'email1', 'phone_mobile',
+            'case_number', 'resolution', 'date_due', 'date_sent'
+        ];
+        
+        $parts = explode(' ', trim($orderBy));
+        
+        if (count($parts) >= 1 && in_array($parts[0], $allowedFields)) {
+            $field = $parts[0];
+            $direction = (count($parts) > 1 && strtoupper($parts[1]) === 'ASC') ? 'ASC' : 'DESC';
+            return "$field $direction";
+        }
+        
+        // Default fallback
+        return 'date_entered DESC';
     }
 }

@@ -3,22 +3,27 @@ namespace Api\Controllers;
 
 use Api\Request;
 use Api\Response;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
 class OpportunitiesController extends BaseController {
     
-    public function list(Request $request) {
+    public function list(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
         $bean = \BeanFactory::newBean('Opportunities');
         
         // Get filters
-        $filters = $request->get('filters', []);
+        $queryParams = $request->getQueryParams();
+        $filters = $queryParams['filters'] ?? [];
         $where = $this->buildWhereClause($filters);
         
         // Get sorting
-        $sortField = $request->get('sort', 'date_entered');
-        $sortOrder = $request->get('order', 'DESC');
+        $sortField = $queryParams['sort'] ?? 'date_entered';
+        $sortOrder = $queryParams['order'] ?? 'DESC';
         
         // Get pagination
-        list($limit, $offset) = $this->getPaginationParams($request);
+        $page = (int)($queryParams['page'] ?? 1);
+        $limit = min((int)($queryParams['limit'] ?? 20), 100);
+        $offset = ($page - 1) * $limit;
         
         // Build query
         $query = $bean->create_new_list_query(
@@ -50,10 +55,10 @@ class OpportunitiesController extends BaseController {
             $opportunities[] = $this->formatBean($opportunity);
         }
         
-        return Response::success([
+        return $response->json([
             'data' => $opportunities,
             'pagination' => [
-                'page' => (int)$request->get('page', 1),
+                'page' => $page,
                 'limit' => $limit,
                 'total' => (int)$total,
                 'pages' => ceil($total / $limit)
@@ -61,12 +66,12 @@ class OpportunitiesController extends BaseController {
         ]);
     }
     
-    public function get(Request $request) {
-        $id = $request->getParam('id');
+    public function get(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $id = $request->getAttribute('id');
         $opportunity = \BeanFactory::getBean('Opportunities', $id);
         
         if (empty($opportunity->id)) {
-            return Response::notFound('Opportunity not found');
+            return $this->notFoundResponse($response, 'Opportunity');
         }
         
         $data = $this->formatBean($opportunity);
@@ -83,23 +88,24 @@ class OpportunitiesController extends BaseController {
             ];
         }
         
-        return Response::success($data);
+        return $response->json($data);
     }
     
-    public function create(Request $request) {
+    public function create(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
         $opportunity = \BeanFactory::newBean('Opportunities');
         
         // Set fields
+        $data = $request->getParsedBody();
         $fields = ['name', 'amount', 'sales_stage', 'probability', 'date_closed', 'description', 'opportunity_type', 'lead_source', 'next_step'];
         foreach ($fields as $field) {
-            if ($request->get($field) !== null) {
-                $opportunity->$field = $request->get($field);
+            if (isset($data[$field])) {
+                $opportunity->$field = $data[$field];
             }
         }
         
         // Validate required fields
         if (empty($opportunity->name)) {
-            return Response::error('Opportunity name is required', 400);
+            return $this->validationErrorResponse($response, 'Opportunity name is required', ['name' => 'Required field']);
         }
         
         // Set defaults
@@ -117,55 +123,56 @@ class OpportunitiesController extends BaseController {
         $opportunity->save();
         
         // Link to contact if provided
-        if ($request->get('contact_id')) {
+        if (!empty($data['contact_id'])) {
             $opportunity->load_relationship('contacts');
-            $opportunity->contacts->add($request->get('contact_id'));
+            $opportunity->contacts->add($data['contact_id']);
         }
         
-        return Response::created($this->formatBean($opportunity));
+        return $response->json($this->formatBean($opportunity), 201);
     }
     
-    public function update(Request $request) {
-        $id = $request->getParam('id');
+    public function update(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $id = $request->getAttribute('id');
         $opportunity = \BeanFactory::getBean('Opportunities', $id);
         
         if (empty($opportunity->id)) {
-            return Response::notFound('Opportunity not found');
+            return $this->notFoundResponse($response, 'Opportunity');
         }
         
         // Update fields
+        $data = $request->getParsedBody();
         $fields = ['name', 'amount', 'sales_stage', 'probability', 'date_closed', 'description', 'opportunity_type', 'lead_source', 'next_step'];
         foreach ($fields as $field) {
-            if ($request->get($field) !== null) {
-                $opportunity->$field = $request->get($field);
+            if (isset($data[$field])) {
+                $opportunity->$field = $data[$field];
             }
         }
         
         // Save
         $opportunity->save();
         
-        return Response::success($this->formatBean($opportunity));
+        return $response->json($this->formatBean($opportunity));
     }
     
-    public function delete(Request $request) {
-        $id = $request->getParam('id');
+    public function delete(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $id = $request->getAttribute('id');
         $opportunity = \BeanFactory::getBean('Opportunities', $id);
         
         if (empty($opportunity->id)) {
-            return Response::notFound('Opportunity not found');
+            return $this->notFoundResponse($response, 'Opportunity');
         }
         
         $opportunity->mark_deleted($id);
         
-        return Response::success(['message' => 'Opportunity deleted successfully']);
+        return $response->json(['message' => 'Opportunity deleted successfully']);
     }
     
-    public function analyze(Request $request) {
-        $id = $request->getParam('id');
+    public function analyze(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $id = $request->getAttribute('id');
         $opportunity = \BeanFactory::getBean('Opportunities', $id);
         
         if (empty($opportunity->id)) {
-            return Response::notFound('Opportunity not found');
+            return $this->notFoundResponse($response, 'Opportunity');
         }
         
         // Calculate win probability based on various factors
@@ -184,7 +191,7 @@ class OpportunitiesController extends BaseController {
             'next_best_action' => $this->suggestNextBestAction($opportunity)
         ];
         
-        return Response::success($analysis);
+        return $response->json($analysis);
     }
     
     private function calculateDaysInPipeline($opportunity) {

@@ -3,22 +3,27 @@ namespace Api\Controllers;
 
 use Api\Request;
 use Api\Response;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
 class TasksController extends BaseController {
     
-    public function list(Request $request) {
+    public function list(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
         $bean = \BeanFactory::newBean('Tasks');
         
         // Get filters
-        $filters = $request->get('filters', []);
+        $queryParams = $request->getQueryParams();
+        $filters = $queryParams['filters'] ?? [];
         $where = $this->buildWhereClause($filters);
         
         // Get sorting
-        $sortField = $request->get('sort', 'date_due');
-        $sortOrder = $request->get('order', 'ASC');
+        $sortField = $queryParams['sort'] ?? 'date_due';
+        $sortOrder = $queryParams['order'] ?? 'ASC';
         
         // Get pagination
-        list($limit, $offset) = $this->getPaginationParams($request);
+        $page = (int)($queryParams['page'] ?? 1);
+        $limit = min((int)($queryParams['limit'] ?? 20), 100);
+        $offset = ($page - 1) * $limit;
         
         // Build query
         $query = $bean->create_new_list_query(
@@ -60,10 +65,10 @@ class TasksController extends BaseController {
             $tasks[] = $taskData;
         }
         
-        return Response::success([
+        return $response->json([
             'data' => $tasks,
             'pagination' => [
-                'page' => (int)$request->get('page', 1),
+                'page' => $page,
                 'limit' => $limit,
                 'total' => (int)$total,
                 'pages' => ceil($total / $limit)
@@ -71,12 +76,12 @@ class TasksController extends BaseController {
         ]);
     }
     
-    public function get(Request $request) {
-        $id = $request->getParam('id');
+    public function get(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $id = $request->getAttribute('id');
         $task = \BeanFactory::getBean('Tasks', $id);
         
         if (empty($task->id)) {
-            return Response::notFound('Task not found');
+            return $this->notFoundResponse($response, 'Task');
         }
         
         $data = $this->formatBean($task);
@@ -105,25 +110,26 @@ class TasksController extends BaseController {
             }
         }
         
-        return Response::success($data);
+        return $response->json($data);
     }
     
-    public function create(Request $request) {
+    public function create(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
         $task = \BeanFactory::newBean('Tasks');
         
         // Set fields
+        $data = $request->getParsedBody();
         $fields = ['name', 'status', 'priority', 'date_due', 'date_due_flag', 'time_due', 
                   'date_start', 'date_start_flag', 'time_start', 'description', 
                   'contact_id', 'parent_type', 'parent_id'];
         foreach ($fields as $field) {
-            if ($request->get($field) !== null) {
-                $task->$field = $request->get($field);
+            if (isset($data[$field])) {
+                $task->$field = $data[$field];
             }
         }
         
         // Validate required fields
         if (empty($task->name)) {
-            return Response::error('Task name is required', 400);
+            return $this->validationErrorResponse($response, 'Task name is required', ['name' => 'Required field']);
         }
         
         // Set defaults
@@ -137,52 +143,53 @@ class TasksController extends BaseController {
         // Save
         $task->save();
         
-        return Response::created($this->formatBean($task));
+        return $response->json($this->formatBean($task), 201);
     }
     
-    public function update(Request $request) {
-        $id = $request->getParam('id');
+    public function update(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $id = $request->getAttribute('id');
         $task = \BeanFactory::getBean('Tasks', $id);
         
         if (empty($task->id)) {
-            return Response::notFound('Task not found');
+            return $this->notFoundResponse($response, 'Task');
         }
         
         // Update fields
+        $data = $request->getParsedBody();
         $fields = ['name', 'status', 'priority', 'date_due', 'date_due_flag', 'time_due', 
                   'date_start', 'date_start_flag', 'time_start', 'description', 
                   'contact_id', 'parent_type', 'parent_id'];
         foreach ($fields as $field) {
-            if ($request->get($field) !== null) {
-                $task->$field = $request->get($field);
+            if (isset($data[$field])) {
+                $task->$field = $data[$field];
             }
         }
         
         // Save
         $task->save();
         
-        return Response::success($this->formatBean($task));
+        return $response->json($this->formatBean($task));
     }
     
-    public function delete(Request $request) {
-        $id = $request->getParam('id');
+    public function delete(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $id = $request->getAttribute('id');
         $task = \BeanFactory::getBean('Tasks', $id);
         
         if (empty($task->id)) {
-            return Response::notFound('Task not found');
+            return $this->notFoundResponse($response, 'Task');
         }
         
         $task->mark_deleted($id);
         
-        return Response::success(['message' => 'Task deleted successfully']);
+        return $response->json(['message' => 'Task deleted successfully']);
     }
     
-    public function complete(Request $request) {
-        $id = $request->getParam('id');
+    public function complete(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $id = $request->getAttribute('id');
         $task = \BeanFactory::getBean('Tasks', $id);
         
         if (empty($task->id)) {
-            return Response::notFound('Task not found');
+            return $this->notFoundResponse($response, 'Task');
         }
         
         // Mark as completed
@@ -190,13 +197,13 @@ class TasksController extends BaseController {
         $task->date_finished = date('Y-m-d H:i:s');
         $task->save();
         
-        return Response::success([
+        return $response->json([
             'message' => 'Task marked as completed',
             'task' => $this->formatBean($task)
         ]);
     }
     
-    public function upcoming(Request $request) {
+    public function upcoming(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
         global $db, $current_user;
         
         // Get tasks due in the next 7 days
@@ -235,13 +242,13 @@ class TasksController extends BaseController {
             $tasks[] = $taskData;
         }
         
-        return Response::success([
+        return $response->json([
             'data' => $tasks,
             'total' => count($tasks)
         ]);
     }
     
-    public function overdue(Request $request) {
+    public function overdue(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
         global $db, $current_user;
         
         // Get overdue tasks
@@ -278,7 +285,7 @@ class TasksController extends BaseController {
             $tasks[] = $taskData;
         }
         
-        return Response::success([
+        return $response->json([
             'data' => $tasks,
             'total' => count($tasks)
         ]);

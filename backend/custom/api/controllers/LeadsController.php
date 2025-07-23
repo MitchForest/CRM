@@ -3,16 +3,21 @@ namespace Api\Controllers;
 
 use Api\Request;
 use Api\Response;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
 class LeadsController extends BaseController {
     
-    public function list(Request $request) {
+    public function list(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
         $bean = \BeanFactory::newBean('Leads');
         
-        $filters = $request->get('filters', []);
+        $queryParams = $request->getQueryParams();
+        $filters = $queryParams['filters'] ?? [];
         $where = $this->buildWhereClause($filters);
         
-        list($limit, $offset) = $this->getPaginationParams($request);
+        $page = (int)($queryParams['page'] ?? 1);
+        $limit = min((int)($queryParams['limit'] ?? 20), 100);
+        $offset = ($page - 1) * $limit;
         
         $query = $bean->create_new_list_query(
             'date_entered DESC',
@@ -32,10 +37,10 @@ class LeadsController extends BaseController {
             $leads[] = $this->formatBean($lead);
         }
         
-        return Response::success([
+        return $response->json([
             'data' => $leads,
             'pagination' => [
-                'page' => (int)$request->get('page', 1),
+                'page' => $page,
                 'limit' => $limit,
                 'total' => (int)$total,
                 'pages' => ceil($total / $limit)
@@ -43,31 +48,32 @@ class LeadsController extends BaseController {
         ]);
     }
     
-    public function get(Request $request) {
-        $id = $request->getParam('id');
+    public function get(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $id = $request->getAttribute('id');
         $lead = \BeanFactory::getBean('Leads', $id);
         
         if (empty($lead->id)) {
-            return Response::notFound('Lead not found');
+            return $this->notFoundResponse($response, 'Lead');
         }
         
-        return Response::success($this->formatBean($lead));
+        return $response->json($this->formatBean($lead));
     }
     
-    public function create(Request $request) {
+    public function create(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
         $lead = \BeanFactory::newBean('Leads');
         
         // Set fields
+        $data = $request->getParsedBody();
         $fields = ['first_name', 'last_name', 'email1', 'phone_mobile', 'status', 'lead_source', 'description'];
         foreach ($fields as $field) {
-            if ($request->get($field)) {
-                $lead->$field = $request->get($field);
+            if (isset($data[$field])) {
+                $lead->$field = $data[$field];
             }
         }
         
         // Validate required fields
         if (empty($lead->last_name)) {
-            return Response::error('Last name is required', 400);
+            return $this->validationErrorResponse($response, 'Last name is required', ['last_name' => 'Required field']);
         }
         
         // Set default status if not provided
@@ -78,50 +84,51 @@ class LeadsController extends BaseController {
         // Save
         $lead->save();
         
-        return Response::created($this->formatBean($lead));
+        return $response->json($this->formatBean($lead), 201);
     }
     
-    public function update(Request $request) {
-        $id = $request->getParam('id');
+    public function update(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $id = $request->getAttribute('id');
         $lead = \BeanFactory::getBean('Leads', $id);
         
         if (empty($lead->id)) {
-            return Response::notFound('Lead not found');
+            return $this->notFoundResponse($response, 'Lead');
         }
         
         // Update fields
+        $data = $request->getParsedBody();
         $fields = ['first_name', 'last_name', 'email1', 'phone_mobile', 'status', 'lead_source', 'description'];
         foreach ($fields as $field) {
-            if ($request->get($field) !== null) {
-                $lead->$field = $request->get($field);
+            if (isset($data[$field])) {
+                $lead->$field = $data[$field];
             }
         }
         
         // Save
         $lead->save();
         
-        return Response::success($this->formatBean($lead));
+        return $response->json($this->formatBean($lead));
     }
     
-    public function delete(Request $request) {
-        $id = $request->getParam('id');
+    public function delete(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $id = $request->getAttribute('id');
         $lead = \BeanFactory::getBean('Leads', $id);
         
         if (empty($lead->id)) {
-            return Response::notFound('Lead not found');
+            return $this->notFoundResponse($response, 'Lead');
         }
         
         $lead->mark_deleted($id);
         
-        return Response::success(['message' => 'Lead deleted successfully']);
+        return $response->json(['message' => 'Lead deleted successfully']);
     }
     
-    public function convert(Request $request) {
-        $id = $request->getParam('id');
+    public function convert(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $id = $request->getAttribute('id');
         $lead = \BeanFactory::getBean('Leads', $id);
         
         if (empty($lead->id)) {
-            return Response::notFound('Lead not found');
+            return $this->notFoundResponse($response, 'Lead');
         }
         
         // Create contact from lead
@@ -135,11 +142,12 @@ class LeadsController extends BaseController {
         $contact->save();
         
         // Create opportunity if requested
+        $data = $request->getParsedBody();
         $opportunity = null;
-        if ($request->get('create_opportunity')) {
+        if (!empty($data['create_opportunity'])) {
             $opportunity = \BeanFactory::newBean('Opportunities');
-            $opportunity->name = $request->get('opportunity_name', $contact->first_name . ' ' . $contact->last_name . ' - Opportunity');
-            $opportunity->amount = $request->get('opportunity_amount', 0);
+            $opportunity->name = $data['opportunity_name'] ?? $contact->first_name . ' ' . $contact->last_name . ' - Opportunity';
+            $opportunity->amount = $data['opportunity_amount'] ?? 0;
             $opportunity->sales_stage = 'Prospecting';
             $opportunity->probability = 10;
             $opportunity->date_closed = date('Y-m-d', strtotime('+30 days'));
@@ -156,7 +164,7 @@ class LeadsController extends BaseController {
         $lead->converted = 1;
         $lead->save();
         
-        return Response::success([
+        return $response->json([
             'contact' => $this->formatBean($contact),
             'opportunity' => $opportunity ? $this->formatBean($opportunity) : null
         ]);

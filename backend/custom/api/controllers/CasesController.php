@@ -3,22 +3,27 @@ namespace Api\Controllers;
 
 use Api\Request;
 use Api\Response;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
 class CasesController extends BaseController {
     
-    public function list(Request $request) {
+    public function list(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
         $bean = \BeanFactory::newBean('Cases');
         
         // Get filters
-        $filters = $request->get('filters', []);
+        $queryParams = $request->getQueryParams();
+        $filters = $queryParams['filters'] ?? [];
         $where = $this->buildWhereClause($filters);
         
         // Get sorting
-        $sortField = $request->get('sort', 'date_entered');
-        $sortOrder = $request->get('order', 'DESC');
+        $sortField = $queryParams['sort'] ?? 'date_entered';
+        $sortOrder = $queryParams['order'] ?? 'DESC';
         
         // Get pagination
-        list($limit, $offset) = $this->getPaginationParams($request);
+        $page = (int)($queryParams['page'] ?? 1);
+        $limit = min((int)($queryParams['limit'] ?? 20), 100);
+        $offset = ($page - 1) * $limit;
         
         // Build query
         $query = $bean->create_new_list_query(
@@ -50,10 +55,10 @@ class CasesController extends BaseController {
             $cases[] = $this->formatBean($case);
         }
         
-        return Response::success([
+        return $response->json([
             'data' => $cases,
             'pagination' => [
-                'page' => (int)$request->get('page', 1),
+                'page' => $page,
                 'limit' => $limit,
                 'total' => (int)$total,
                 'pages' => ceil($total / $limit)
@@ -61,12 +66,12 @@ class CasesController extends BaseController {
         ]);
     }
     
-    public function get(Request $request) {
-        $id = $request->getParam('id');
+    public function get(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $id = $request->getAttribute('id');
         $case = \BeanFactory::getBean('Cases', $id);
         
         if (empty($case->id)) {
-            return Response::notFound('Case not found');
+            return $this->notFoundResponse($response, 'Case');
         }
         
         $data = $this->formatBean($case);
@@ -86,23 +91,24 @@ class CasesController extends BaseController {
         // Add case updates/history
         $data['updates'] = $this->getCaseUpdates($case);
         
-        return Response::success($data);
+        return $response->json($data);
     }
     
-    public function create(Request $request) {
+    public function create(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
         $case = \BeanFactory::newBean('Cases');
         
         // Set fields
+        $data = $request->getParsedBody();
         $fields = ['name', 'description', 'status', 'priority', 'type', 'resolution', 'work_log'];
         foreach ($fields as $field) {
-            if ($request->get($field) !== null) {
-                $case->$field = $request->get($field);
+            if (isset($data[$field])) {
+                $case->$field = $data[$field];
             }
         }
         
         // Validate required fields
         if (empty($case->name)) {
-            return Response::error('Case subject is required', 400);
+            return $this->validationErrorResponse($response, 'Case subject is required', ['name' => 'Required field']);
         }
         
         // Set defaults
@@ -123,30 +129,31 @@ class CasesController extends BaseController {
         $case->save();
         
         // Link to contact if provided
-        if ($request->get('contact_id')) {
+        if (!empty($data['contact_id'])) {
             $case->load_relationship('contacts');
-            $case->contacts->add($request->get('contact_id'));
+            $case->contacts->add($data['contact_id']);
         }
         
-        return Response::created($this->formatBean($case));
+        return $response->json($this->formatBean($case), 201);
     }
     
-    public function update(Request $request) {
-        $id = $request->getParam('id');
+    public function update(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $id = $request->getAttribute('id');
         $case = \BeanFactory::getBean('Cases', $id);
         
         if (empty($case->id)) {
-            return Response::notFound('Case not found');
+            return $this->notFoundResponse($response, 'Case');
         }
         
         // Track status changes for history
         $oldStatus = $case->status;
         
         // Update fields
+        $data = $request->getParsedBody();
         $fields = ['name', 'description', 'status', 'priority', 'type', 'resolution', 'work_log'];
         foreach ($fields as $field) {
-            if ($request->get($field) !== null) {
-                $case->$field = $request->get($field);
+            if (isset($data[$field])) {
+                $case->$field = $data[$field];
             }
         }
         
@@ -161,37 +168,38 @@ class CasesController extends BaseController {
         $case->save();
         
         // Log status change if needed
-        if ($oldStatus != $case->status && $request->get('update_text')) {
-            $this->createCaseUpdate($case, $request->get('update_text'), $oldStatus, $case->status);
+        if ($oldStatus != $case->status && !empty($data['update_text'])) {
+            $this->createCaseUpdate($case, $data['update_text'], $oldStatus, $case->status);
         }
         
-        return Response::success($this->formatBean($case));
+        return $response->json($this->formatBean($case));
     }
     
-    public function delete(Request $request) {
-        $id = $request->getParam('id');
+    public function delete(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $id = $request->getAttribute('id');
         $case = \BeanFactory::getBean('Cases', $id);
         
         if (empty($case->id)) {
-            return Response::notFound('Case not found');
+            return $this->notFoundResponse($response, 'Case');
         }
         
         $case->mark_deleted($id);
         
-        return Response::success(['message' => 'Case deleted successfully']);
+        return $response->json(['message' => 'Case deleted successfully']);
     }
     
-    public function addUpdate(Request $request) {
-        $id = $request->getParam('id');
+    public function addUpdate(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface {
+        $id = $request->getAttribute('id');
         $case = \BeanFactory::getBean('Cases', $id);
         
         if (empty($case->id)) {
-            return Response::notFound('Case not found');
+            return $this->notFoundResponse($response, 'Case');
         }
         
-        $updateText = $request->get('update_text');
+        $data = $request->getParsedBody();
+        $updateText = $data['update_text'] ?? '';
         if (empty($updateText)) {
-            return Response::error('Update text is required', 400);
+            return $this->validationErrorResponse($response, 'Update text is required', ['update_text' => 'Required field']);
         }
         
         // Create case update
@@ -199,13 +207,13 @@ class CasesController extends BaseController {
         $update->name = 'Update from ' . date('Y-m-d H:i:s');
         $update->description = $updateText;
         $update->case_id = $case->id;
-        $update->internal = $request->get('internal', 0);
+        $update->internal = $data['internal'] ?? 0;
         $update->save();
         
         // Update case modified date
         $case->save();
         
-        return Response::success([
+        return $response->json([
             'message' => 'Update added successfully',
             'update' => [
                 'id' => $update->id,

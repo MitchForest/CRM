@@ -1,21 +1,20 @@
 <?php
 namespace Api\Controllers;
 
-use Api\Request;
-use Api\Response;
-
-class QuotesController extends BaseController {
+class QuotesController extends BaseController
+{
     
-    public function list(Request $request) {
+    public function list($request, $response)
+    {
         $bean = \BeanFactory::newBean('AOS_Quotes');
         
         // Get filters
-        $filters = $request->get('filters', []);
+        $filters = $request->getQueryParam('filters', []);
         $where = $this->buildWhereClause($filters);
         
         // Get sorting
-        $sortField = $request->get('sort', 'date_entered');
-        $sortOrder = $request->get('order', 'DESC');
+        $sortField = $request->getQueryParam('sort', 'date_entered');
+        $sortOrder = $request->getQueryParam('order', 'DESC');
         
         // Get pagination
         list($limit, $offset) = $this->getPaginationParams($request);
@@ -56,10 +55,10 @@ class QuotesController extends BaseController {
             $quotes[] = $quoteData;
         }
         
-        return Response::success([
+        return $response->json([
             'data' => $quotes,
             'pagination' => [
-                'page' => (int)$request->get('page', 1),
+                'page' => (int)$request->getQueryParam('page', 1),
                 'limit' => $limit,
                 'total' => (int)$total,
                 'pages' => ceil($total / $limit)
@@ -67,12 +66,13 @@ class QuotesController extends BaseController {
         ]);
     }
     
-    public function get(Request $request) {
+    public function get($request, $response)
+    {
         $id = $request->getParam('id');
         $quote = \BeanFactory::getBean('AOS_Quotes', $id);
         
         if (empty($quote->id)) {
-            return Response::notFound('Quote not found');
+            return $this->notFoundResponse($response, 'Quote');
         }
         
         $data = $this->formatBean($quote);
@@ -84,10 +84,12 @@ class QuotesController extends BaseController {
         // Get line items
         $data['line_items'] = $this->getLineItems($quote);
         
-        return Response::success($data);
+        return $response->json($data);
     }
     
-    public function create(Request $request) {
+    public function create($request, $response)
+    {
+        $data = json_decode($request->getBody(), true);
         $quote = \BeanFactory::newBean('AOS_Quotes');
         
         // Set fields
@@ -103,14 +105,14 @@ class QuotesController extends BaseController {
         ];
         
         foreach ($fields as $field) {
-            if ($request->get($field) !== null) {
-                $quote->$field = $request->get($field);
+            if (isset($data[$field])) {
+                $quote->$field = $data[$field];
             }
         }
         
         // Validate required fields
         if (empty($quote->name)) {
-            return Response::error('Quote name is required', 400);
+            return $this->validationErrorResponse($response, 'Quote name is required', ['name' => ['Quote name is required']]);
         }
         
         // Set defaults
@@ -135,20 +137,22 @@ class QuotesController extends BaseController {
         $quote->save();
         
         // Handle line items
-        $lineItems = $request->get('line_items', []);
+        $lineItems = $data['line_items'] ?? [];
         if (!empty($lineItems)) {
             $this->saveLineItems($quote, $lineItems);
         }
         
-        return Response::created($this->formatBean($quote));
+        return $response->json($this->formatBean($quote), 201);
     }
     
-    public function update(Request $request) {
+    public function update($request, $response)
+    {
         $id = $request->getParam('id');
+        $data = json_decode($request->getBody(), true);
         $quote = \BeanFactory::getBean('AOS_Quotes', $id);
         
         if (empty($quote->id)) {
-            return Response::notFound('Quote not found');
+            return $this->notFoundResponse($response, 'Quote');
         }
         
         // Update fields
@@ -164,13 +168,13 @@ class QuotesController extends BaseController {
         ];
         
         foreach ($fields as $field) {
-            if ($request->get($field) !== null) {
-                $quote->$field = $request->get($field);
+            if (isset($data[$field])) {
+                $quote->$field = $data[$field];
             }
         }
         
         // Recalculate totals if components changed
-        if ($request->get('recalculate_totals')) {
+        if (!empty($data['recalculate_totals'])) {
             $quote->total_amount = 
                 ($quote->subtotal_amount ?? 0) - 
                 ($quote->discount_amount ?? 0) + 
@@ -182,25 +186,26 @@ class QuotesController extends BaseController {
         $quote->save();
         
         // Handle line items update
-        $lineItems = $request->get('line_items');
+        $lineItems = $data['line_items'] ?? null;
         if ($lineItems !== null) {
             $this->updateLineItems($quote, $lineItems);
         }
         
-        return Response::success($this->formatBean($quote));
+        return $response->json($this->formatBean($quote));
     }
     
-    public function delete(Request $request) {
+    public function delete($request, $response)
+    {
         $id = $request->getParam('id');
         $quote = \BeanFactory::getBean('AOS_Quotes', $id);
         
         if (empty($quote->id)) {
-            return Response::notFound('Quote not found');
+            return $this->notFoundResponse($response, 'Quote');
         }
         
         // Check if quote can be deleted
         if ($quote->stage === 'Delivered' || $quote->invoice_status === 'Paid') {
-            return Response::error('Cannot delete delivered or paid quotes', 403);
+            return $this->forbiddenResponse($response, 'Cannot delete delivered or paid quotes');
         }
         
         // Delete line items first
@@ -209,33 +214,34 @@ class QuotesController extends BaseController {
         // Delete quote
         $quote->mark_deleted($id);
         
-        return Response::success(['message' => 'Quote deleted successfully']);
+        return $response->json(['message' => 'Quote deleted successfully']);
     }
     
     /**
      * Send quote to customer
      */
-    public function send(Request $request) {
+    public function send($request, $response)
+    {
         $id = $request->getParam('id');
         $quote = \BeanFactory::getBean('AOS_Quotes', $id);
         
         if (empty($quote->id)) {
-            return Response::notFound('Quote not found');
+            return $this->notFoundResponse($response, 'Quote');
         }
         
         // Validate quote is ready to send
         if ($quote->stage === 'Draft') {
-            return Response::error('Cannot send draft quotes', 400);
+            return $this->validationErrorResponse($response, 'Cannot send draft quotes');
         }
         
         if (empty($quote->billing_contact_id)) {
-            return Response::error('No billing contact specified', 400);
+            return $this->validationErrorResponse($response, 'No billing contact specified', ['billing_contact_id' => ['Billing contact is required']]);
         }
         
         // Get contact email
         $contact = \BeanFactory::getBean('Contacts', $quote->billing_contact_id);
         if (empty($contact->email1)) {
-            return Response::error('Contact has no email address', 400);
+            return $this->validationErrorResponse($response, 'Contact has no email address');
         }
         
         // TODO: Generate PDF and send email
@@ -243,7 +249,7 @@ class QuotesController extends BaseController {
         $quote->stage = 'Delivered';
         $quote->save();
         
-        return Response::success([
+        return $response->json([
             'message' => 'Quote sent successfully',
             'recipient' => $contact->email1
         ]);
@@ -252,17 +258,18 @@ class QuotesController extends BaseController {
     /**
      * Convert quote to invoice
      */
-    public function convertToInvoice(Request $request) {
+    public function convertToInvoice($request, $response)
+    {
         $id = $request->getParam('id');
         $quote = \BeanFactory::getBean('AOS_Quotes', $id);
         
         if (empty($quote->id)) {
-            return Response::notFound('Quote not found');
+            return $this->notFoundResponse($response, 'Quote');
         }
         
         // Validate quote can be converted
         if ($quote->approval_status !== 'Approved') {
-            return Response::error('Quote must be approved before converting to invoice', 400);
+            return $this->validationErrorResponse($response, 'Quote must be approved before converting to invoice');
         }
         
         // Create invoice from quote
@@ -311,7 +318,7 @@ class QuotesController extends BaseController {
         $quote->invoice_status = 'Invoiced';
         $quote->save();
         
-        return Response::success([
+        return $response->json([
             'message' => 'Quote converted to invoice successfully',
             'invoice_id' => $invoice->id
         ]);
