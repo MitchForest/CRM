@@ -5,9 +5,7 @@ import {
   TrendingUp, 
   Activity,
   Settings,
-  LogOut,
-  Code2,
-  TestTube2
+  LogOut
 } from "lucide-react"
 import {
   Sidebar,
@@ -70,7 +68,7 @@ export function AppSidebar() {
   const handleLogout = async () => {
     try {
       await apiClient.logout()
-    } catch (error) {
+    } catch {
       // Even if logout fails on server, clear local state
     }
     logout()

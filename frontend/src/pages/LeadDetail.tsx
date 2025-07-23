@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Mail, Phone, Edit, Trash2, UserPlus, Building } from 'lucide-react'
+import { ArrowLeft, Mail, Phone, Edit, Trash2, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useLead, useLeadActivities, useConvertLead, useDeleteLead } from '@/hooks/use-leads'
-import { formatDate, formatDateTime } from '@/lib/utils'
+import { formatDateTime } from '@/lib/utils'
 import { ActivityTimeline } from '@/components/activities/ActivityTimeline'
 
 const statusColors = {

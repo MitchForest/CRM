@@ -11,12 +11,6 @@ import type {
   Lead,
   Opportunity,
   Task,
-  Case,
-  Quote,
-  Email,
-  Call,
-  Meeting,
-  Note,
   Activity
 } from '@/types/api.generated'
 

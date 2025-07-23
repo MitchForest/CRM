@@ -83,7 +83,7 @@ export function ContactFormPage() {
         toast.success('Contact created successfully')
       }
       navigate('/contacts')
-    } catch (error) {
+    } catch {
       toast.error(`Failed to ${isEdit ? 'update' : 'create'} contact. Please try again.`)
     }
   }

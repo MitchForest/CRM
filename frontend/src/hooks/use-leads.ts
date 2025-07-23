@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import type { Lead, Activity, ListResponse } from '@/types/api.generated'
 
 // Get paginated leads
-export function useLeads(page = 1, limit = 10, filters?: Record<string, any>) {
+export function useLeads(page = 1, limit = 10, filters?: Record<string, string | number>) {
   return useQuery({
     queryKey: ['leads', page, limit, filters],
     queryFn: async () => {

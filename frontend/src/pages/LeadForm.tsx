@@ -12,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCreateLead, useUpdateLead, useLead } from '@/hooks/use-leads'
-import type { Lead } from '@/types/api.generated'
 
 const leadSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -84,7 +83,7 @@ export function LeadFormPage() {
         const result = await createLead.mutateAsync(data)
         navigate(`/leads/${result.data.id}`)
       }
-    } catch (error) {
+    } catch {
       // Error is handled by the mutation
     }
   }

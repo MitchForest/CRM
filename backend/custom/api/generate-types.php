@@ -22,19 +22,6 @@ $dtoClasses = [
     'Api\DTO\Base\PaginationDTO',
     'Api\DTO\Base\ErrorDTO',
     
-    // Entity DTOs
-    'Api\DTO\ContactDTO',
-    'Api\DTO\LeadDTO',
-    'Api\DTO\OpportunityDTO',
-    'Api\DTO\TaskDTO',
-    'Api\DTO\CaseDTO',
-    'Api\DTO\EmailDTO',
-    'Api\DTO\CallDTO',
-    'Api\DTO\MeetingDTO',
-    'Api\DTO\NoteDTO',
-    'Api\DTO\QuoteDTO',
-    'Api\DTO\ActivityDTO',
-    
     // Auth DTOs
     'Api\DTO\Auth\LoginRequestDTO',
     'Api\DTO\Auth\LoginResponseDTO',
@@ -152,17 +139,6 @@ export const ListResponseSchema = <T extends z.ZodType>(itemSchema: T) =>
   });
 
 // Type inference helpers
-export type Contact = z.infer<typeof ContactSchema>;
-export type Lead = z.infer<typeof LeadSchema>;
-export type Opportunity = z.infer<typeof OpportunitySchema>;
-export type Task = z.infer<typeof TaskSchema>;
-export type Case = z.infer<typeof CaseSchema>;
-export type Email = z.infer<typeof EmailSchema>;
-export type Call = z.infer<typeof CallSchema>;
-export type Meeting = z.infer<typeof MeetingSchema>;
-export type Note = z.infer<typeof NoteSchema>;
-export type Quote = z.infer<typeof QuoteSchema>;
-export type Activity = z.infer<typeof ActivitySchema>;
 export type Pagination = z.infer<typeof PaginationSchema>;
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
 TS;

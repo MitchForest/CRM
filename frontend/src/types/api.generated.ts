@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Auto-generated TypeScript types from PHP DTOs
  * Generated: 2025-07-23 02:05:11

@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { DataTable } from '@/components/ui/data-table'
 import { useContacts } from '@/hooks/use-contacts'
-import { formatDate, formatCurrency } from '@/lib/utils'
+import { formatDate } from '@/lib/utils'
 import type { Contact } from '@/types/api.generated'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -137,7 +137,7 @@ const columns: ColumnDef<Contact>[] = [
 ]
 
 export function ContactsPage() {
-  const [page, setPage] = useState(1)
+  const [page] = useState(1)
   const { data, isLoading } = useContacts({ page, pageSize: 20 })
 
   if (isLoading) {

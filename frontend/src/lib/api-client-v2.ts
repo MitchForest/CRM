@@ -1,7 +1,7 @@
 import axios, { type AxiosInstance, type AxiosError } from 'axios'
 import { z } from 'zod'
 import { getStoredAuth, setStoredAuth, clearStoredAuth } from '@/stores/auth-store'
-import { ApiEndpointSchemas, ApiEndpoint, ApiRequest, ApiResponse } from './api-schemas'
+import { ApiEndpointSchemas, type ApiEndpoint, type ApiRequest, type ApiResponse } from './api-schemas'
 
 export class TypeSafeApiClient {
   private client: AxiosInstance
@@ -32,7 +32,7 @@ export class TypeSafeApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
-        const originalRequest = error.config as any
+        const originalRequest = error.config as AxiosError['config'] & { _retry?: boolean }
 
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true
@@ -90,7 +90,7 @@ export class TypeSafeApiClient {
   async request<T extends ApiEndpoint>(
     endpoint: T,
     data?: ApiRequest<T>,
-    params?: Record<string, any>
+    params?: Record<string, string | number>
   ): Promise<ApiResponse<T>> {
     const config = ApiEndpointSchemas[endpoint]
     

@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, type UseQueryOptions, type UseMutationOptions } from '@tanstack/react-query'
 import { typeSafeApiClient } from '@/lib/api-client-v2'
-import { ApiEndpoint, ApiRequest, ApiResponse } from '@/lib/api-schemas'
+import { type ApiEndpoint, type ApiRequest, type ApiResponse } from '@/lib/api-schemas'
 import { toast } from 'sonner'
 
 // Generic query hook for type-safe API calls

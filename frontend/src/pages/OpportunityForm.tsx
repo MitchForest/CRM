@@ -104,7 +104,7 @@ export function OpportunityFormPage() {
         toast.success('Opportunity created successfully')
       }
       navigate('/opportunities')
-    } catch (error) {
+    } catch {
       toast.error(`Failed to ${isEdit ? 'update' : 'create'} opportunity. Please try again.`)
     }
   }
