@@ -9,9 +9,16 @@
 define('PHPUNIT_TEST', true);
 define('ENTRY_POINT_TYPE', 'api');
 
-// Set up paths
-$suitecrmPath = getenv('SUITECRM_PATH') ?: __DIR__ . '/../suitecrm';
-$apiPath = __DIR__ . '/../custom/api';
+// Set up paths - Adjust for Docker environment
+if (file_exists('/.dockerenv')) {
+    // Running inside Docker container
+    $suitecrmPath = getenv('SUITECRM_PATH') ?: '/var/www/html';
+    $apiPath = '/var/www/html/custom/api';
+} else {
+    // Running on host
+    $suitecrmPath = getenv('SUITECRM_PATH') ?: __DIR__ . '/../suitecrm';
+    $apiPath = __DIR__ . '/../custom/api';
+}
 
 // Check if SuiteCRM is installed
 if (!file_exists($suitecrmPath . '/config.php')) {

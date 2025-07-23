@@ -5,6 +5,13 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { Layout } from '@/components/layout/Layout'
 import { LoginPage } from '@/pages/Login'
 import { DashboardPage } from '@/pages/Dashboard'
+import { ContactsPage } from '@/pages/Contacts'
+import { ContactDetailPage } from '@/pages/ContactDetail'
+import { ContactFormPage } from '@/pages/ContactForm'
+import { LeadsListPage } from '@/pages/LeadsList'
+import { LeadDetailPage } from '@/pages/LeadDetail'
+import { LeadFormPage } from '@/pages/LeadForm'
+import { Toaster } from '@/components/ui/sonner'
 
 // Create a client
 const queryClient = new QueryClient({
@@ -31,8 +38,14 @@ export function App() {
             </ProtectedRoute>
           }>
             <Route path="/" element={<DashboardPage />} />
-            <Route path="/contacts" element={<div>Contacts Page (Coming Soon)</div>} />
-            <Route path="/leads" element={<div>Leads Page (Coming Soon)</div>} />
+            <Route path="/contacts" element={<ContactsPage />} />
+            <Route path="/contacts/new" element={<ContactFormPage />} />
+            <Route path="/contacts/:id" element={<ContactDetailPage />} />
+            <Route path="/contacts/:id/edit" element={<ContactFormPage />} />
+            <Route path="/leads" element={<LeadsListPage />} />
+            <Route path="/leads/new" element={<LeadFormPage />} />
+            <Route path="/leads/:id" element={<LeadDetailPage />} />
+            <Route path="/leads/:id/edit" element={<LeadFormPage />} />
             <Route path="/opportunities" element={<div>Opportunities Page (Coming Soon)</div>} />
             <Route path="/activities" element={<div>Activities Page (Coming Soon)</div>} />
             <Route path="/settings" element={<div>Settings Page (Coming Soon)</div>} />
@@ -41,6 +54,7 @@ export function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
+      <Toaster position="top-right" />
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   )

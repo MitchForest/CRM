@@ -5,7 +5,9 @@ import {
   TrendingUp, 
   Activity,
   Settings,
-  LogOut
+  LogOut,
+  Code2,
+  TestTube2
 } from "lucide-react"
 import {
   Sidebar,

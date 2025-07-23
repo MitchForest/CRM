@@ -33,6 +33,9 @@ services:
     volumes:
       - ./backend/suitecrm:/var/www/html:rw
       - ./backend/custom:/var/www/html/custom:rw
+      - ./backend/tests:/var/www/html/tests:rw
+      - ./backend/phpunit.xml:/var/www/html/phpunit.xml:rw
+      - ./backend/composer.json:/var/www/html/composer-backend.json:rw
     environment:
       DATABASE_HOST: mysql
       DATABASE_NAME: suitecrm
