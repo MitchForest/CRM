@@ -81,6 +81,3 @@ Thumbs.db
 
 # Docker
 .dockerignore
-
-# Swarm memory files
-.swarm/memory.db

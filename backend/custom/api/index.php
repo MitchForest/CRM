@@ -1,14 +1,6 @@
 <?php
-// Prevent direct access
-if (!defined('sugarEntry')) define('sugarEntry', true);
-
-// Change working directory to SuiteCRM root
-chdir('../..');
-
-// Include SuiteCRM bootstrap
-require_once('include/entryPoint.php');
-require_once('include/utils.php');
-require_once('data/BeanFactory.php');
+// Initialize SuiteCRM environment for API
+require_once __DIR__ . '/init.php';
 
 // API autoloader
 spl_autoload_register(function ($class) {

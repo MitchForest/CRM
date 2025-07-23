@@ -122,10 +122,7 @@ abstract class BaseDTO implements \JsonSerializable
      */
     protected function addError(string $field, string $message): void
     {
-        if (!isset($this->errors[$field])) {
-            $this->errors[$field] = [];
-        }
-        $this->errors[$field][] = $message;
+        $this->errors[$field] = $message;
     }
     
     /**

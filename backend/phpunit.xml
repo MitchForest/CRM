@@ -40,10 +40,10 @@
 
     <php>
         <env name="ENVIRONMENT" value="testing"/>
-        <env name="DB_HOST" value="db"/>
+        <env name="DB_HOST" value="mysql"/>
         <env name="DB_NAME" value="suitecrm_test"/>
         <env name="DB_USER" value="root"/>
         <env name="DB_PASSWORD" value="root"/>
-        <env name="SUITECRM_PATH" value="./suitecrm"/>
+        <env name="SUITECRM_PATH" value="/var/www/html"/>
     </php>
 </phpunit>

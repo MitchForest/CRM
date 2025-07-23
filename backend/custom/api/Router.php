@@ -9,28 +9,29 @@ class Router {
         $this->middleware[] = $middleware;
     }
     
-    public function get($path, $handler) {
-        $this->addRoute('GET', $path, $handler);
+    public function get($path, $handler, $options = []) {
+        $this->addRoute('GET', $path, $handler, $options);
     }
     
-    public function post($path, $handler) {
-        $this->addRoute('POST', $path, $handler);
+    public function post($path, $handler, $options = []) {
+        $this->addRoute('POST', $path, $handler, $options);
     }
     
-    public function put($path, $handler) {
-        $this->addRoute('PUT', $path, $handler);
+    public function put($path, $handler, $options = []) {
+        $this->addRoute('PUT', $path, $handler, $options);
     }
     
-    public function delete($path, $handler) {
-        $this->addRoute('DELETE', $path, $handler);
+    public function delete($path, $handler, $options = []) {
+        $this->addRoute('DELETE', $path, $handler, $options);
     }
     
-    private function addRoute($method, $path, $handler) {
+    private function addRoute($method, $path, $handler, $options = []) {
         $this->routes[] = [
             'method' => $method,
             'path' => $path,
             'handler' => $handler,
-            'pattern' => $this->convertPathToRegex($path)
+            'pattern' => $this->convertPathToRegex($path),
+            'options' => $options
         ];
     }
     
@@ -57,34 +58,40 @@ class Router {
         // Create request object
         $request = new Request($method, $path, $this->getRequestData());
         
-        // Run middleware
-        foreach ($this->middleware as $middleware) {
-            $result = $middleware->handle($request);
-            if ($result === false) {
-                return;
-            }
-        }
-        
-        // Find matching route
+        // Find matching route first to check options
+        $matchedRoute = null;
         foreach ($this->routes as $route) {
             if ($route['method'] === $method && preg_match($route['pattern'], $path, $matches)) {
+                $matchedRoute = $route;
                 // Extract route parameters
                 $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
                 $request->setParams($params);
-                
-                // Call handler
-                list($class, $method) = explode('::', $route['handler']);
-                $controller = new $class();
-                $response = $controller->$method($request);
-                
-                // Send response
-                $this->sendResponse($response);
-                return;
+                break;
             }
         }
         
-        // No route found
-        $this->sendError(404, 'Route not found');
+        if (!$matchedRoute) {
+            $this->sendError(404, 'Route not found');
+            return;
+        }
+        
+        // Run middleware only if skipAuth is not set
+        if (empty($matchedRoute['options']['skipAuth'])) {
+            foreach ($this->middleware as $middleware) {
+                $result = $middleware->handle($request);
+                if ($result === false) {
+                    return;
+                }
+            }
+        }
+        
+        // Call handler
+        list($class, $method) = explode('::', $matchedRoute['handler']);
+        $controller = new $class();
+        $response = $controller->$method($request);
+        
+        // Send response
+        $this->sendResponse($response);
     }
     
     private function getRequestData() {

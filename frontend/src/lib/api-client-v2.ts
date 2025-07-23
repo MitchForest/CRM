@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosError } from 'axios'
+import axios, { type AxiosInstance, type AxiosError } from 'axios'
 import { z } from 'zod'
 import { getStoredAuth, setStoredAuth, clearStoredAuth } from '@/stores/auth-store'
 import { ApiEndpointSchemas, ApiEndpoint, ApiRequest, ApiResponse } from './api-schemas'

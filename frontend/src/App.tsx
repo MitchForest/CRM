@@ -11,6 +11,9 @@ import { ContactFormPage } from '@/pages/ContactForm'
 import { LeadsListPage } from '@/pages/LeadsList'
 import { LeadDetailPage } from '@/pages/LeadDetail'
 import { LeadFormPage } from '@/pages/LeadForm'
+import OpportunitiesList from '@/pages/OpportunitiesList'
+import { OpportunityDetailPage } from '@/pages/OpportunityDetail'
+import { OpportunityFormPage } from '@/pages/OpportunityForm'
 import { Toaster } from '@/components/ui/sonner'
 
 // Create a client
@@ -46,7 +49,10 @@ export function App() {
             <Route path="/leads/new" element={<LeadFormPage />} />
             <Route path="/leads/:id" element={<LeadDetailPage />} />
             <Route path="/leads/:id/edit" element={<LeadFormPage />} />
-            <Route path="/opportunities" element={<div>Opportunities Page (Coming Soon)</div>} />
+            <Route path="/opportunities" element={<OpportunitiesList />} />
+            <Route path="/opportunities/new" element={<OpportunityFormPage />} />
+            <Route path="/opportunities/:id" element={<OpportunityDetailPage />} />
+            <Route path="/opportunities/:id/edit" element={<OpportunityFormPage />} />
             <Route path="/activities" element={<div>Activities Page (Coming Soon)</div>} />
             <Route path="/settings" element={<div>Settings Page (Coming Soon)</div>} />
           </Route>

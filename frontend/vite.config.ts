@@ -10,6 +10,23 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    include: [
+      'axios', 
+      'class-variance-authority', 
+      '@tanstack/react-table', 
+      '@tanstack/react-query',
+      'lucide-react',
+      'react-router-dom',
+      'zustand',
+      'zod',
+      'react-hook-form',
+      '@hookform/resolvers',
+      'sonner',
+      'date-fns',
+      'recharts'
+    ],
+  },
   server: {
     port: 3000,
     proxy: {

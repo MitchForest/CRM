@@ -1,5 +1,8 @@
 <?php
 function configureRoutes($router) {
+    // Health check route (no auth required)
+    $router->get('/health', 'Api\Controllers\HealthController::check', ['skipAuth' => true]);
+    
     // Add middleware
     $router->addMiddleware(new \Api\Middleware\AuthMiddleware());
     
