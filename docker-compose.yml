@@ -32,7 +32,10 @@ services:
       - "8080:80"
     volumes:
       - ./backend/suitecrm:/var/www/html:rw
-      - ./backend/custom:/var/www/html/custom:rw
+      - ./backend/custom-api:/var/www/html/custom/api:rw
+      - ./backend/custom-extensions:/var/www/html/custom/Extension:rw
+      - ./backend/config/config.php:/var/www/html/config.php:rw
+      - ./backend/config/config_override.php:/var/www/html/config_override.php:rw
       - ./backend/tests:/var/www/html/tests:rw
       - ./backend/phpunit.xml:/var/www/html/phpunit.xml:rw
       - ./backend/composer.json:/var/www/html/composer-backend.json:rw

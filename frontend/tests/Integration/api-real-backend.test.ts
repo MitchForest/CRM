@@ -8,7 +8,7 @@ const API_BASE_URL = 'http://localhost:8080/custom/api'
 
 describe('Real Backend API Integration', () => {
   let authToken: string
-  let apiClient: any
+  let apiClient: ReturnType<typeof axios.create>
 
   beforeAll(async () => {
     // Skip these tests if not explicitly enabled
@@ -40,9 +40,10 @@ describe('Real Backend API Integration', () => {
       // Set auth header for all subsequent requests
       apiClient.defaults.headers.common['Authorization'] = `Bearer ${authToken}`
       console.log('Authentication successful!')
-    } catch (error: any) {
-      console.error('Failed to authenticate:', error.response?.data || error.message)
-      throw new Error(`Backend authentication failed: ${error.message}`)
+    } catch (error) {
+      const message = axios.isAxiosError(error) ? error.response?.data || error.message : String(error)
+      console.error('Failed to authenticate:', message)
+      throw new Error(`Backend authentication failed: ${message}`)
     }
   })
 
@@ -230,7 +231,7 @@ describe('Real Backend API Integration', () => {
       try {
         await apiClient.get('/contacts/non-existent-id')
         expect.fail('Should have thrown an error')
-      } catch (error: any) {
+      } catch (error) {
         expect(error.response.status).toBe(404)
         expect(error.response.data).toHaveProperty('success')
         expect(error.response.data.success).toBe(false)
@@ -247,7 +248,7 @@ describe('Real Backend API Integration', () => {
           firstName: 'Test'
         })
         expect.fail('Should have thrown an error')
-      } catch (error: any) {
+      } catch (error) {
         expect(error.response.status).toBe(400)
         expect(error.response.data).toHaveProperty('success')
         expect(error.response.data.success).toBe(false)
@@ -267,7 +268,7 @@ describe('Real Backend API Integration', () => {
       try {
         await unauthClient.get('/contacts')
         expect.fail('Should have thrown an error')
-      } catch (error: any) {
+      } catch (error) {
         expect(error.response.status).toBe(401)
       }
     })

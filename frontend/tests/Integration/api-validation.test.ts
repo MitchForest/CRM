@@ -4,7 +4,7 @@ import { ApiEndpointSchemas } from '@/lib/api-schemas'
 
 // This test ensures all our API endpoints are properly typed and documented
 describe('API Schema Completeness', () => {
-  const backendRoutes = [
+  /* const backendRoutes = [
     // Auth routes
     { method: 'POST', path: '/auth/login' },
     { method: 'POST', path: '/auth/refresh' },
@@ -57,7 +57,7 @@ describe('API Schema Completeness', () => {
     { method: 'POST', path: '/activities' },
     { method: 'GET', path: '/activities/upcoming' },
     { method: 'GET', path: '/activities/recent' },
-  ]
+  ] */
 
   it('should have schemas defined for critical endpoints', () => {
     const criticalEndpoints = [
@@ -83,7 +83,7 @@ describe('API Schema Completeness', () => {
   })
 
   it('should have proper Zod schemas for all endpoint configs', () => {
-    Object.entries(ApiEndpointSchemas).forEach(([endpoint, config]) => {
+    Object.entries(ApiEndpointSchemas).forEach(([, config]) => {
       // Check that request and response are Zod schemas
       expect(config.request).toHaveProperty('parse')
       expect(config.request).toHaveProperty('safeParse')
@@ -167,13 +167,13 @@ describe('API Schema Completeness', () => {
 
   it('should cover all CRUD operations for main entities', () => {
     const entities = ['contacts', 'leads', 'opportunities', 'tasks']
-    const crudOps = {
+    /* const crudOps = {
       list: 'GET /{entity}',
       get: 'GET /{entity}/:id',
       create: 'POST /{entity}',
       update: 'PUT /{entity}/:id',
       delete: 'DELETE /{entity}/:id'
-    }
+    } */
 
     const missingEndpoints: string[] = []
 

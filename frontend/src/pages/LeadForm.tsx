@@ -3,7 +3,6 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -12,22 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCreateLead, useUpdateLead, useLead } from '@/hooks/use-leads'
-
-const leadSchema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-  email: z.string().email('Invalid email address'),
-  phone: z.string().optional(),
-  mobile: z.string().optional(),
-  title: z.string().optional(),
-  company: z.string().optional(),
-  website: z.string().optional(),
-  description: z.string().optional(),
-  status: z.enum(['New', 'Contacted', 'Qualified', 'Converted', 'Dead']),
-  source: z.string().optional(),
-})
-
-type LeadFormData = z.infer<typeof leadSchema>
+import { leadSchema, type LeadFormData } from '@/lib/validation'
 
 export function LeadFormPage() {
   const { id } = useParams<{ id: string }>()
@@ -48,10 +32,11 @@ export function LeadFormPage() {
       mobile: '',
       title: '',
       company: '',
+      accountName: '',
       website: '',
       description: '',
       status: 'New',
-      source: '',
+      source: undefined,
     },
   })
 
@@ -66,22 +51,32 @@ export function LeadFormPage() {
         mobile: lead.mobile || '',
         title: lead.title || '',
         company: lead.company || '',
+        accountName: lead.customFields?.accountName || '',
         website: lead.website || '',
         description: lead.description || '',
         status: lead.status,
-        source: lead.source || '',
+        source: lead.source as LeadFormData['source'] || undefined,
       })
     }
   }, [isEdit, leadData, form])
 
   const onSubmit = async (data: LeadFormData) => {
     try {
+      // Extract accountName and prepare the lead data
+      const { accountName, ...leadData } = data
+      const leadPayload = {
+        ...leadData,
+        customFields: {
+          accountName: accountName || undefined
+        }
+      }
+      
       if (isEdit) {
-        await updateLead.mutateAsync(data)
+        await updateLead.mutateAsync(leadPayload)
         navigate(`/leads/${id}`)
       } else {
-        const result = await createLead.mutateAsync(data)
-        navigate(`/leads/${result.data.id}`)
+        const result = await createLead.mutateAsync(leadPayload)
+        navigate(`/leads/${result.data?.id || ''}`)
       }
     } catch {
       // Error is handled by the mutation
@@ -241,6 +236,23 @@ export function LeadFormPage() {
 
                 <FormField
                   control={form.control}
+                  name="accountName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Account Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="e.g., Acme Corporation" />
+                      </FormControl>
+                      <FormDescription>
+                        The parent account this lead is associated with
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="website"
                   render={({ field }) => (
                     <FormItem>
@@ -284,9 +296,20 @@ export function LeadFormPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Lead Source</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="e.g., Website, Referral, Trade Show" />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select lead source" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Website">Website</SelectItem>
+                          <SelectItem value="Referral">Referral</SelectItem>
+                          <SelectItem value="Campaign">Campaign</SelectItem>
+                          <SelectItem value="Social Media">Social Media</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormDescription>
                         How did this lead find us?
                       </FormDescription>

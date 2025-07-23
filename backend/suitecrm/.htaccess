@@ -9,9 +9,14 @@
     RewriteCond %{REQUEST_URI} ^/index\.html$
     RewriteRule ^ - [L]
     
+    # Route v8 API requests to Api/index.php
+    RewriteCond %{REQUEST_URI} ^/Api/V8
+    RewriteRule ^Api/(.*)$ Api/index.php [QSA,L]
+    
     # Allow access to API endpoints
     RewriteCond %{REQUEST_URI} ^/custom/api [OR]
     RewriteCond %{REQUEST_URI} ^/api [OR]
+    RewriteCond %{REQUEST_URI} ^/Api [OR]
     RewriteCond %{REQUEST_URI} ^/service [OR]
     RewriteCond %{REQUEST_URI} ^/cache [OR]
     RewriteCond %{REQUEST_URI} ^/upload [OR]

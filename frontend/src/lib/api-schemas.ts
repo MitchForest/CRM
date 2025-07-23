@@ -16,7 +16,7 @@ export const ErrorResponseSchema = z.object({
   error: z.string(),
   message: z.string(),
   statusCode: z.number().optional(),
-  details: z.record(z.any()).optional()
+  details: z.record(z.string(), z.any()).optional()
 })
 
 export const ApiResponseSchema = <T extends z.ZodType>(dataSchema: T) => z.object({
@@ -52,7 +52,7 @@ export const ContactSchema = z.object({
   assignedUserId: z.string().optional(),
   assignedUserName: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  customFields: z.record(z.any()).optional(),
+  customFields: z.record(z.string(), z.any()).optional(),
   lastContactedAt: DateStringSchema,
   preferredContactMethod: z.enum(['Email', 'Phone', 'Mobile']).optional(),
   doNotCall: z.boolean().optional(),
@@ -84,7 +84,7 @@ export const LeadSchema = z.object({
   assignedUserName: z.string().optional(),
   convertedContactId: z.string().optional(),
   convertedAt: DateStringSchema,
-  customFields: z.record(z.any()).optional(),
+  customFields: z.record(z.string(), z.any()).optional(),
   createdAt: DateStringSchema,
   updatedAt: DateStringSchema
 })
@@ -106,7 +106,7 @@ export const OpportunitySchema = z.object({
   aiInsights: z.string().optional(),
   aiScore: z.number().optional(),
   aiRecommendations: z.array(z.string()).optional(),
-  customFields: z.record(z.any()).optional(),
+  customFields: z.record(z.string(), z.any()).optional(),
   createdAt: DateStringSchema,
   updatedAt: DateStringSchema
 })
@@ -124,7 +124,7 @@ export const TaskSchema = z.object({
   assignedUserId: z.string().optional(),
   assignedUserName: z.string().optional(),
   completedAt: DateStringSchema,
-  customFields: z.record(z.any()).optional(),
+  customFields: z.record(z.string(), z.any()).optional(),
   createdAt: DateStringSchema,
   updatedAt: DateStringSchema
 })
@@ -143,7 +143,7 @@ export const CaseSchema = z.object({
   assignedUserName: z.string().optional(),
   resolution: z.string().optional(),
   resolvedAt: DateStringSchema,
-  customFields: z.record(z.any()).optional(),
+  customFields: z.record(z.string(), z.any()).optional(),
   createdAt: DateStringSchema,
   updatedAt: DateStringSchema
 })

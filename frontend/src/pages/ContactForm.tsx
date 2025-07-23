@@ -2,7 +2,6 @@ import { useEffect } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,20 +10,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useContact, useCreateContact, useUpdateContact } from '@/hooks/use-contacts'
 import { toast } from 'sonner'
-
-const contactSchema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-  email: z.string().email('Invalid email address'),
-  phone: z.string().optional(),
-  mobile: z.string().optional(),
-  title: z.string().optional(),
-  preferredContactMethod: z.enum(['email', 'phone', 'sms']).optional(),
-  customerNumber: z.string().optional(),
-  tags: z.string().optional(), // We'll parse this into an array
-})
-
-type ContactFormData = z.infer<typeof contactSchema>
+import { contactSchema, type ContactFormData } from '@/lib/validation'
 
 export function ContactFormPage() {
   const { id } = useParams<{ id?: string }>()

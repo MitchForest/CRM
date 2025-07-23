@@ -38,7 +38,7 @@ export const ContactSchema = z.object({
   customerNumber: z.string().optional(),
   preferredContactMethod: z.enum(['email', 'phone', 'sms']).optional(),
   tags: z.array(z.string()).optional(),
-  customFields: z.record(z.any()).optional(),
+  customFields: z.record(z.string(), z.any()).optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional()
 });
@@ -60,7 +60,7 @@ export const LeadSchema = z.object({
   assignedUserName: z.string().optional(),
   convertedContactId: z.string().optional(),
   convertedAt: z.string().optional(),
-  customFields: z.record(z.any()).optional(),
+  customFields: z.record(z.string(), z.any()).optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional()
 });
@@ -82,7 +82,7 @@ export const OpportunitySchema = z.object({
   aiInsights: z.string().optional(),
   aiScore: z.number().min(0).max(100).optional(),
   aiRecommendations: z.array(z.string()).optional(),
-  customFields: z.record(z.any()).optional(),
+  customFields: z.record(z.string(), z.any()).optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional()
 });
@@ -104,7 +104,7 @@ export const TaskSchema = z.object({
   assignedUserId: z.string().optional(),
   assignedUserName: z.string().optional(),
   reminderTime: z.string().optional(),
-  customFields: z.record(z.any()).optional(),
+  customFields: z.record(z.string(), z.any()).optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional()
 });
@@ -136,7 +136,7 @@ export const CaseSchema = z.object({
     createdBy: z.string(),
     createdAt: z.string()
   })).optional(),
-  customFields: z.record(z.any()).optional(),
+  customFields: z.record(z.string(), z.any()).optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional()
 });
@@ -185,7 +185,7 @@ export const QuoteSchema = z.object({
   description: z.string().optional(),
   assignedUserId: z.string().optional(),
   assignedUserName: z.string().optional(),
-  customFields: z.record(z.any()).optional(),
+  customFields: z.record(z.string(), z.any()).optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional()
 });
@@ -225,7 +225,7 @@ export const EmailSchema = z.object({
   flags: z.array(z.string()).optional(),
   folder: z.string().optional(),
   threadId: z.string().optional(),
-  customFields: z.record(z.any()).optional(),
+  customFields: z.record(z.string(), z.any()).optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional()
 });
@@ -260,7 +260,7 @@ export const CallSchema = z.object({
   result: z.string().optional(),
   recordingUrl: z.string().url().optional(),
   recurrence: RecurrenceRuleSchema.optional(),
-  customFields: z.record(z.any()).optional(),
+  customFields: z.record(z.string(), z.any()).optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional()
 });
@@ -296,7 +296,7 @@ export const MeetingSchema = z.object({
   agenda: z.string().optional(),
   minutes: z.string().optional(),
   recurrence: RecurrenceRuleSchema.optional(),
-  customFields: z.record(z.any()).optional(),
+  customFields: z.record(z.string(), z.any()).optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional()
 });
@@ -314,7 +314,7 @@ export const NoteSchema = z.object({
   assignedUserName: z.string().optional(),
   attachment: AttachmentSchema.optional(),
   tags: z.array(z.string()).optional(),
-  customFields: z.record(z.any()).optional(),
+  customFields: z.record(z.string(), z.any()).optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional()
 });

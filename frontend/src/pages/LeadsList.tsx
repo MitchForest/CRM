@@ -109,19 +109,17 @@ const columns: ColumnDef<Lead>[] = [
 ]
 
 export function LeadsListPage() {
-  const [page, setPage] = useState(1)
+  const [page] = useState(1)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const limit = 10
 
-  const { data, isLoading } = useLeads(page, limit, {
-    search,
-    status: statusFilter !== 'all' ? statusFilter : undefined,
-  })
-
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage)
+  const filters: Record<string, string | number> = { search }
+  if (statusFilter !== 'all') {
+    filters.status = statusFilter
   }
+
+  const { data, isLoading } = useLeads(page, limit, filters)
 
   return (
     <div className="space-y-6">
@@ -183,17 +181,16 @@ export function LeadsListPage() {
             </Select>
           </div>
 
-          <DataTable
-            columns={columns}
-            data={data?.data || []}
-            isLoading={isLoading}
-            pagination={{
-              page,
-              limit,
-              total: data?.pagination?.total || 0,
-              onPageChange: handlePageChange,
-            }}
-          />
+          {isLoading ? (
+            <div className="flex justify-center p-8">
+              <div className="text-muted-foreground">Loading...</div>
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={data?.data || []}
+            />
+          )}
         </CardContent>
       </Card>
     </div>

@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,13 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { useAuthStore } from '@/stores/auth-store'
 import { apiClient } from '@/lib/api-client'
-
-const loginSchema = z.object({
-  username: z.string().min(1, 'Username is required'),
-  password: z.string().min(1, 'Password is required'),
-})
-
-type LoginForm = z.infer<typeof loginSchema>
+import { loginSchema, type LoginFormData } from '@/lib/validation'
+import { getErrorMessage } from '@/lib/error-utils'
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -24,7 +18,7 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const form = useForm<LoginForm>({
+  const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       username: '',
@@ -32,7 +26,7 @@ export function LoginPage() {
     },
   })
 
-  const onSubmit = async (data: LoginForm) => {
+  const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true)
     setError(null)
 
@@ -45,8 +39,8 @@ export function LoginPage() {
       } else {
         setError(response.error?.error || 'Login failed')
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error?.error || 'Invalid credentials')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Invalid credentials'))
     } finally {
       setIsLoading(false)
     }

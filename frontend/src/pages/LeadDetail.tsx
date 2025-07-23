@@ -7,12 +7,8 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
-import { useLead, useLeadActivities, useConvertLead, useDeleteLead } from '@/hooks/use-leads'
+import { useLead, useConvertLead, useDeleteLead } from '@/hooks/use-leads'
 import { formatDateTime } from '@/lib/utils'
-import { ActivityTimeline } from '@/components/activities/ActivityTimeline'
 
 const statusColors = {
   New: 'bg-blue-100 text-blue-700',
@@ -26,27 +22,16 @@ export function LeadDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [showConvertDialog, setShowConvertDialog] = useState(false)
-  const [createOpportunity, setCreateOpportunity] = useState(false)
-  const [opportunityData, setOpportunityData] = useState({
-    name: '',
-    amount: 0,
-    closeDate: '',
-    salesStage: 'Prospecting',
-  })
 
   const { data: leadData, isLoading: leadLoading } = useLead(id!)
-  const { data: activitiesData, isLoading: activitiesLoading } = useLeadActivities(id!)
+  // const { data: activitiesData, isLoading: activitiesLoading } = useLeadActivities(id!)
   const convertLead = useConvertLead()
   const deleteLead = useDeleteLead()
 
   const handleConvert = async () => {
     if (!id) return
 
-    await convertLead.mutateAsync({
-      leadId: id,
-      createOpportunity,
-      opportunityData: createOpportunity ? opportunityData : undefined,
-    })
+    await convertLead.mutateAsync(id)
 
     setShowConvertDialog(false)
     navigate('/contacts')
@@ -92,7 +77,7 @@ export function LeadDetailPage() {
   }
 
   const lead = leadData.data
-  const activities = activitiesData?.data || []
+  // const activities = activitiesData?.data || []
 
   return (
     <div className="space-y-6">
@@ -190,6 +175,12 @@ export function LeadDetailPage() {
                     <p className="text-sm">{lead.source}</p>
                   </div>
                 )}
+                {lead.customFields?.accountName && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Account Name</p>
+                    <p className="text-sm">{lead.customFields.accountName}</p>
+                  </div>
+                )}
                 {lead.assignedUserName && (
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Assigned To</p>
@@ -222,17 +213,9 @@ export function LeadDetailPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ActivityTimeline
-                    activities={activities}
-                    isLoading={activitiesLoading}
-                    emptyStateAction={{
-                      label: 'Add Activity',
-                      onClick: () => {
-                        // TODO: Open activity creation modal
-                        console.log('Add activity')
-                      }
-                    }}
-                  />
+                  <p className="text-center text-muted-foreground">
+                    Activity timeline coming soon
+                  </p>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -310,51 +293,13 @@ export function LeadDetailPage() {
           <DialogHeader>
             <DialogTitle>Convert Lead to Contact</DialogTitle>
             <DialogDescription>
-              Convert {lead.firstName} {lead.lastName} to a contact. Optionally create an opportunity.
+              Convert {lead.firstName} {lead.lastName} to a contact.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="create-opportunity"
-                checked={createOpportunity}
-                onCheckedChange={(checked) => setCreateOpportunity(checked as boolean)}
-              />
-              <Label htmlFor="create-opportunity">Create Opportunity</Label>
-            </div>
-
-            {createOpportunity && (
-              <div className="space-y-4 pl-6">
-                <div className="space-y-2">
-                  <Label htmlFor="opp-name">Opportunity Name</Label>
-                  <Input
-                    id="opp-name"
-                    value={opportunityData.name}
-                    onChange={(e) => setOpportunityData({ ...opportunityData, name: e.target.value })}
-                    placeholder="e.g., Website Redesign Project"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="opp-amount">Amount</Label>
-                  <Input
-                    id="opp-amount"
-                    type="number"
-                    value={opportunityData.amount}
-                    onChange={(e) => setOpportunityData({ ...opportunityData, amount: Number(e.target.value) })}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="opp-close-date">Expected Close Date</Label>
-                  <Input
-                    id="opp-close-date"
-                    type="date"
-                    value={opportunityData.closeDate}
-                    onChange={(e) => setOpportunityData({ ...opportunityData, closeDate: e.target.value })}
-                  />
-                </div>
-              </div>
-            )}
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              This will create a new contact with the lead's information.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowConvertDialog(false)}>

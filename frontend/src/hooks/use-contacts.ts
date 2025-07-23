@@ -52,10 +52,11 @@ export function useDeleteContact() {
   })
 }
 
-export function useContactActivities(contactId: string, params?: QueryParams) {
-  return useQuery({
-    queryKey: ['contact-activities', contactId, params],
-    queryFn: () => apiClient.getContactActivities(contactId, params),
-    enabled: !!contactId,
-  })
-}
+// Get contact activities - commented out (not part of Phase 1)
+// export function useContactActivities(contactId: string, params?: QueryParams) {
+//   return useQuery({
+//     queryKey: ['contact-activities', contactId, params],
+//     queryFn: () => apiClient.getContactActivities(contactId, params),
+//     enabled: !!contactId,
+//   })
+// }

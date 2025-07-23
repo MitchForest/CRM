@@ -42,6 +42,32 @@ export interface Contact {
   updatedAt?: string;
 }
 
+export interface Account {
+  id?: string;
+  name: string;
+  phone?: string;
+  website?: string;
+  industry?: string;
+  annualRevenue?: number;
+  employees?: number;
+  billingStreet?: string;
+  billingCity?: string;
+  billingState?: string;
+  billingPostalCode?: string;
+  billingCountry?: string;
+  shippingStreet?: string;
+  shippingCity?: string;
+  shippingState?: string;
+  shippingPostalCode?: string;
+  shippingCountry?: string;
+  description?: string;
+  assignedUserId?: string;
+  assignedUserName?: string;
+  customFields?: Record<string, any>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Lead {
   id?: string;
   firstName: string;

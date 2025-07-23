@@ -5,14 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useContact, useContactActivities } from '@/hooks/use-contacts'
+import { useContact } from '@/hooks/use-contacts'
 import { formatDate, formatDateTime } from '@/lib/utils'
-import { ActivityTimeline } from '@/components/activities/ActivityTimeline'
 
 export function ContactDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { data: contactData, isLoading: contactLoading } = useContact(id!)
-  const { data: activitiesData, isLoading: activitiesLoading } = useContactActivities(id!)
+  // const { data: activitiesData, isLoading: activitiesLoading } = useContactActivities(id!)
 
   if (contactLoading) {
     return (
@@ -47,7 +46,7 @@ export function ContactDetailPage() {
   }
 
   const contact = contactData.data
-  const activities = activitiesData?.data || []
+  // const activities = activitiesData?.data || []
 
   return (
     <div className="space-y-6">
@@ -139,7 +138,6 @@ export function ContactDetailPage() {
           <Tabs defaultValue="activities" className="w-full">
             <TabsList>
               <TabsTrigger value="activities">Activities</TabsTrigger>
-              <TabsTrigger value="opportunities">Opportunities</TabsTrigger>
               <TabsTrigger value="cases">Cases</TabsTrigger>
             </TabsList>
             
@@ -152,26 +150,8 @@ export function ContactDetailPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ActivityTimeline
-                    activities={activities}
-                    isLoading={activitiesLoading}
-                    emptyStateAction={{
-                      label: 'Add Activity',
-                      onClick: () => {
-                        // TODO: Open activity creation modal
-                        console.log('Add activity')
-                      }
-                    }}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="opportunities">
-              <Card>
-                <CardContent className="p-6">
                   <p className="text-center text-muted-foreground">
-                    Opportunities feature coming soon
+                    Activity timeline coming soon
                   </p>
                 </CardContent>
               </Card>

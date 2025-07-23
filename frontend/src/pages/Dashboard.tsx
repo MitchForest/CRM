@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { 
   Users, 
-  TrendingUp, 
-  DollarSign, 
-  Activity,
+  Target,
+  Building2, 
+  TrendingUp,
   ArrowUp,
   ArrowDown
 } from 'lucide-react'
@@ -83,10 +83,10 @@ export function DashboardPage() {
   }
 
   const dashboardData = stats?.data || {
-    totalContacts: 0,
-    activeTrials: 0,
-    monthlyRevenue: 0,
-    conversionRate: 0,
+    totalLeads: 0,
+    totalAccounts: 0,
+    newLeadsToday: 0,
+    pipelineValue: 0,
   }
 
   return (
@@ -99,32 +99,38 @@ export function DashboardPage() {
       {/* Metrics Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
-          title="Total Contacts"
-          value={dashboardData.totalContacts}
-          icon={Users}
+          title="Total Leads"
+          value={dashboardData.totalLeads}
+          icon={Target}
           trend={{ value: 12, isPositive: true }}
         />
         <MetricCard
-          title="Active Trials"
-          value={dashboardData.activeTrials}
-          icon={Activity}
+          title="Total Accounts"
+          value={dashboardData.totalAccounts}
+          icon={Building2}
           trend={{ value: 5, isPositive: true }}
         />
         <MetricCard
-          title="Monthly Revenue"
-          value={`$${dashboardData.monthlyRevenue.toLocaleString()}`}
-          icon={DollarSign}
+          title="New Leads Today"
+          value={dashboardData.newLeadsToday}
+          icon={Users}
           trend={{ value: 8, isPositive: true }}
         />
         <MetricCard
-          title="Conversion Rate"
-          value={`${dashboardData.conversionRate}%`}
+          title="Pipeline Value"
+          value={`$${dashboardData.pipelineValue.toLocaleString()}`}
           icon={TrendingUp}
-          trend={{ value: 2, isPositive: false }}
+          trend={{ value: 0, isPositive: true }}
         />
       </div>
 
-      {/* More dashboard content can be added here */}
+      {/* Activity timeline placeholder for future phases */}
+      <Card>
+        <CardContent className="p-6">
+          <h2 className="text-lg font-semibold mb-4">Recent Activity</h2>
+          <p className="text-muted-foreground">Activity timeline coming soon...</p>
+        </CardContent>
+      </Card>
     </div>
   )
 }

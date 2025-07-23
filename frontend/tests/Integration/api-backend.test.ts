@@ -214,7 +214,7 @@ describe('Backend API Schema Validation', () => {
       try {
         // Try to get non-existent contact
         await client.request('/contacts/:id', undefined, { id: 'non-existent-id' })
-      } catch (error: any) {
+      } catch (error) {
         const errorResponse = error.response?.data
         
         // Backend should return proper error structure
@@ -233,8 +233,8 @@ describe('Backend API Schema Validation', () => {
         await client.request('/contacts/create', {
           firstName: 'Test',
           // Missing required fields
-        } as any)
-      } catch (error: any) {
+        } as never)
+      } catch (error) {
         // Should fail on client-side validation first
         expect(error.message).toContain('Invalid request data')
       }

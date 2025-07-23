@@ -70,9 +70,10 @@ export class TypeSafeApiClient {
 
       const { accessToken, expiresIn } = response.data.data
       setStoredAuth({
-        ...auth,
         accessToken,
+        refreshToken: auth.refreshToken,
         expiresAt: Date.now() + (expiresIn * 1000),
+        user: auth.user
       })
 
       return accessToken
@@ -100,8 +101,8 @@ export class TypeSafeApiClient {
         config.request.parse(data)
       } catch (error) {
         if (error instanceof z.ZodError) {
-          console.error('Request validation failed:', error.errors)
-          const messages = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+          console.error('Request validation failed:', error.issues)
+          const messages = error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')
           throw new Error(`Invalid request data: ${messages}`)
         }
       }
@@ -110,7 +111,7 @@ export class TypeSafeApiClient {
     // Build the actual URL (replace :id params)
     let url = endpoint as string
     if (params?.id) {
-      url = url.replace(':id', params.id)
+      url = url.replace(':id', String(params.id))
     }
 
     // Make the request
@@ -129,7 +130,7 @@ export class TypeSafeApiClient {
         response = await this.client.delete(url)
         break
       default:
-        throw new Error(`Unsupported method: ${config.method}`)
+        throw new Error(`Unsupported method`)
     }
 
     // Validate response
@@ -138,9 +139,9 @@ export class TypeSafeApiClient {
       return validatedResponse as ApiResponse<T>
     } catch (error) {
       if (error instanceof z.ZodError) {
-        console.error('Response validation failed:', error.errors)
+        console.error('Response validation failed:', error.issues)
         console.error('Response data:', response.data)
-        const messages = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+        const messages = error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')
         throw new Error(`Invalid response data: ${messages}`)
       }
       throw error

@@ -15,6 +15,7 @@ interface AuthState {
   accessToken: string | null
   refreshToken: string | null
   isAuthenticated: boolean
+  expiresAt?: number
   
   setAuth: (data: LoginResponse) => void
   setAccessToken: (token: string) => void
@@ -59,3 +60,34 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 )
+
+// Helper functions for API client
+export function getStoredAuth() {
+  const state = useAuthStore.getState()
+  if (!state.isAuthenticated) return null
+  return {
+    accessToken: state.accessToken,
+    refreshToken: state.refreshToken,
+    user: state.user || undefined,
+    expiresAt: state.expiresAt
+  }
+}
+
+export function setStoredAuth(auth: { 
+  accessToken: string, 
+  refreshToken: string, 
+  expiresAt?: number,
+  user?: User 
+}) {
+  useAuthStore.setState({
+    accessToken: auth.accessToken,
+    refreshToken: auth.refreshToken,
+    expiresAt: auth.expiresAt,
+    user: auth.user || useAuthStore.getState().user,
+    isAuthenticated: true
+  })
+}
+
+export function clearStoredAuth() {
+  useAuthStore.getState().logout()
+}

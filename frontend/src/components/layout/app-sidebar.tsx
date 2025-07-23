@@ -2,8 +2,7 @@ import {
   LayoutDashboard, 
   Users, 
   Target, 
-  TrendingUp, 
-  Activity,
+  Building2,
   Settings,
   LogOut
 } from "lucide-react"
@@ -30,24 +29,19 @@ const mainNavItems = [
     icon: LayoutDashboard,
   },
   {
-    title: "Contacts",
-    url: "/contacts",
-    icon: Users,
-  },
-  {
     title: "Leads",
     url: "/leads",
     icon: Target,
   },
   {
-    title: "Opportunities",
-    url: "/opportunities",
-    icon: TrendingUp,
+    title: "Contacts",
+    url: "/contacts",
+    icon: Users,
   },
   {
-    title: "Activities",
-    url: "/activities",
-    icon: Activity,
+    title: "Accounts",
+    url: "/accounts",
+    icon: Building2,
   },
 ]
 
