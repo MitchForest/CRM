@@ -56,7 +56,7 @@ export function OpportunityForm() {
   const isEdit = Boolean(id)
 
   const { data: opportunityData, isLoading: isLoadingOpportunity } = useOpportunity(id || '')
-  const { data: accountsData } = useAccounts(1, 100)
+  const { data: accountsData } = useAccounts({ page: 1, pageSize: 100 })
   const createMutation = useCreateOpportunity()
   const updateMutation = useUpdateOpportunity(id || '')
 

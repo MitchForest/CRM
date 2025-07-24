@@ -3,6 +3,7 @@ import { useForm, type SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { ArrowLeft, Loader2 } from 'lucide-react'
+import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -39,8 +40,8 @@ export function TaskForm() {
   const isEdit = Boolean(id)
 
   const { data: task, isLoading: isLoadingTask } = useTask(id || '')
-  const { data: accounts } = useAccounts()
-  const { data: contacts } = useContacts()
+  const { data: accounts } = useAccounts({ pageSize: 100 })
+  const { data: contacts } = useContacts({ pageSize: 100 })
   
   const createTask = useCreateTask()
   const updateTask = useUpdateTask(id || '')
@@ -50,24 +51,33 @@ export function TaskForm() {
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
-    defaultValues: task ? {
-      name: task.name,
-      status: task.status,
-      priority: task.priority as 'High' | 'Medium' | 'Low',
-      dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
-      parentType: task.parentType,
-      parentId: task.parentId,
-      description: task.description,
-    } : {
+    defaultValues: {
       status: 'Not Started',
       priority: 'Medium',
     },
   })
 
   const parentType = watch('parentType')
+
+  // Use effect to reset form when task data is loaded
+  useEffect(() => {
+    if (task && isEdit) {
+      reset({
+        name: task.name,
+        status: task.status,
+        priority: task.priority as 'High' | 'Medium' | 'Low',
+        dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+        startDate: task.startDate ? new Date(task.startDate) : undefined,
+        parentType: task.parentType,
+        parentId: task.parentId,
+        description: task.description,
+      })
+    }
+  }, [task, isEdit, reset])
 
   const onSubmit: SubmitHandler<TaskFormData> = async (data) => {
     try {
@@ -132,8 +142,8 @@ export function TaskForm() {
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
             <Select
+              value={watch('status') || 'Not Started'}
               onValueChange={(value) => setValue('status', value)}
-              defaultValue={task?.status || 'Not Started'}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -151,8 +161,8 @@ export function TaskForm() {
           <div className="space-y-2">
             <Label htmlFor="priority">Priority</Label>
             <Select
+              value={watch('priority') || 'Medium'}
               onValueChange={(value) => setValue('priority', value as 'High' | 'Medium' | 'Low')}
-              defaultValue={task?.priority || 'Medium'}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -190,11 +200,11 @@ export function TaskForm() {
           <div className="space-y-2">
             <Label htmlFor="parentType">Related To</Label>
             <Select
+              value={watch('parentType') || ''}
               onValueChange={(value) => {
                 setValue('parentType', value)
                 setValue('parentId', '')
               }}
-              defaultValue={task?.parentType}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select type" />
@@ -213,8 +223,8 @@ export function TaskForm() {
             <div className="space-y-2">
               <Label htmlFor="parentId">Select {parentType.slice(0, -1)}</Label>
               <Select
+                value={watch('parentId') || ''}
                 onValueChange={(value) => setValue('parentId', value)}
-                defaultValue={task?.parentId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={`Select ${parentType.toLowerCase()}`} />

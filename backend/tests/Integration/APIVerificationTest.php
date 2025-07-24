@@ -12,7 +12,7 @@ function getToken($username, $password) {
     $data = [
         'grant_type' => 'password',
         'client_id' => 'suitecrm_client',
-        'client_secret' => 'secret123',
+        'client_secret' => getenv('OAUTH_CLIENT_SECRET') ?: 'test_secret_for_development_only',
         'username' => $username,
         'password' => $password
     ];

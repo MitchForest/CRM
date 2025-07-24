@@ -14,7 +14,7 @@ NC='\033[0m'
 echo "1. Getting authentication token..."
 TOKEN=$(curl -s -X POST http://localhost:8080/Api/access_token \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=password&client_id=suitecrm_client&client_secret=secret123&username=apiuser&password=apiuser123&scope=" | jq -r '.access_token')
+  -d "grant_type=password&client_id=suitecrm_client&client_secret=\${OAUTH_CLIENT_SECRET:-test_secret_for_development_only}&username=apiuser&password=apiuser123&scope=" | jq -r '.access_token')
 
 if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
     echo -e "${GREEN}✓ OAuth2 JWT authentication working${NC}"

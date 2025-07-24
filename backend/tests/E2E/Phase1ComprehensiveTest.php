@@ -60,7 +60,7 @@ echo "\n2. Authentication Tests\n";
 $authData = http_build_query([
     'grant_type' => 'password',
     'client_id' => 'suitecrm_client',
-    'client_secret' => 'secret123',
+            'client_secret' => getenv('OAUTH_CLIENT_SECRET') ?: 'test_secret_for_development_only',
     'username' => 'apiuser',
     'password' => 'apiuser123'
 ]);
@@ -178,7 +178,7 @@ $refreshData = http_build_query([
     'grant_type' => 'refresh_token',
     'refresh_token' => $refreshToken,
     'client_id' => 'suitecrm_client',
-    'client_secret' => 'secret123'
+                'client_secret' => getenv('OAUTH_CLIENT_SECRET') ?: 'test_secret_for_development_only'
 ]);
 
 $refreshResponse = makeRequest($authUrl, 'POST', $refreshData, [

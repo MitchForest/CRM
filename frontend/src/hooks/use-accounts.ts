@@ -5,13 +5,24 @@ import type { Account } from '@/types/api.generated'
 import { getErrorMessage } from '@/lib/error-utils'
 
 // Get paginated accounts
-export function useAccounts(page = 1, limit = 10, filters?: Record<string, string | number>) {
+export function useAccounts(options?: { page?: number; pageSize?: number } | number, limit = 10, filters?: Record<string, string | number>) {
+  // Handle both object and separate parameters
+  let page = 1
+  let pageSize = limit
+  
+  if (typeof options === 'object' && options !== null) {
+    page = options.page || 1
+    pageSize = options.pageSize || 10
+  } else if (typeof options === 'number') {
+    page = options
+  }
+  
   return useQuery({
-    queryKey: ['accounts', page, limit, filters],
+    queryKey: ['accounts', page, pageSize, filters],
     queryFn: async () => {
       return await apiClient.getAccounts({ 
         page, 
-        pageSize: limit,
+        pageSize,
         ...filters 
       })
     },

@@ -31,18 +31,7 @@ import {
   buildJsonApiPagination,
   type JsonApiError
 } from './api-transformers'
-
-// Get auth token from localStorage
-const getStoredAuth = () => {
-  const stored = localStorage.getItem('auth-storage')
-  if (!stored) return null
-  try {
-    const parsed = JSON.parse(stored)
-    return parsed.state
-  } catch {
-    return null
-  }
-}
+import { getStoredAuth, setStoredAuth, clearStoredAuth } from '@/stores/auth-store'
 
 class ApiClient {
   private client: AxiosInstance
@@ -53,7 +42,7 @@ class ApiClient {
   constructor() {
     // SuiteCRM V8 API client
     this.client = axios.create({
-      baseURL: 'http://localhost:8080/Api/V8', // Direct to SuiteCRM v8 API with correct casing
+      baseURL: '/Api/V8', // Use relative URL to work with Vite proxy
       headers: {
         'Content-Type': 'application/vnd.api+json',
         'Accept': 'application/vnd.api+json',
@@ -62,7 +51,7 @@ class ApiClient {
 
     // Custom API client for Phase 2 features
     this.customClient = axios.create({
-      baseURL: 'http://localhost:8080/api',
+      baseURL: '/api', // Use relative URL to work with Vite proxy
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -110,7 +99,7 @@ class ApiClient {
             return this.client(originalRequest)
           } catch (refreshError) {
             // Refresh failed, logout
-            localStorage.removeItem('auth-storage')
+            clearStoredAuth()
             window.location.href = '/login'
             return Promise.reject(refreshError)
           } finally {
@@ -162,7 +151,7 @@ class ApiClient {
     params.append('refresh_token', auth.refreshToken)
     
     const response = await axios.post(
-      'http://localhost:8080/Api/access_token',
+      '/Api/access_token', // Use relative URL to work with Vite proxy
       params,
       {
         headers: {
@@ -178,14 +167,12 @@ class ApiClient {
     const accessToken = response.data.access_token
     const refreshToken = response.data.refresh_token || auth.refreshToken
     
-    // Update stored auth
-    const stored = localStorage.getItem('auth-storage')
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      parsed.state.accessToken = accessToken
-      parsed.state.refreshToken = refreshToken
-      localStorage.setItem('auth-storage', JSON.stringify(parsed))
-    }
+    // Update stored auth using the helper function
+    setStoredAuth({
+      accessToken,
+      refreshToken,
+      user: auth.user
+    })
     
     return accessToken
   }
@@ -218,7 +205,7 @@ class ApiClient {
     
     try {
       const response = await axios.post(
-        'http://localhost:8080/Api/access_token',
+        '/Api/access_token', // Use relative URL to work with Vite proxy
         params,
         {
           headers: {

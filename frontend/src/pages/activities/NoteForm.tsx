@@ -18,7 +18,7 @@ import { toast } from 'sonner'
 import { useNote, useCreateNote, useUpdateNote } from '@/hooks/use-activities'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useContacts } from '@/hooks/use-contacts'
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
 
 const noteSchema = z.object({
@@ -38,8 +38,8 @@ export function NoteForm() {
   const isEdit = Boolean(id)
 
   const { data: note, isLoading: isLoadingNote } = useNote(id || '')
-  const { data: accounts } = useAccounts()
-  const { data: contacts } = useContacts()
+  const { data: accounts } = useAccounts({ pageSize: 100 })
+  const { data: contacts } = useContacts({ pageSize: 100 })
   
   const createNote = useCreateNote()
   const updateNote = useUpdateNote(id || '')
@@ -49,19 +49,29 @@ export function NoteForm() {
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<NoteFormData>({
     resolver: zodResolver(noteSchema),
-    defaultValues: note ? {
-      name: note.name,
-      description: note.description,
-      parentType: note.parentType,
-      parentId: note.parentId,
-    } : {},
+    defaultValues: {},
   })
 
   const parentType = watch('parentType')
   const fileName = watch('fileName')
+
+  // Use effect to reset form when note data is loaded
+  useEffect(() => {
+    if (note && isEdit) {
+      reset({
+        name: note.name,
+        description: note.description,
+        parentType: note.parentType,
+        parentId: note.parentId,
+        fileName: (note as any).fileName,
+        fileMimeType: (note as any).fileMimeType,
+      })
+    }
+  }, [note, isEdit, reset])
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -139,11 +149,11 @@ export function NoteForm() {
           <div className="space-y-2">
             <Label htmlFor="parentType">Related To</Label>
             <Select
+              value={watch('parentType') || ''}
               onValueChange={(value) => {
                 setValue('parentType', value)
                 setValue('parentId', '')
               }}
-              defaultValue={note?.parentType}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select type" />
@@ -162,8 +172,8 @@ export function NoteForm() {
             <div className="space-y-2">
               <Label htmlFor="parentId">Select {parentType.slice(0, -1)}</Label>
               <Select
+                value={watch('parentId') || ''}
                 onValueChange={(value) => setValue('parentId', value)}
-                defaultValue={note?.parentId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={`Select ${parentType.toLowerCase()}`} />

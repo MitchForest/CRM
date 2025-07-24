@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { ArrowLeft, Loader2 } from 'lucide-react'
+import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -37,7 +38,7 @@ export function CaseForm() {
   const isEdit = Boolean(id)
 
   const { data: caseData, isLoading: isLoadingCase } = useCase(id || '')
-  const { data: contacts } = useContacts()
+  const { data: contacts } = useContacts({ pageSize: 100 })
   
   const createCase = useCreateCase()
   const updateCase = useUpdateCase(id || '')
@@ -47,10 +48,11 @@ export function CaseForm() {
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<CaseFormData>({
     resolver: zodResolver(caseSchema),
-    defaultValues: caseData?.data || {
+    defaultValues: {
       status: 'New',
       priority: 'Medium',
       type: 'Problem',
@@ -58,6 +60,21 @@ export function CaseForm() {
   })
 
   const status = watch('status')
+
+  // Use effect to reset form when case data is loaded
+  useEffect(() => {
+    if (caseData?.data && isEdit) {
+      reset({
+        name: caseData.data.name,
+        status: caseData.data.status,
+        priority: caseData.data.priority as 'High' | 'Medium' | 'Low',
+        type: caseData.data.type,
+        contactId: caseData.data.contactId,
+        description: caseData.data.description,
+        resolution: caseData.data.resolution,
+      })
+    }
+  }, [caseData, isEdit, reset])
 
   const onSubmit = async (data: CaseFormData) => {
     try {
@@ -115,8 +132,8 @@ export function CaseForm() {
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
             <Select
+              value={watch('status') || 'New'}
               onValueChange={(value) => setValue('status', value)}
-              defaultValue={caseData?.data?.status || 'New'}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -134,8 +151,8 @@ export function CaseForm() {
           <div className="space-y-2">
             <Label htmlFor="priority">Priority</Label>
             <Select
+              value={watch('priority') || 'Medium'}
               onValueChange={(value) => setValue('priority', value as 'High' | 'Medium' | 'Low')}
-              defaultValue={caseData?.data?.priority || 'Medium'}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -151,8 +168,8 @@ export function CaseForm() {
           <div className="space-y-2">
             <Label htmlFor="type">Type</Label>
             <Select
+              value={watch('type') || 'Problem'}
               onValueChange={(value) => setValue('type', value)}
-              defaultValue={caseData?.data?.type || 'Problem'}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -170,8 +187,8 @@ export function CaseForm() {
         <div className="space-y-2">
           <Label htmlFor="contactId">Contact</Label>
           <Select
+            value={watch('contactId') || ''}
             onValueChange={(value) => setValue('contactId', value)}
-            defaultValue={caseData?.data?.contactId}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select contact" />

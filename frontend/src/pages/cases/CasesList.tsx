@@ -25,13 +25,13 @@ import { PriorityBadge } from '@/components/ui/priority-badge'
 
 export function CasesList() {
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('')
-  const [priorityFilter, setPriorityFilter] = useState<string>('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [page, setPage] = useState(1)
 
-  const { data, isLoading } = useCases(page, 20, {
-    status: statusFilter || undefined,
-    priority: priorityFilter || undefined,
+  const { data, isLoading, error } = useCases(page, 20, {
+    status: statusFilter === 'all' ? undefined : statusFilter,
+    priority: priorityFilter === 'all' ? undefined : priorityFilter,
     search: searchTerm || undefined,
   })
 
@@ -86,7 +86,7 @@ export function CasesList() {
             <SelectValue placeholder="All statuses" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All statuses</SelectItem>
+            <SelectItem value="all">All statuses</SelectItem>
             <SelectItem value="New">New</SelectItem>
             <SelectItem value="Assigned">Assigned</SelectItem>
             <SelectItem value="In Progress">In Progress</SelectItem>
@@ -102,7 +102,7 @@ export function CasesList() {
             <SelectValue placeholder="All priorities" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All priorities</SelectItem>
+            <SelectItem value="all">All priorities</SelectItem>
             <SelectItem value="High">P1 - High</SelectItem>
             <SelectItem value="Medium">P2 - Medium</SelectItem>
             <SelectItem value="Low">P3 - Low</SelectItem>
@@ -111,6 +111,18 @@ export function CasesList() {
       </div>
 
       {isLoading && <div>Loading cases...</div>}
+
+      {error && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-4">
+          <div className="flex items-center gap-2 text-red-800">
+            <AlertCircle className="h-5 w-5" />
+            <p className="font-medium">Failed to load cases</p>
+          </div>
+          <p className="mt-1 text-sm text-red-700">
+            Please check if the backend server is running and try again.
+          </p>
+        </div>
+      )}
 
       {data && (
         <div className="rounded-md border">

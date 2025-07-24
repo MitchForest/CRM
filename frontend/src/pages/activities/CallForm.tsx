@@ -3,6 +3,7 @@ import { useForm, type SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { ArrowLeft, Loader2 } from 'lucide-react'
+import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -40,8 +41,8 @@ export function CallForm() {
   const isEdit = Boolean(id)
 
   const { data: call, isLoading: isLoadingCall } = useCall(id || '')
-  const { data: accounts } = useAccounts()
-  const { data: contacts } = useContacts()
+  const { data: accounts } = useAccounts({ pageSize: 100 })
+  const { data: contacts } = useContacts({ pageSize: 100 })
   
   const createCall = useCreateCall()
   const updateCall = useUpdateCall(id || '')
@@ -51,20 +52,11 @@ export function CallForm() {
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<CallFormData>({
     resolver: zodResolver(callSchema),
-    defaultValues: call ? {
-      name: call.name,
-      status: call.status,
-      direction: call.direction,
-      startDate: new Date(call.startDate),
-      durationHours: Math.floor((call.duration || 0) / 60),
-      durationMinutes: (call.duration || 0) % 60,
-      parentType: call.parentType,
-      parentId: call.parentId,
-      description: call.description,
-    } : {
+    defaultValues: {
       status: 'Planned',
       direction: 'Outbound',
       startDate: new Date(),
@@ -73,7 +65,26 @@ export function CallForm() {
     },
   })
 
+  // Use effect to reset form when call data is loaded
+  useEffect(() => {
+    if (call && isEdit) {
+      reset({
+        name: call.name,
+        status: call.status,
+        direction: call.direction,
+        startDate: new Date(call.startDate),
+        durationHours: Math.floor((call.duration || 0) / 60),
+        durationMinutes: (call.duration || 0) % 60,
+        parentType: call.parentType,
+        parentId: call.parentId,
+        description: call.description,
+      })
+    }
+  }, [call, isEdit, reset])
+
   const parentType = watch('parentType')
+  const status = watch('status')
+  const direction = watch('direction')
 
   const onSubmit: SubmitHandler<CallFormData> = async (data) => {
     try {
@@ -138,8 +149,8 @@ export function CallForm() {
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
             <Select
+              value={status || 'Planned'}
               onValueChange={(value) => setValue('status', value)}
-              defaultValue={call?.status || 'Planned'}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -155,8 +166,8 @@ export function CallForm() {
           <div className="space-y-2">
             <Label htmlFor="direction">Direction</Label>
             <Select
+              value={direction || 'Outbound'}
               onValueChange={(value) => setValue('direction', value as 'Inbound' | 'Outbound')}
-              defaultValue={call?.direction || 'Outbound'}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -207,11 +218,11 @@ export function CallForm() {
           <div className="space-y-2">
             <Label htmlFor="parentType">Related To</Label>
             <Select
+              value={watch('parentType') || ''}
               onValueChange={(value) => {
                 setValue('parentType', value)
                 setValue('parentId', '')
               }}
-              defaultValue={call?.parentType}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select type" />
@@ -229,8 +240,8 @@ export function CallForm() {
             <div className="space-y-2">
               <Label htmlFor="parentId">Select {parentType.slice(0, -1)}</Label>
               <Select
+                value={watch('parentId') || ''}
                 onValueChange={(value) => setValue('parentId', value)}
-                defaultValue={call?.parentId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={`Select ${parentType.toLowerCase()}`} />

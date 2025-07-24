@@ -17,7 +17,7 @@ http://localhost:8080/Api/V8
 ```bash
 curl -X POST http://localhost:8080/Api/access_token \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=password&client_id=suitecrm_client&client_secret=secret123&username=apiuser&password=apiuser123"
+  -d "grant_type=password&client_id=suitecrm_client&client_secret=YOUR_CLIENT_SECRET&username=apiuser&password=apiuser123"
 ```
 
 **Response:**
@@ -37,7 +37,7 @@ curl -X POST http://localhost:8080/Api/access_token \
 ```bash
 curl -X POST http://localhost:8080/Api/access_token \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=refresh_token&refresh_token=YOUR_REFRESH_TOKEN&client_id=suitecrm_client&client_secret=secret123"
+  -d "grant_type=refresh_token&refresh_token=YOUR_REFRESH_TOKEN&client_id=suitecrm_client&client_secret=YOUR_CLIENT_SECRET"
 ```
 
 ## API Endpoints

@@ -42,8 +42,8 @@ export function MeetingForm() {
   const isEdit = Boolean(id)
 
   const { data: meeting, isLoading: isLoadingMeeting } = useMeeting(id || '')
-  const { data: accounts } = useAccounts()
-  const { data: contacts } = useContacts()
+  const { data: accounts } = useAccounts({ pageSize: 100 })
+  const { data: contacts } = useContacts({ pageSize: 100 })
   
   const createMeeting = useCreateMeeting()
   const updateMeeting = useUpdateMeeting(id || '')
@@ -53,20 +53,11 @@ export function MeetingForm() {
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<MeetingFormData>({
     resolver: zodResolver(meetingSchema),
-    defaultValues: meeting ? {
-      name: meeting.name,
-      status: meeting.status,
-      startDate: new Date(meeting.startDate),
-      durationHours: Math.floor((meeting.duration || 0) / 60),
-      durationMinutes: (meeting.duration || 0) % 60,
-      location: meeting.location,
-      parentType: meeting.parentType,
-      parentId: meeting.parentId,
-      description: meeting.description,
-    } : {
+    defaultValues: {
       status: 'Planned',
       startDate: new Date(),
       durationHours: 1,
@@ -78,6 +69,23 @@ export function MeetingForm() {
   const startDate = watch('startDate')
   const durationHours = watch('durationHours')
   const durationMinutes = watch('durationMinutes')
+
+  // Use effect to reset form when meeting data is loaded
+  React.useEffect(() => {
+    if (meeting && isEdit) {
+      reset({
+        name: meeting.name,
+        status: meeting.status,
+        startDate: new Date(meeting.startDate),
+        durationHours: Math.floor((meeting.duration || 0) / 60),
+        durationMinutes: (meeting.duration || 0) % 60,
+        location: meeting.location,
+        parentType: meeting.parentType,
+        parentId: meeting.parentId,
+        description: meeting.description,
+      })
+    }
+  }, [meeting, isEdit, reset])
 
   // Calculate end date based on start date and duration
   React.useEffect(() => {
@@ -155,8 +163,8 @@ export function MeetingForm() {
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
             <Select
+              value={watch('status') || 'Planned'}
               onValueChange={(value) => setValue('status', value)}
-              defaultValue={meeting?.status || 'Planned'}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -219,11 +227,11 @@ export function MeetingForm() {
           <div className="space-y-2">
             <Label htmlFor="parentType">Related To</Label>
             <Select
+              value={watch('parentType') || ''}
               onValueChange={(value) => {
                 setValue('parentType', value)
                 setValue('parentId', '')
               }}
-              defaultValue={meeting?.parentType}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select type" />
@@ -241,8 +249,8 @@ export function MeetingForm() {
             <div className="space-y-2">
               <Label htmlFor="parentId">Select {parentType.slice(0, -1)}</Label>
               <Select
+                value={watch('parentId') || ''}
                 onValueChange={(value) => setValue('parentId', value)}
-                defaultValue={meeting?.parentId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={`Select ${parentType.toLowerCase()}`} />

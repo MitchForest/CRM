@@ -90,7 +90,7 @@ try {
     // Also create a simple client for testing
     $testId = generateUUID();
     $testClientId = 'test_client';
-    $testClientSecret = 'test_secret';
+    $testClientSecret = 'test_secret_for_development_only';
     
     $stmt = $pdo->prepare("SELECT id FROM oauth2clients WHERE client_id = ? AND deleted = 0");
     $stmt->execute([$testClientId]);
