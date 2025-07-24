@@ -31,17 +31,28 @@ export function OpportunityCard({ opportunity }: OpportunityCardProps) {
     (opportunity.probability || 0) >= 40 ? 'text-yellow-600' :
     'text-red-600'
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | string | undefined) => {
+    if (!amount) return '$0'
+    
+    // Convert to number and handle potential string values
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
+    
+    if (isNaN(numAmount) || !isFinite(numAmount)) {
+      return '$0'
+    }
+    
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: opportunity.currency || 'USD',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(amount)
+    }).format(numAmount)
   }
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return 'No date'
     const date = new Date(dateString)
+    if (isNaN(date.getTime())) return 'Invalid date'
     return new Intl.DateTimeFormat('en-US', {
       month: 'short',
       day: 'numeric',
@@ -55,9 +66,16 @@ export function OpportunityCard({ opportunity }: OpportunityCardProps) {
       style={style}
       {...attributes}
       {...listeners}
-      className={cn(isDragging && 'opacity-50')}
+      className={cn(
+        "transform-gpu",
+        isDragging && "opacity-50"
+      )}
     >
-      <Card className="cursor-grab hover:shadow-md active:cursor-grabbing">
+      <Card className={cn(
+        "cursor-grab hover:shadow-md active:cursor-grabbing transition-all duration-200",
+        "hover:scale-[1.02] hover:-translate-y-1",
+        isDragging && "ring-2 ring-primary"
+      )}>
         <CardContent className="p-4">
           <Link
             to={`/opportunities/${opportunity.id}`}
@@ -77,7 +95,7 @@ export function OpportunityCard({ opportunity }: OpportunityCardProps) {
               <div className="flex items-center gap-1">
                 <DollarSign className="h-3 w-3" />
                 <span className="font-semibold">
-                  {formatCurrency(opportunity.amount)}
+                  {formatCurrency(opportunity.amount || 0)}
                 </span>
               </div>
               <Badge variant="secondary" className={cn(probabilityColor)}>

@@ -1,9 +1,11 @@
+import { useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { Layout } from '@/components/layout/Layout'
 import { LoginPage } from '@/pages/Login'
+import { useAuthStore } from '@/stores/auth-store'
 import { DashboardPage } from '@/pages/Dashboard'
 import { ContactsPage } from '@/pages/Contacts'
 import { ContactDetailPage } from '@/pages/ContactDetail'
@@ -45,9 +47,37 @@ const queryClient = new QueryClient({
   },
 })
 
-export function App() {
+function AppContent() {
+  const { accessToken, refreshToken } = useAuthStore()
+
+  useEffect(() => {
+    // Sync auth tokens with API client when they change
+    if (accessToken) {
+      // The API client will pick up the token from localStorage via getStoredAuth
+      // Force a re-read by updating the axios default headers
+      const authData = {
+        accessToken,
+        refreshToken
+      }
+      // Store in expected format for getStoredAuth
+      const stored = localStorage.getItem('auth-storage')
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored)
+          // Ensure the token is in the right place
+          if (parsed.state && parsed.state.accessToken !== accessToken) {
+            parsed.state.accessToken = accessToken
+            parsed.state.refreshToken = refreshToken
+            localStorage.setItem('auth-storage', JSON.stringify(parsed))
+          }
+        } catch (e) {
+          console.error('Failed to sync auth storage:', e)
+        }
+      }
+    }
+  }, [accessToken, refreshToken])
+
   return (
-    <QueryClientProvider client={queryClient}>
       <Router>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
@@ -105,6 +135,13 @@ export function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
+  )
+}
+
+export function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AppContent />
       <Toaster position="top-right" />
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

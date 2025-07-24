@@ -6,7 +6,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
+import type { DragEndEvent, DragStartEvent, DragOverEvent } from '@dnd-kit/core'
 import {
   SortableContext,
   verticalListSortingStrategy,
@@ -36,6 +36,7 @@ interface OpportunitiesKanbanProps {
 
 export function OpportunitiesKanban({ opportunities }: OpportunitiesKanbanProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [overId, setOverId] = useState<string | null>(null)
   const updateStageMutation = useUpdateOpportunityStage()
 
   const sensors = useSensors(
@@ -50,25 +51,42 @@ export function OpportunitiesKanban({ opportunities }: OpportunitiesKanbanProps)
     setActiveId(event.active.id as string)
   }
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event
+    setOverId(over ? over.id as string : null)
+  }
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
+    
+    setActiveId(null)
+    setOverId(null)
 
-    if (!over || active.id === over.id) {
-      setActiveId(null)
-      return
-    }
+    if (!over) return
 
     const opportunity = opportunities.find(opp => opp.id === active.id)
-    const newStage = over.id as string
+    if (!opportunity) return
 
-    if (opportunity && opportunity.salesStage !== newStage) {
-      updateStageMutation.mutate({
-        id: opportunity.id!,
-        stage: newStage,
-      })
+    // Check if we're dropping on a column or another card
+    let targetStage: string | null = null
+    
+    // If dropping on a column directly
+    if (stages.includes(over.id as string)) {
+      targetStage = over.id as string
+    } else {
+      // If dropping on another card, find which stage that card is in
+      const targetOpp = opportunities.find(opp => opp.id === over.id)
+      if (targetOpp) {
+        targetStage = targetOpp.salesStage || 'Qualification'
+      }
     }
 
-    setActiveId(null)
+    if (targetStage && opportunity.salesStage !== targetStage) {
+      updateStageMutation.mutate({
+        id: opportunity.id!,
+        stage: targetStage,
+      })
+    }
   }
 
   const opportunitiesByStage = stages.reduce((acc, stage) => {
@@ -93,6 +111,7 @@ export function OpportunitiesKanban({ opportunities }: OpportunitiesKanbanProps)
     <DndContext
       sensors={sensors}
       onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
       <ScrollArea className="h-[calc(100vh-12rem)] w-full">
@@ -100,7 +119,10 @@ export function OpportunitiesKanban({ opportunities }: OpportunitiesKanbanProps)
           {stages.map((stage) => {
             const stageOpportunities = opportunitiesByStage[stage] || []
             const totalValue = stageOpportunities.reduce(
-              (sum, opp) => sum + (opp.amount || 0),
+              (sum, opp) => {
+                const amount = typeof opp.amount === 'string' ? parseFloat(opp.amount) : (opp.amount || 0)
+                return sum + (isNaN(amount) || !isFinite(amount) ? 0 : amount)
+              },
               0
             )
 
@@ -111,6 +133,7 @@ export function OpportunitiesKanban({ opportunities }: OpportunitiesKanbanProps)
                 title={stage}
                 count={stageOpportunities.length}
                 value={formatCurrency(totalValue)}
+                isEmpty={stageOpportunities.length === 0}
               >
                 <SortableContext
                   items={stageOpportunities.map(opp => opp.id || '')}
@@ -131,9 +154,9 @@ export function OpportunitiesKanban({ opportunities }: OpportunitiesKanbanProps)
 
       <DragOverlay>
         {activeOpportunity && (
-          <Card className="cursor-grabbing opacity-50">
+          <div className="cursor-grabbing opacity-80">
             <OpportunityCard opportunity={activeOpportunity} />
-          </Card>
+          </div>
         )}
       </DragOverlay>
     </DndContext>

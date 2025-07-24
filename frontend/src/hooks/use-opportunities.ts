@@ -90,14 +90,51 @@ export function useUpdateOpportunityStage() {
     mutationFn: async ({ id, stage }: { id: string; stage: string }) => {
       return await apiClient.updateOpportunityStage(id, stage)
     },
-    onSuccess: (_, variables) => {
-      // Invalidate both specific opportunity and list queries
-      queryClient.invalidateQueries({ queryKey: ['opportunity', variables.id] })
-      queryClient.invalidateQueries({ queryKey: ['opportunities'] })
-      // Don't show toast for drag-drop operations to avoid spam
+    onMutate: async ({ id, stage }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['opportunities', 'pipeline'] })
+
+      // Snapshot the previous value
+      const previousData = queryClient.getQueryData(['opportunities', 'pipeline'])
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(['opportunities', 'pipeline'], (old: any) => {
+        if (!old) return old
+        
+        const updatedOpportunities = old.opportunities.map((opp: Opportunity) =>
+          opp.id === id ? { ...opp, salesStage: stage } : opp
+        )
+        
+        // Rebuild the byStage grouping
+        const opportunitiesByStage = updatedOpportunities.reduce((acc: any, opp: Opportunity) => {
+          const stageKey = opp.salesStage || 'Qualification'
+          if (!acc[stageKey]) {
+            acc[stageKey] = []
+          }
+          acc[stageKey].push(opp)
+          return acc
+        }, {})
+        
+        return {
+          ...old,
+          opportunities: updatedOpportunities,
+          byStage: opportunitiesByStage
+        }
+      })
+
+      // Return a context object with the snapshotted value
+      return { previousData }
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, _, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousData) {
+        queryClient.setQueryData(['opportunities', 'pipeline'], context.previousData)
+      }
       toast.error(getErrorMessage(error, 'Failed to update opportunity stage'))
+    },
+    onSettled: () => {
+      // Always refetch after error or success
+      queryClient.invalidateQueries({ queryKey: ['opportunities', 'pipeline'] })
     },
   })
 }
@@ -129,6 +166,7 @@ export function useOpportunitiesPipeline() {
       const response = await apiClient.getOpportunities({ 
         pageSize: 200, // Get more for complete pipeline view
       })
+      
       
       // Group by stage for pipeline
       const opportunitiesByStage = response.data.reduce((acc, opp) => {
@@ -163,10 +201,18 @@ export function usePipelineMetrics() {
     }
   }
   
-  const totalValue = data.opportunities.reduce((sum, opp) => sum + (opp.amount || 0), 0)
-  const weightedValue = data.opportunities.reduce((sum, opp) => 
-    sum + ((opp.amount || 0) * (opp.probability || 0) / 100), 0
-  )
+  const totalValue = data.opportunities.reduce((sum, opp) => {
+    const amount = typeof opp.amount === 'string' ? parseFloat(opp.amount) : (opp.amount || 0)
+    return sum + (isNaN(amount) || !isFinite(amount) ? 0 : amount)
+  }, 0)
+  
+  const weightedValue = data.opportunities.reduce((sum, opp) => {
+    const amount = typeof opp.amount === 'string' ? parseFloat(opp.amount) : (opp.amount || 0)
+    const probability = typeof opp.probability === 'string' ? parseFloat(opp.probability) : (opp.probability || 0)
+    const validAmount = isNaN(amount) || !isFinite(amount) ? 0 : amount
+    const validProbability = isNaN(probability) || !isFinite(probability) ? 0 : probability
+    return sum + (validAmount * validProbability / 100)
+  }, 0)
   const averageDealSize = data.opportunities.length > 0 
     ? totalValue / data.opportunities.length 
     : 0
@@ -174,7 +220,10 @@ export function usePipelineMetrics() {
   const stageMetrics = Object.entries(data.byStage).map(([stage, opps]) => ({
     stage,
     count: opps.length,
-    value: opps.reduce((sum, opp) => sum + (opp.amount || 0), 0)
+    value: opps.reduce((sum, opp) => {
+      const amount = typeof opp.amount === 'string' ? parseFloat(opp.amount) : (opp.amount || 0)
+      return sum + (isNaN(amount) || !isFinite(amount) ? 0 : amount)
+    }, 0)
   }))
   
   return {

@@ -239,21 +239,33 @@ class ApiClient {
           expiresIn: response.data.expires_in,
           tokenType: response.data.token_type || 'Bearer',
           user: {
-            id: 'apiuser',
+            id: response.data.user_id || 'apiuser',
             username: username,
-            email: `${username}@example.com`,
-            firstName: username,
-            lastName: 'User'
+            email: response.data.email || `${username}@example.com`,
+            firstName: response.data.first_name || username,
+            lastName: response.data.last_name || 'User',
+            role: response.data.role || 'admin'
           }
         }
       }
-    } catch {
+    } catch (error) {
+      console.error('Login error:', error)
+      if (axios.isAxiosError(error)) {
+        return {
+          success: false,
+          error: {
+            error: error.response?.data?.error || 'Login failed',
+            code: error.response?.status?.toString() || 'UNKNOWN',
+            details: error.response?.data || { message: 'Authentication failed' }
+          }
+        }
+      }
       return {
         success: false,
         error: {
           error: 'Login failed',
-          code: 'INVALID_CREDENTIALS',
-          details: { message: 'Invalid credentials' }
+          code: 'UNKNOWN',
+          details: { message: 'An unexpected error occurred' }
         }
       }
     }
@@ -742,12 +754,13 @@ class ApiClient {
       ...buildJsonApiPagination(params?.page, params?.pageSize)
     }
     
+    // SuiteCRM V8 API requires operator for each filter
     if (params?.status) {
-      queryParams['filter[status]'] = params.status
+      queryParams['filter[status][eq]'] = params.status
     }
     
     if (params?.priority) {
-      queryParams['filter[priority]'] = params.priority
+      queryParams['filter[priority][eq]'] = params.priority
     }
     
     if (params?.search) {
