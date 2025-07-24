@@ -243,8 +243,7 @@ class ApiClient {
             username: username,
             email: response.data.email || `${username}@example.com`,
             firstName: response.data.first_name || username,
-            lastName: response.data.last_name || 'User',
-            role: response.data.role || 'admin'
+            lastName: response.data.last_name || 'User'
           }
         }
       }

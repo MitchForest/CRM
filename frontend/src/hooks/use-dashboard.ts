@@ -108,7 +108,7 @@ export function useRecentActivities() {
       
       // Transform upcoming activities into the expected format
       const rawData = response.data as any
-      const activities = rawData.upcomingActivities || rawData.upcoming_activities || []
+      const activities = (rawData.upcomingActivities || rawData.upcoming_activities || []) as any[]
       return activities.slice(0, 10).map((activity: any) => ({
         id: activity.id,
         type: activity.type || 'Task' as const,

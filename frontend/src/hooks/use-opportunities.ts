@@ -98,15 +98,16 @@ export function useUpdateOpportunityStage() {
       const previousData = queryClient.getQueryData(['opportunities', 'pipeline'])
 
       // Optimistically update to the new value
-      queryClient.setQueryData(['opportunities', 'pipeline'], (old: any) => {
+      queryClient.setQueryData(['opportunities', 'pipeline'], (old: unknown) => {
         if (!old) return old
+        const typedOld = old as { opportunities: Opportunity[] }
         
-        const updatedOpportunities = old.opportunities.map((opp: Opportunity) =>
+        const updatedOpportunities = typedOld.opportunities.map((opp: Opportunity) =>
           opp.id === id ? { ...opp, salesStage: stage } : opp
         )
         
         // Rebuild the byStage grouping
-        const opportunitiesByStage = updatedOpportunities.reduce((acc: any, opp: Opportunity) => {
+        const opportunitiesByStage = updatedOpportunities.reduce((acc: Record<string, Opportunity[]>, opp: Opportunity) => {
           const stageKey = opp.salesStage || 'Qualification'
           if (!acc[stageKey]) {
             acc[stageKey] = []

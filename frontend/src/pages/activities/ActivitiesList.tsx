@@ -233,6 +233,14 @@ function ActivityTimeline({ activities }: { activities: BaseActivity[] }) {
                 <span>{activity.type}</span>
                 {activity.status && <Badge variant="outline" className="text-xs">{activity.status}</Badge>}
                 {activity.assignedUserName && <span>Assigned to: {activity.assignedUserName}</span>}
+                {activity.parentType && activity.parentId && activity.parentName && (
+                  <Link 
+                    to={`/${activity.parentType.toLowerCase()}s/${activity.parentId}`}
+                    className="text-primary hover:underline"
+                  >
+                    {activity.parentName}
+                  </Link>
+                )}
               </div>
             </div>
           </div>
@@ -263,6 +271,14 @@ function CallsList({ calls }: { calls: Call[] }) {
               <span>{call.direction || 'Outbound'}</span>
               {call.startDate && <span>{formatDate(call.startDate)} {formatTime(call.startDate)}</span>}
               <span>{call.duration ? `${Math.floor(call.duration / 60)}h ${call.duration % 60}m` : '0h 0m'}</span>
+              {call.parentType && call.parentId && call.parentName && (
+                <Link 
+                  to={`/${call.parentType.toLowerCase()}s/${call.parentId}`}
+                  className="text-primary hover:underline"
+                >
+                  {call.parentName}
+                </Link>
+              )}
             </div>
           </div>
           <Badge variant="outline">{call.status}</Badge>
@@ -293,6 +309,14 @@ function MeetingsList({ meetings }: { meetings: Meeting[] }) {
               {meeting.location && <span>{meeting.location}</span>}
               {meeting.startDate && <span>{formatDate(meeting.startDate)} {formatTime(meeting.startDate)}</span>}
               <span>{meeting.duration ? `${Math.floor(meeting.duration / 60)}h ${meeting.duration % 60}m` : '0h 0m'}</span>
+              {meeting.parentType && meeting.parentId && meeting.parentName && (
+                <Link 
+                  to={`/${meeting.parentType.toLowerCase()}s/${meeting.parentId}`}
+                  className="text-primary hover:underline"
+                >
+                  {meeting.parentName}
+                </Link>
+              )}
             </div>
           </div>
           <Badge variant="outline">{meeting.status}</Badge>
@@ -322,6 +346,14 @@ function TasksList({ tasks }: { tasks: Task[] }) {
             <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
               {task.priority && <Badge variant={task.priority === 'High' ? 'destructive' : 'secondary'}>{task.priority}</Badge>}
               {task.dueDate && <span>Due: {formatDate(task.dueDate)}</span>}
+              {task.parentType && task.parentId && task.parentName && (
+                <Link 
+                  to={`/${task.parentType.toLowerCase()}s/${task.parentId}`}
+                  className="text-primary hover:underline"
+                >
+                  {task.parentName}
+                </Link>
+              )}
             </div>
           </div>
           <Badge variant="outline">{task.status}</Badge>
@@ -352,8 +384,16 @@ function NotesList({ notes }: { notes: Note[] }) {
               {note.description}
             </p>
             <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-              <span>Created: {formatDate((note as any).dateEntered || '')}</span>
-              {(note as any).fileName && <span>📎 {(note as any).fileName}</span>}
+              <span>Created: {formatDate('dateEntered' in note && typeof note.dateEntered === 'string' ? note.dateEntered : '')}</span>
+              {'fileName' in note && note.fileName ? <span>📎 {String(note.fileName)}</span> : null}
+              {note.parentType && note.parentId && note.parentName && (
+                <Link 
+                  to={`/${note.parentType.toLowerCase()}s/${note.parentId}`}
+                  className="text-primary hover:underline"
+                >
+                  {note.parentName}
+                </Link>
+              )}
             </div>
           </div>
         </div>

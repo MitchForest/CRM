@@ -15,11 +15,14 @@ import { LeadDetailPage } from '@/pages/LeadDetail'
 import { LeadFormPage } from '@/pages/LeadForm'
 import { AccountsListPage } from '@/pages/AccountsList'
 import { AccountFormPage } from '@/pages/AccountForm'
+import { AccountDetailPage } from '@/pages/AccountDetail'
 import { LeadDebugPage } from '@/pages/LeadDebug'
+import { SettingsPage } from '@/pages/Settings'
 
 // Opportunities
 import { OpportunitiesPipeline } from '@/pages/opportunities/OpportunitiesPipeline'
 import { OpportunityForm } from '@/pages/opportunities/OpportunityForm'
+import { OpportunityDetailPage } from '@/pages/opportunities/OpportunityDetail'
 
 // Activities
 import { ActivitiesList } from '@/pages/activities/ActivitiesList'
@@ -55,10 +58,7 @@ function AppContent() {
     if (accessToken) {
       // The API client will pick up the token from localStorage via getStoredAuth
       // Force a re-read by updating the axios default headers
-      const authData = {
-        accessToken,
-        refreshToken
-      }
+      // Update local storage to sync tokens
       // Store in expected format for getStoredAuth
       const stored = localStorage.getItem('auth-storage')
       if (stored) {
@@ -104,12 +104,14 @@ function AppContent() {
             {/* Accounts Routes */}
             <Route path="/accounts" element={<AccountsListPage />} />
             <Route path="/accounts/new" element={<AccountFormPage />} />
+            <Route path="/accounts/:id" element={<AccountDetailPage />} />
             <Route path="/accounts/:id/edit" element={<AccountFormPage />} />
             
             {/* Opportunities Routes */}
             <Route path="/opportunities" element={<OpportunitiesPipeline />} />
             <Route path="/opportunities/new" element={<OpportunityForm />} />
-            <Route path="/opportunities/:id" element={<OpportunityForm />} />
+            <Route path="/opportunities/:id" element={<OpportunityDetailPage />} />
+            <Route path="/opportunities/:id/edit" element={<OpportunityForm />} />
             
             {/* Activities Routes */}
             <Route path="/activities" element={<ActivitiesList />} />
@@ -129,7 +131,7 @@ function AppContent() {
             <Route path="/cases/:id/edit" element={<CaseForm />} />
             
             <Route path="/debug/leads" element={<LeadDebugPage />} />
-            <Route path="/settings" element={<div>Settings Page (Coming Soon)</div>} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
           
           <Route path="*" element={<Navigate to="/" replace />} />

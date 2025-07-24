@@ -144,7 +144,7 @@ export function CasesList() {
                     </Badge>
                   </TableCell>
                   <TableCell>{caseItem.assignedUserName || '-'}</TableCell>
-                  <TableCell>{formatDate(new Date().toISOString())}</TableCell>
+                  <TableCell>{formatDate(caseItem.createdAt || caseItem.updatedAt || '')}</TableCell>
                   <TableCell>
                     <Button variant="ghost" size="sm" asChild>
                       <Link to={`/cases/${caseItem.id}`}>View</Link>

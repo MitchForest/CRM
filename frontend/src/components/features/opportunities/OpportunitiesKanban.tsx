@@ -11,7 +11,6 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import { Card } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { KanbanColumn } from './KanbanColumn'
 import { OpportunityCard } from './OpportunityCard'
@@ -36,7 +35,6 @@ interface OpportunitiesKanbanProps {
 
 export function OpportunitiesKanban({ opportunities }: OpportunitiesKanbanProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
-  const [overId, setOverId] = useState<string | null>(null)
   const updateStageMutation = useUpdateOpportunityStage()
 
   const sensors = useSensors(
@@ -51,16 +49,14 @@ export function OpportunitiesKanban({ opportunities }: OpportunitiesKanbanProps)
     setActiveId(event.active.id as string)
   }
 
-  const handleDragOver = (event: DragOverEvent) => {
-    const { over } = event
-    setOverId(over ? over.id as string : null)
+  const handleDragOver = (_event: DragOverEvent) => {
+    // Drag over handling if needed
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     
     setActiveId(null)
-    setOverId(null)
 
     if (!over) return
 
@@ -71,8 +67,8 @@ export function OpportunitiesKanban({ opportunities }: OpportunitiesKanbanProps)
     let targetStage: string | null = null
     
     // If dropping on a column directly
-    if (stages.includes(over.id as string)) {
-      targetStage = over.id as string
+    if (stages.includes(over.id as OpportunityStage)) {
+      targetStage = over.id as OpportunityStage
     } else {
       // If dropping on another card, find which stage that card is in
       const targetOpp = opportunities.find(opp => opp.id === over.id)
@@ -84,7 +80,7 @@ export function OpportunitiesKanban({ opportunities }: OpportunitiesKanbanProps)
     if (targetStage && opportunity.salesStage !== targetStage) {
       updateStageMutation.mutate({
         id: opportunity.id!,
-        stage: targetStage,
+        stage: targetStage as OpportunityStage,
       })
     }
   }

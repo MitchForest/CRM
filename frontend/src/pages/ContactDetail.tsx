@@ -1,17 +1,22 @@
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Mail, Phone, Edit, Trash2 } from 'lucide-react'
+import { ArrowLeft, Mail, Phone, Edit, Trash2, AlertCircle, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useContact } from '@/hooks/use-contacts'
+import { useCases } from '@/hooks/use-cases'
 import { formatDate, formatDateTime } from '@/lib/utils'
+import { ActivityTimeline } from '@/components/activities/ActivityTimeline'
+import { useActivitiesByParent } from '@/hooks/use-activities'
 
 export function ContactDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { data: contactData, isLoading: contactLoading } = useContact(id!)
-  // const { data: activitiesData, isLoading: activitiesLoading } = useContactActivities(id!)
+  const { data: cases, isLoading: casesLoading } = useCases(1, 50)
+  const { data: activities } = useActivitiesByParent('Contact', id!)
 
   if (contactLoading) {
     return (
@@ -137,8 +142,12 @@ export function ContactDetailPage() {
 
           <Tabs defaultValue="activities" className="w-full">
             <TabsList>
-              <TabsTrigger value="activities">Activities</TabsTrigger>
-              <TabsTrigger value="cases">Cases</TabsTrigger>
+              <TabsTrigger value="activities">
+                Activities {activities && `(${activities.length})`}
+              </TabsTrigger>
+              <TabsTrigger value="cases">
+                Cases {cases && `(${cases.data.length})`}
+              </TabsTrigger>
             </TabsList>
             
             <TabsContent value="activities" className="space-y-4">
@@ -150,19 +159,81 @@ export function ContactDetailPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-center text-muted-foreground">
-                    Activity timeline coming soon
-                  </p>
+                  <ActivityTimeline parentType="Contact" parentId={id!} />
                 </CardContent>
               </Card>
             </TabsContent>
 
             <TabsContent value="cases">
               <Card>
-                <CardContent className="p-6">
-                  <p className="text-center text-muted-foreground">
-                    Cases feature coming soon
-                  </p>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Related Cases</CardTitle>
+                      <CardDescription>
+                        Support cases associated with this contact
+                      </CardDescription>
+                    </div>
+                    <Button size="sm" asChild>
+                      <Link to={`/cases/new?contactId=${id}`}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Case
+                      </Link>
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {casesLoading ? (
+                    <div className="space-y-2">
+                      {[1, 2, 3].map((i) => (
+                        <Skeleton key={i} className="h-16" />
+                      ))}
+                    </div>
+                  ) : cases && cases.data.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Number</TableHead>
+                          <TableHead>Subject</TableHead>
+                          <TableHead>Priority</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Created</TableHead>
+                          <TableHead></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {cases.data.map((caseItem) => (
+                          <TableRow key={caseItem.id}>
+                            <TableCell className="font-medium">#{caseItem.caseNumber || caseItem.id}</TableCell>
+                            <TableCell>{caseItem.name}</TableCell>
+                            <TableCell>
+                              <Badge variant={
+                                caseItem.priority === 'High' ? 'destructive' :
+                                caseItem.priority === 'Medium' ? 'default' : 'secondary'
+                              }>
+                                {caseItem.priority}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge>{caseItem.status}</Badge>
+                            </TableCell>
+                            <TableCell>{formatDate(caseItem.createdAt || caseItem.updatedAt || '')}</TableCell>
+                            <TableCell>
+                              <Button variant="ghost" size="sm" asChild>
+                                <Link to={`/cases/${caseItem.id}`}>View</Link>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <AlertCircle className="mx-auto h-12 w-12 mb-3 opacity-20" />
+                      <p>No cases yet</p>
+                      <p className="text-sm mt-1">Cases will appear here when created</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

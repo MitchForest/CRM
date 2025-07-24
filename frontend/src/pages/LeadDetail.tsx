@@ -9,6 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useLead, useConvertLead, useDeleteLead } from '@/hooks/use-leads'
 import { formatDateTime } from '@/lib/utils'
+import { ActivityTimeline } from '@/components/activities/ActivityTimeline'
+import { useActivitiesByParent } from '@/hooks/use-activities'
 
 const statusColors = {
   New: 'bg-blue-100 text-blue-700',
@@ -24,7 +26,7 @@ export function LeadDetailPage() {
   const [showConvertDialog, setShowConvertDialog] = useState(false)
 
   const { data: leadData, isLoading: leadLoading } = useLead(id!)
-  // const { data: activitiesData, isLoading: activitiesLoading } = useLeadActivities(id!)
+  const { data: activities } = useActivitiesByParent('Lead', id!)
   const convertLead = useConvertLead()
   const deleteLead = useDeleteLead()
 
@@ -200,7 +202,9 @@ export function LeadDetailPage() {
 
           <Tabs defaultValue="activities" className="w-full">
             <TabsList>
-              <TabsTrigger value="activities">Activities</TabsTrigger>
+              <TabsTrigger value="activities">
+                Activities {activities && `(${activities.length})`}
+              </TabsTrigger>
               <TabsTrigger value="history">History</TabsTrigger>
             </TabsList>
             
@@ -213,9 +217,7 @@ export function LeadDetailPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-center text-muted-foreground">
-                    Activity timeline coming soon
-                  </p>
+                  <ActivityTimeline parentType="Lead" parentId={id!} />
                 </CardContent>
               </Card>
             </TabsContent>

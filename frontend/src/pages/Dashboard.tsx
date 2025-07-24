@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { EntityActivities } from '@/components/dashboard/EntityActivities'
 import {
   BarChart,
   Bar,
@@ -101,11 +102,11 @@ export function DashboardPage() {
     )
   }
 
-  const dashboardData = stats?.data?.data || {
-    totalLeads: 0,
-    totalAccounts: 0,
-    newLeadsToday: 0,
-    pipelineValue: 0,
+  const dashboardData = {
+    totalLeads: stats?.data?.data?.totalLeads || 0,
+    totalAccounts: stats?.data?.data?.totalAccounts || 0,
+    newLeadsToday: stats?.data?.data?.newLeadsToday || 0,
+    pipelineValue: stats?.data?.data?.pipelineValue || 0,
   }
 
   // Calculate pipeline metrics
@@ -217,7 +218,7 @@ export function DashboardPage() {
             <CardTitle>Cases by Priority</CardTitle>
           </CardHeader>
           <CardContent>
-            {caseMetrics?.data?.data?.casesByPriority && caseMetrics.data.data.casesByPriority.length > 0 ? (
+            {caseMetrics?.data?.data?.casesByPriority && Array.isArray(caseMetrics.data.data.casesByPriority) && caseMetrics.data.data.casesByPriority.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
@@ -230,7 +231,7 @@ export function DashboardPage() {
                     fill="#8884d8"
                     dataKey="count"
                   >
-                    {caseMetrics.data.data.casesByPriority.map((_, index) => (
+                    {caseMetrics.data.data.casesByPriority.map((_: unknown, index: number) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -277,17 +278,17 @@ export function DashboardPage() {
                               to={`/${activity.type.toLowerCase()}s/${activity.id}`}
                               className="font-medium hover:underline"
                             >
-                              {activity.name}
+                              {String(activity.name)}
                             </Link>
                             <p className="text-sm text-muted-foreground">
-                              {activity.description}
+                              {String(activity.description)}
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline">{activity.type}</Badge>
                           <span className="text-xs text-muted-foreground">
-                            {formatDate(activity.date)}
+                            {formatDate(String(activity.date))}
                           </span>
                         </div>
                       </div>
@@ -299,19 +300,13 @@ export function DashboardPage() {
               )}
             </TabsContent>
             <TabsContent value="leads" className="mt-4">
-              <div className="space-y-4">
-                <p className="text-muted-foreground">Lead activity tracking coming soon</p>
-              </div>
+              <EntityActivities entityType="Lead" />
             </TabsContent>
             <TabsContent value="opportunities" className="mt-4">
-              <div className="space-y-4">
-                <p className="text-muted-foreground">Opportunity activity tracking coming soon</p>
-              </div>
+              <EntityActivities entityType="Opportunity" />
             </TabsContent>
             <TabsContent value="cases" className="mt-4">
-              <div className="space-y-4">
-                <p className="text-muted-foreground">Case activity tracking coming soon</p>
-              </div>
+              <EntityActivities entityType="Case" />
             </TabsContent>
           </Tabs>
         </CardContent>
@@ -342,7 +337,7 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
-              {caseMetrics?.data?.data?.avgResolutionTime ? 
+              {caseMetrics?.data?.data?.avgResolutionTime && typeof caseMetrics.data.data.avgResolutionTime === 'number' ? 
                 `${caseMetrics.data.data.avgResolutionTime.toFixed(1)} days` : 
                 'N/A'
               }

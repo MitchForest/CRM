@@ -138,7 +138,7 @@ export function CaseDetail() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Created</p>
-                  <p>{formatDateTime(new Date().toISOString())}</p>
+                  <p>{formatDateTime(caseItem.createdAt || '')}</p>
                 </div>
               </div>
 
@@ -216,7 +216,7 @@ export function CaseDetail() {
                     <CardContent className="pt-6">
                       <div className="flex items-start justify-between mb-2">
                         <div className="text-sm text-muted-foreground">
-                          System • {formatDateTime(new Date().toISOString())}
+                          System • {formatDateTime(caseItem.updatedAt || caseItem.createdAt || '')}
                         </div>
                       </div>
                       <p className="whitespace-pre-wrap">{note.description}</p>
