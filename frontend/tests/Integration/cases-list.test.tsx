@@ -16,54 +16,54 @@ const mockCases: Case[] = [
     caseNumber: 'CASE-001',
     name: 'Login issue',
     status: 'New',
-    priority: 'P1',
+    priority: 'High',
     type: 'Technical',
-    accountId: 'acc1',
-    accountName: 'Acme Corp',
+    // accountId: 'acc1',
+    // accountName: 'Acme Corp',
     contactId: 'cont1',
     contactName: 'John Doe',
     description: 'Cannot login to the system',
-    resolution: null,
+    resolution: undefined,
     assignedUserId: 'user1',
     assignedUserName: 'Support Agent',
-    dateEntered: '2024-01-15T10:00:00Z',
-    dateModified: '2024-01-15T14:30:00Z',
+    // dateEntered: '2024-01-15T10:00:00Z',
+    // dateModified: '2024-01-15T14:30:00Z',
   },
   {
     id: '2',
     caseNumber: 'CASE-002',
     name: 'Feature request',
-    status: 'In Progress',
-    priority: 'P2',
+    status: 'Assigned',
+    priority: 'Medium',
     type: 'Enhancement',
-    accountId: 'acc2',
-    accountName: 'Tech Solutions',
+    // accountId: 'acc2',
+    // accountName: 'Tech Solutions',
     contactId: 'cont2',
     contactName: 'Jane Smith',
     description: 'Need export functionality',
-    resolution: null,
+    resolution: undefined,
     assignedUserId: 'user2',
     assignedUserName: 'Product Manager',
-    dateEntered: '2024-01-14T09:00:00Z',
-    dateModified: '2024-01-16T11:00:00Z',
+    // dateEntered: '2024-01-14T09:00:00Z',
+    // dateModified: '2024-01-16T11:00:00Z',
   },
   {
     id: '3',
     caseNumber: 'CASE-003',
     name: 'Data sync problem',
     status: 'Closed',
-    priority: 'P3',
+    priority: 'Low',
     type: 'Bug',
-    accountId: 'acc1',
-    accountName: 'Acme Corp',
+    // accountId: 'acc1',
+    // accountName: 'Acme Corp',
     contactId: 'cont3',
     contactName: 'Bob Wilson',
     description: 'Data not syncing properly',
     resolution: 'Fixed sync service',
     assignedUserId: 'user1',
     assignedUserName: 'Support Agent',
-    dateEntered: '2024-01-10T08:00:00Z',
-    dateModified: '2024-01-12T16:00:00Z',
+    // dateEntered: '2024-01-10T08:00:00Z',
+    // dateModified: '2024-01-12T16:00:00Z',
   },
 ]
 
@@ -170,14 +170,14 @@ describe('CasesList', () => {
     render(<CasesList />, { wrapper: createWrapper() })
 
     await waitFor(() => {
-      const p1Badge = screen.getAllByText('P1')[0]
-      expect(p1Badge.className).toContain('red')
+      const p1Badge = screen.getAllByText('High')[0]
+      expect(p1Badge!.className).toContain('red')
 
-      const p2Badge = screen.getAllByText('P2')[0]
-      expect(p2Badge.className).toContain('yellow')
+      const p2Badge = screen.getAllByText('Medium')[0]
+      expect(p2Badge!.className).toContain('yellow')
 
-      const p3Badge = screen.getAllByText('P3')[0]
-      expect(p3Badge.className).toContain('green')
+      const p3Badge = screen.getAllByText('Low')[0]
+      expect(p3Badge!.className).toContain('green')
     })
   })
 

@@ -9,19 +9,29 @@ vi.mock('@/hooks/use-permissions')
 describe('PermissionGuard', () => {
   const mockUsePermissions = vi.mocked(usePermissions)
 
+  const createMockPermissions = (hasPermission: boolean, role: string) => ({
+    hasPermission: vi.fn().mockReturnValue(hasPermission),
+    canView: vi.fn(),
+    canCreate: vi.fn(),
+    canEdit: vi.fn(),
+    canDelete: vi.fn(),
+    hasModuleAccess: vi.fn(),
+    getAccessibleModules: vi.fn(() => []),
+    userRole: role,
+    isAdmin: role === 'admin',
+    isSalesManager: role === 'sales_manager',
+    isSalesRep: role === 'sales_rep',
+    isCustomerSuccess: role === 'customer_success',
+    isSupportAgent: role === 'support_agent',
+    isViewer: role === 'viewer',
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   it('renders children when permission is granted', () => {
-    mockUsePermissions.mockReturnValue({
-      hasPermission: vi.fn().mockReturnValue(true),
-      canView: vi.fn(),
-      canCreate: vi.fn(),
-      canEdit: vi.fn(),
-      canDelete: vi.fn(),
-      userRole: 'admin',
-    })
+    mockUsePermissions.mockReturnValue(createMockPermissions(true, 'admin'))
 
     render(
       <PermissionGuard module="Leads" action="create">
@@ -34,14 +44,7 @@ describe('PermissionGuard', () => {
   })
 
   it('renders fallback when permission is denied', () => {
-    mockUsePermissions.mockReturnValue({
-      hasPermission: vi.fn().mockReturnValue(false),
-      canView: vi.fn(),
-      canCreate: vi.fn(),
-      canEdit: vi.fn(),
-      canDelete: vi.fn(),
-      userRole: 'sales_rep',
-    })
+    mockUsePermissions.mockReturnValue(createMockPermissions(false, 'sales_rep'))
 
     render(
       <PermissionGuard 
@@ -59,14 +62,7 @@ describe('PermissionGuard', () => {
   })
 
   it('renders nothing when permission is denied and no fallback', () => {
-    mockUsePermissions.mockReturnValue({
-      hasPermission: vi.fn().mockReturnValue(false),
-      canView: vi.fn(),
-      canCreate: vi.fn(),
-      canEdit: vi.fn(),
-      canDelete: vi.fn(),
-      userRole: 'customer_success',
-    })
+    mockUsePermissions.mockReturnValue(createMockPermissions(false, 'customer_success'))
 
     const { container } = render(
       <PermissionGuard module="Opportunities" action="delete">
@@ -85,12 +81,8 @@ describe('PermissionGuard', () => {
       .mockReturnValueOnce(true)  // Third call
 
     mockUsePermissions.mockReturnValue({
+      ...createMockPermissions(true, 'sales_rep'),
       hasPermission: mockHasPermission,
-      canView: vi.fn(),
-      canCreate: vi.fn(),
-      canEdit: vi.fn(),
-      canDelete: vi.fn(),
-      userRole: 'sales_rep',
     })
 
     // First render - permission granted
@@ -125,14 +117,7 @@ describe('PermissionGuard', () => {
   })
 
   it('works with complex children', () => {
-    mockUsePermissions.mockReturnValue({
-      hasPermission: vi.fn().mockReturnValue(true),
-      canView: vi.fn(),
-      canCreate: vi.fn(),
-      canEdit: vi.fn(),
-      canDelete: vi.fn(),
-      userRole: 'admin',
-    })
+    mockUsePermissions.mockReturnValue(createMockPermissions(true, 'admin'))
 
     render(
       <PermissionGuard module="Accounts" action="edit">
@@ -150,14 +135,7 @@ describe('PermissionGuard', () => {
   })
 
   it('works with React fragments', () => {
-    mockUsePermissions.mockReturnValue({
-      hasPermission: vi.fn().mockReturnValue(true),
-      canView: vi.fn(),
-      canCreate: vi.fn(),
-      canEdit: vi.fn(),
-      canDelete: vi.fn(),
-      userRole: 'admin',
-    })
+    mockUsePermissions.mockReturnValue(createMockPermissions(true, 'admin'))
 
     render(
       <PermissionGuard module="Opportunities" action="create">

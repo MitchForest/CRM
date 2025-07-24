@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-interface AuthTokens {
+export interface AuthTokens {
   suitecrmToken: string
   customApiToken: string
 }

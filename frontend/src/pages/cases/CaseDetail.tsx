@@ -22,7 +22,7 @@ export function CaseDetail() {
   const [isResolving, setIsResolving] = useState(false)
 
   const { data: caseData, isLoading } = useCase(id || '')
-  const { data: notes } = useNotes(1, 100, { parentId: id, parentType: 'Cases' })
+  const { data: notes } = useNotes(1, 100, { parent_id: id || '', parent_type: 'Cases' })
   const resolveCase = useResolveCase(id || '')
   const createNote = useCreateNote()
 
@@ -238,7 +238,7 @@ export function CaseDetail() {
               <CardTitle>Account Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {caseItem.accountId ? (
+              {caseItem.contactId ? (
                 <>
                   <p className="font-medium">Account Name</p>
                   <Button variant="outline" size="sm" className="w-full" asChild>

@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
+import { useForm, type SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { ArrowLeft, Loader2 } from 'lucide-react'
@@ -54,7 +54,17 @@ export function CallForm() {
     formState: { errors, isSubmitting },
   } = useForm<CallFormData>({
     resolver: zodResolver(callSchema),
-    defaultValues: call?.data || {
+    defaultValues: call ? {
+      name: call.name,
+      status: call.status,
+      direction: call.direction,
+      startDate: new Date(call.startDate),
+      durationHours: Math.floor((call.duration || 0) / 60),
+      durationMinutes: (call.duration || 0) % 60,
+      parentType: call.parentType,
+      parentId: call.parentId,
+      description: call.description,
+    } : {
       status: 'Planned',
       direction: 'Outbound',
       startDate: new Date(),
@@ -65,7 +75,7 @@ export function CallForm() {
 
   const parentType = watch('parentType')
 
-  const onSubmit = async (data: CallFormData) => {
+  const onSubmit: SubmitHandler<CallFormData> = async (data) => {
     try {
       const formattedData = {
         name: data.name,
@@ -129,7 +139,7 @@ export function CallForm() {
             <Label htmlFor="status">Status</Label>
             <Select
               onValueChange={(value) => setValue('status', value)}
-              defaultValue={call?.data?.status || 'Planned'}
+              defaultValue={call?.status || 'Planned'}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -146,7 +156,7 @@ export function CallForm() {
             <Label htmlFor="direction">Direction</Label>
             <Select
               onValueChange={(value) => setValue('direction', value as 'Inbound' | 'Outbound')}
-              defaultValue={call?.data?.direction || 'Outbound'}
+              defaultValue={call?.direction || 'Outbound'}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -201,7 +211,7 @@ export function CallForm() {
                 setValue('parentType', value)
                 setValue('parentId', '')
               }}
-              defaultValue={call?.data?.parentType}
+              defaultValue={call?.parentType}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select type" />
@@ -220,7 +230,7 @@ export function CallForm() {
               <Label htmlFor="parentId">Select {parentType.slice(0, -1)}</Label>
               <Select
                 onValueChange={(value) => setValue('parentId', value)}
-                defaultValue={call?.data?.parentId}
+                defaultValue={call?.parentId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={`Select ${parentType.toLowerCase()}`} />

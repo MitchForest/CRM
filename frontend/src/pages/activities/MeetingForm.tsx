@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
+import { useForm, type SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { ArrowLeft, Loader2 } from 'lucide-react'
@@ -56,7 +56,17 @@ export function MeetingForm() {
     formState: { errors, isSubmitting },
   } = useForm<MeetingFormData>({
     resolver: zodResolver(meetingSchema),
-    defaultValues: meeting?.data || {
+    defaultValues: meeting ? {
+      name: meeting.name,
+      status: meeting.status,
+      startDate: new Date(meeting.startDate),
+      durationHours: Math.floor((meeting.duration || 0) / 60),
+      durationMinutes: (meeting.duration || 0) % 60,
+      location: meeting.location,
+      parentType: meeting.parentType,
+      parentId: meeting.parentId,
+      description: meeting.description,
+    } : {
       status: 'Planned',
       startDate: new Date(),
       durationHours: 1,
@@ -79,7 +89,7 @@ export function MeetingForm() {
     }
   }, [startDate, durationHours, durationMinutes, setValue])
 
-  const onSubmit = async (data: MeetingFormData) => {
+  const onSubmit: SubmitHandler<MeetingFormData> = async (data) => {
     try {
       const formattedData = {
         name: data.name,
@@ -146,7 +156,7 @@ export function MeetingForm() {
             <Label htmlFor="status">Status</Label>
             <Select
               onValueChange={(value) => setValue('status', value)}
-              defaultValue={meeting?.data?.status || 'Planned'}
+              defaultValue={meeting?.status || 'Planned'}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -213,7 +223,7 @@ export function MeetingForm() {
                 setValue('parentType', value)
                 setValue('parentId', '')
               }}
-              defaultValue={meeting?.data?.parentType}
+              defaultValue={meeting?.parentType}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select type" />
@@ -232,7 +242,7 @@ export function MeetingForm() {
               <Label htmlFor="parentId">Select {parentType.slice(0, -1)}</Label>
               <Select
                 onValueChange={(value) => setValue('parentId', value)}
-                defaultValue={meeting?.data?.parentId}
+                defaultValue={meeting?.parentId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={`Select ${parentType.toLowerCase()}`} />

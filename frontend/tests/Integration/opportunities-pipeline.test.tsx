@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
@@ -40,36 +40,36 @@ const mockOpportunities: Opportunity[] = [
   {
     id: '1',
     name: 'Test Opportunity 1',
-    accountId: 'acc1',
-    accountName: 'Test Account 1',
+    // accountId: 'acc1',
+    // accountName: 'Test Account 1',
     salesStage: 'Qualification',
     amount: 50000,
     probability: 20,
-    dateClosed: '2024-03-01',
-    leadSource: 'Website',
+    closeDate: '2024-03-01',
+    // leadSource: 'Website',
     nextStep: 'Schedule demo',
     description: 'Test description',
     assignedUserId: 'user1',
     assignedUserName: 'John Doe',
-    dateEntered: '2024-01-01',
-    dateModified: '2024-01-15',
+    // dateEntered: '2024-01-01',
+    // dateModified: '2024-01-15',
   },
   {
     id: '2',
     name: 'Test Opportunity 2',
-    accountId: 'acc2',
-    accountName: 'Test Account 2',
+    // accountId: 'acc2',
+    // accountName: 'Test Account 2',
     salesStage: 'Proposal',
     amount: 75000,
     probability: 75,
-    dateClosed: '2024-02-15',
-    leadSource: 'Referral',
+    closeDate: '2024-02-15',
+    // leadSource: 'Referral',
     nextStep: 'Send proposal',
     description: 'Another test',
     assignedUserId: 'user2',
     assignedUserName: 'Jane Smith',
-    dateEntered: '2024-01-05',
-    dateModified: '2024-01-20',
+    // dateEntered: '2024-01-05',
+    // dateModified: '2024-01-20',
   },
 ]
 
@@ -191,7 +191,7 @@ describe('OpportunitiesPipeline', () => {
   })
 
   it('navigates to new opportunity form', async () => {
-    const user = userEvent.setup()
+    // const user = userEvent.setup()
     render(<OpportunitiesPipeline />, { wrapper: createWrapper() })
 
     const newButton = await screen.findByRole('link', { name: /new opportunity/i })

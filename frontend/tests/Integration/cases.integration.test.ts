@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { getTestAuthTokens, createAuthenticatedClient } from './helpers/test-auth'
-import { testData, casePriorities, caseStatuses } from './helpers/test-data'
+// import { casePriorities } from './helpers/test-data'
 import type { AuthTokens } from './helpers/test-auth'
 
 describe('Cases Integration Tests', () => {
@@ -8,7 +8,7 @@ describe('Cases Integration Tests', () => {
   let suitecrmClient: any
   let customApiClient: any
   let testAccountId: string | null = null
-  let createdCaseIds: string[] = []
+  const createdCaseIds: string[] = []
 
   beforeAll(async () => {
     tokens = await getTestAuthTokens()
@@ -159,7 +159,9 @@ describe('Cases Integration Tests', () => {
         const attributes = response.data.data.attributes
         const sla = slaExpectations[index]
         
-        expect(attributes.priority).toBe(sla.priority)
+        if (sla) {
+          expect(attributes.priority).toBe(sla.priority)
+        }
         
         // If SLA fields are available, verify them
         if (attributes.sla_deadline) {
@@ -168,7 +170,7 @@ describe('Cases Integration Tests', () => {
           const hoursDiff = (slaDeadline.getTime() - createdDate.getTime()) / (1000 * 60 * 60)
           
           // Allow for small variations due to processing time
-          expect(Math.round(hoursDiff)).toBe(sla.hoursToResolve)
+          expect(Math.round(hoursDiff)).toBe(sla?.hoursToResolve || 0)
         }
       })
     })
@@ -232,7 +234,7 @@ describe('Cases Integration Tests', () => {
       const priorityData = metrics.casesByPriority
       expect(Array.isArray(priorityData)).toBe(true)
       
-      ['P1', 'P2', 'P3'].forEach(priority => {
+      ;['P1', 'P2', 'P3'].forEach(priority => {
         const priorityCount = priorityData.find((p: any) => p.priority === priority)
         expect(priorityCount).toBeDefined()
         expect(priorityCount.count).toBeGreaterThanOrEqual(0)

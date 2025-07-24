@@ -16,6 +16,7 @@ import {
 } from '@/hooks/use-activities'
 import { formatDate, formatTime } from '@/lib/utils'
 import type { BaseActivity } from '@/types/phase2.types'
+import type { Call, Meeting, Task, Note } from '@/types/api.generated'
 
 export function ActivitiesList() {
   const [activeTab, setActiveTab] = useState('all')
@@ -261,7 +262,7 @@ function CallsList({ calls }: { calls: Call[] }) {
             <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
               <span>{call.direction || 'Outbound'}</span>
               {call.startDate && <span>{formatDate(call.startDate)} {formatTime(call.startDate)}</span>}
-              <span>{call.durationHours || 0}h {call.durationMinutes || 0}m</span>
+              <span>{call.duration ? `${Math.floor(call.duration / 60)}h ${call.duration % 60}m` : '0h 0m'}</span>
             </div>
           </div>
           <Badge variant="outline">{call.status}</Badge>
@@ -291,7 +292,7 @@ function MeetingsList({ meetings }: { meetings: Meeting[] }) {
             <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
               {meeting.location && <span>{meeting.location}</span>}
               {meeting.startDate && <span>{formatDate(meeting.startDate)} {formatTime(meeting.startDate)}</span>}
-              <span>{meeting.durationHours || 0}h {meeting.durationMinutes || 0}m</span>
+              <span>{meeting.duration ? `${Math.floor(meeting.duration / 60)}h ${meeting.duration % 60}m` : '0h 0m'}</span>
             </div>
           </div>
           <Badge variant="outline">{meeting.status}</Badge>
@@ -351,8 +352,8 @@ function NotesList({ notes }: { notes: Note[] }) {
               {note.description}
             </p>
             <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-              <span>Created: {formatDate(note.dateEntered)}</span>
-              {note.fileName && <span>📎 {note.fileName}</span>}
+              <span>Created: {formatDate((note as any).dateEntered || '')}</span>
+              {(note as any).fileName && <span>📎 {(note as any).fileName}</span>}
             </div>
           </div>
         </div>

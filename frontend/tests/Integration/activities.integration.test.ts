@@ -9,7 +9,7 @@ describe('Activities Integration Tests', () => {
   let customApiClient: any
   let testAccountId: string | null = null
   let testContactId: string | null = null
-  let createdActivityIds: { [key: string]: string[] } = {
+  const createdActivityIds: { [key: string]: string[] } = {
     calls: [],
     meetings: [],
     tasks: [],
@@ -97,7 +97,7 @@ describe('Activities Integration Tests', () => {
       expect(response.data.data.type).toBe('Calls')
       
       const callId = response.data.data.id
-      createdActivityIds.calls.push(callId)
+      createdActivityIds.calls!.push(callId)
       
       const attributes = response.data.data.attributes
       expect(attributes.name).toBe(testData.call.name)
@@ -124,7 +124,7 @@ describe('Activities Integration Tests', () => {
     })
 
     it('should update call status and outcome', async () => {
-      const callId = createdActivityIds.calls[0]
+      const callId = createdActivityIds.calls![0]
       
       const updateData = {
         data: {
@@ -164,7 +164,7 @@ describe('Activities Integration Tests', () => {
       expect(response.data.data).toHaveProperty('id')
       
       const meetingId = response.data.data.id
-      createdActivityIds.meetings.push(meetingId)
+      createdActivityIds.meetings!.push(meetingId)
       
       const attributes = response.data.data.attributes
       expect(attributes.name).toBe(testData.meeting.name)
@@ -193,7 +193,7 @@ describe('Activities Integration Tests', () => {
       const response = await suitecrmClient.post('/module', recurringMeetingData)
       
       expect(response.status).toBe(201)
-      createdActivityIds.meetings.push(response.data.data.id)
+      createdActivityIds.meetings!.push(response.data.data.id)
       
       // Note: Actual recurring functionality depends on SuiteCRM configuration
       expect(response.data.data.attributes.name).toBe('Weekly Status Meeting')
@@ -225,7 +225,7 @@ describe('Activities Integration Tests', () => {
       
       responses.forEach((response, index) => {
         expect(response.status).toBe(201)
-        createdActivityIds.tasks.push(response.data.data.id)
+        createdActivityIds.tasks!.push(response.data.data.id)
         expect(response.data.data.attributes.priority).toBe(priorities[index])
       })
     })
@@ -245,7 +245,7 @@ describe('Activities Integration Tests', () => {
       }
       
       const createResponse = await suitecrmClient.post('/module', overdueTaskData)
-      createdActivityIds.tasks.push(createResponse.data.data.id)
+      createdActivityIds.tasks!.push(createResponse.data.data.id)
       
       // Get activity metrics from custom API
       const metricsResponse = await customApiClient.get('/dashboard/activities')
@@ -255,7 +255,7 @@ describe('Activities Integration Tests', () => {
     })
 
     it('should update task completion status', async () => {
-      const taskId = createdActivityIds.tasks[0]
+      const taskId = createdActivityIds.tasks![0]
       
       const updateData = {
         data: {
@@ -292,7 +292,7 @@ describe('Activities Integration Tests', () => {
       const response = await suitecrmClient.post('/module', noteData)
       
       expect(response.status).toBe(201)
-      createdActivityIds.notes.push(response.data.data.id)
+      createdActivityIds.notes!.push(response.data.data.id)
       
       const attributes = response.data.data.attributes
       expect(attributes.name).toBe(testData.note.name)
@@ -315,7 +315,7 @@ describe('Activities Integration Tests', () => {
       const response = await suitecrmClient.post('/module', noteWithAttachmentData)
       
       expect(response.status).toBe(201)
-      createdActivityIds.notes.push(response.data.data.id)
+      createdActivityIds.notes!.push(response.data.data.id)
       
       expect(response.data.data.attributes.filename).toBe('contract-draft.pdf')
       expect(response.data.data.attributes.file_mime_type).toBe('application/pdf')
@@ -354,8 +354,8 @@ describe('Activities Integration Tests', () => {
         suitecrmClient.post('/module', todayMeeting)
       ])
       
-      createdActivityIds.calls.push(callResponse.data.data.id)
-      createdActivityIds.meetings.push(meetingResponse.data.data.id)
+      createdActivityIds.calls!.push(callResponse.data.data.id)
+      createdActivityIds.meetings!.push(meetingResponse.data.data.id)
       
       // Wait for data propagation
       await new Promise(resolve => setTimeout(resolve, 1000))
@@ -387,7 +387,7 @@ describe('Activities Integration Tests', () => {
 
   describe('Activity Relationships', () => {
     it('should link activities to parent records', async () => {
-      const callId = createdActivityIds.calls[0]
+      const callId = createdActivityIds.calls![0]
       
       const response = await suitecrmClient.get(`/module/Calls/${callId}`, {
         params: {

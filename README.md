@@ -1,182 +1,320 @@
-# Modern CRM - Headless SuiteCRM
+# CRM Project - Setup and Testing Guide
 
-A modern, headless CRM using SuiteCRM as the backend API with a React frontend.
+A modern CRM system built with SuiteCRM backend and React TypeScript frontend, featuring AI-powered capabilities and advanced B2B sales management.
 
-## Architecture
-
-- **Backend**: Full SuiteCRM (PHP) with V4.1 REST API
-- **Frontend**: React + TypeScript + TailwindCSS + Vite  
-- **Database**: MySQL 5.7 with SuiteCRM schema
-- **Deployment**: Docker + docker-compose
-
-## Structure
+## Project Structure
 
 ```
-├── suitecrm/         # Complete SuiteCRM backend (PHP)
-├── frontend/         # React frontend (TypeScript)
-├── docker/           # Docker configurations
-└── docker-compose.yml # Complete stack orchestration
+crm/
+├── backend/          # SuiteCRM 8.6.1 with custom API
+├── frontend/         # React 18 + TypeScript + Vite
+├── .docs/           # Phase documentation
+└── README.md        # This file
 ```
 
 ## Quick Start
 
-**One command to rule them all:**
+### Prerequisites
+- Docker & Docker Compose
+- Node.js 18+
+- npm or yarn
+- Git
+
+### 1. Start Backend Services
 
 ```bash
-docker-compose up --build
+# Navigate to backend directory
+cd backend
+
+# Start Docker containers (MySQL + SuiteCRM)
+docker-compose up -d
+
+# Verify containers are running
+docker ps
+
+# Expected output:
+# - suitecrm-backend (port 8080)
+# - suitecrm-mysql (port 3306)
+
+# Check backend health
+curl http://localhost:8080/custom-api/health
+
+# View logs if needed
+docker logs -f suitecrm-backend
 ```
 
-**Then:**
-1. **SuiteCRM Setup**: Visit http://localhost:8080/install.php to complete SuiteCRM installation
-2. **Frontend**: Visit http://localhost:3000 for the React frontend
-3. **Both use the same data and user accounts!**
+### 2. Start Frontend Application
 
-See **[SETUP.md](./SETUP.md)** for detailed setup instructions.
+```bash
+# Navigate to frontend directory
+cd frontend
 
-## Features
+# Install dependencies
+npm install
 
-- ✅ **Full SuiteCRM Backend** - Complete CRM functionality
-- ✅ **Modern React Frontend** - Fast, responsive UI
-- ✅ **V4.1 REST API** - Mature, stable API
-- ✅ **Session Authentication** - Simple, secure login flow
-- ✅ **Docker Setup** - One-command deployment
-- ✅ **TypeScript** - Type-safe frontend development
+# Start development server
+npm run dev
 
-## Services
+# Frontend available at: http://localhost:5173
+```
 
-- **MySQL**: Port 3306 (SuiteCRM database)
-- **SuiteCRM**: Port 8080 (PHP backend + admin interface) 
-- **Frontend**: Port 3000 (React development server)
+### 3. Login Credentials
+
+- **URL**: http://localhost:5173/login
+- **Username**: `admin`
+- **Password**: `admin123`
+
+## Phase Status
+
+### ✅ Phase 1 - Foundation (Complete)
+- Basic CRM modules (Leads, Accounts, Contacts)
+- Authentication system
+- Modern React UI with TypeScript
+- API integration
+
+### ✅ Phase 2 - Core CRM Features (Complete)
+- Real-time Dashboard with metrics
+- Opportunities with Kanban board
+- Activities management (Calls, Meetings, Tasks, Notes)
+- Cases with priority system (P1/P2/P3)
+- Drag-drop functionality
+- Cross-module integration
+
+### 🚧 Phase 3 - AI & Advanced Features (Pending)
+- AI Lead Scoring with OpenAI
+- Form Builder (drag-drop)
+- Knowledge Base
+- AI Chatbot
+- Website Activity Tracking
+
+## Testing Phase 2 Features
+
+### Dashboard
+After login, verify:
+- **Metric Cards**: Total Leads, Accounts, New Leads Today, Pipeline Value
+- **Pipeline Chart**: 8 B2B sales stages with hover details
+- **Activity Metrics**: Today's calls/meetings, overdue tasks
+- **Case Distribution**: P1/P2/P3 pie chart
+- **Recent Activities**: Latest 10 items from all modules
+
+### Opportunities Module
+Key features to test:
+1. **Kanban View**:
+   - Toggle between Table and Pipeline view
+   - Drag opportunities between stages
+   - Verify automatic probability updates:
+     - Qualification: 10%
+     - Needs Analysis: 20%
+     - Value Proposition: 40%
+     - Decision Makers: 60%
+     - Proposal: 75%
+     - Negotiation: 90%
+     - Closed Won: 100%
+     - Closed Lost: 0%
+
+2. **CRUD Operations**:
+   - Create new opportunity
+   - Edit existing opportunity
+   - Delete opportunity
+   - Search and filter
+
+### Activities Module
+Test each activity type:
+- **Calls**: Schedule, link to records, mark as held
+- **Meetings**: Add location, set duration, manage status
+- **Tasks**: Set priorities (High/Medium/Low), track overdue
+- **Notes**: Rich text, attach to parent records
+
+### Cases Module
+Priority-based support:
+- **P1 (Critical)**: Red badge, 4-hour SLA
+- **P2 (Medium)**: Yellow badge, 24-hour SLA
+- **P3 (Low)**: Green badge, 72-hour SLA
+
+Test workflow: New → Assigned → Pending Input → Resolved → Closed
+
+## Running Tests
+
+### Unit Tests
+```bash
+cd frontend
+npm run test
+```
+
+### Integration Tests
+```bash
+cd frontend
+npm run test:integration
+
+# Run specific test suite
+npm run test:integration dashboard.integration.test.ts
+npm run test:integration opportunities.integration.test.ts
+npm run test:integration activities.integration.test.ts
+npm run test:integration cases.integration.test.ts
+npm run test:integration e2e-workflows.test.ts
+```
+
+### Manual Testing
+Use the comprehensive checklist:
+```bash
+cat frontend/tests/manual-testing-checklist.md
+```
+
+## API Endpoints
+
+### SuiteCRM V8 API
+- Base URL: `http://localhost:8080/Api/V8`
+- Authentication: OAuth2
+- Used for: CRUD operations on all modules
+
+### Custom API (Phase 2)
+- Base URL: `http://localhost:8080/custom-api`
+- Authentication: JWT
+- Endpoints:
+  - `POST /auth/login` - Authentication
+  - `GET /dashboard/metrics` - Dashboard stats
+  - `GET /dashboard/pipeline` - Opportunity pipeline
+  - `GET /dashboard/activities` - Activity metrics
+  - `GET /dashboard/cases` - Case statistics
 
 ## Development
 
-### Frontend Development
-```bash
-cd frontend
-bun install
-bun run dev
+### Frontend Structure
+```
+frontend/src/
+├── components/      # Reusable UI components
+├── pages/          # Route pages
+├── hooks/          # Custom React hooks
+├── lib/            # Utilities and API client
+├── stores/         # Zustand stores
+└── types/          # TypeScript definitions
 ```
 
-### SuiteCRM Customization
-Add customizations to `suitecrm/custom/` folder - never modify core files.
+### Add New Features
+1. Update types in `src/types/`
+2. Create/update hooks in `src/hooks/`
+3. Build components in `src/components/`
+4. Add pages in `src/pages/`
+5. Update routes in `src/App.tsx`
 
-### API Testing
-Use the SuiteCRM V4.1 API at http://localhost:8080/service/v4_1/rest.php
-
-## Next Steps
-
-Once running, you can:
-- **Backend Admin**: Access full SuiteCRM admin at http://localhost:8080
-- **Frontend Dev**: Build custom React features at http://localhost:3000
-- **Extend**: Add custom fields and modules using SuiteCRM's extension system
-- **Deploy**: Use same Docker setup for production
-
-## Documentation
-
-- **[SETUP.md](./SETUP.md)** - Step-by-step setup guide
-- **[Phase 1.5 Docs](.docs/phase-1.5.md)** - Headless architecture details
-
-
-
-# Headless SuiteCRM Setup Guide
-
-## 🎯 Complete Setup in 3 Steps
-
-### Step 1: Start the Stack
+### Code Quality
 ```bash
-docker-compose up --build
+# Type checking
+npm run type-check
+
+# Linting
+npm run lint
+
+# Format code
+npm run format
 ```
 
-This will start:
-- MySQL database (port 3306)
-- SuiteCRM backend (port 8080) 
-- React frontend (port 3000)
+## Troubleshooting
 
-### Step 2: Install SuiteCRM
-
-1. **Visit**: http://localhost:8080/install.php
-2. **Database Configuration**:
-   - Database Type: `MySQL`
-   - Host Name: `mysql`
-   - Database Name: `suitecrm`
-   - Database User Name: `suitecrm`
-   - Database Password: `suitecrm`
-3. **Admin Account**: Create your admin user
-4. **Complete Installation**
-
-### Step 3: Use Your Headless CRM
-
-The SuiteCRM V4.1 REST API is enabled by default - no additional configuration needed!
-
-- **SuiteCRM Admin**: http://localhost:8080 (full CRM backend)
-- **React Frontend**: http://localhost:3000 (modern UI)
-- **API Endpoint**: `/service/v4_1/rest.php`
-
-## ✅ Test Your Setup
-
-1. **Backend**: Login to SuiteCRM at http://localhost:8080 with your admin account
-2. **Frontend**: Login to React app at http://localhost:3000 with same credentials
-3. **API**: Both interfaces use the same data and user accounts
-
-## 🚨 Troubleshooting
-
-**SuiteCRM Installation Issues:**
-- Make sure MySQL is healthy: `docker-compose ps`
-- Check logs: `docker-compose logs suitecrm`
-
-**Frontend Can't Connect:**
-- Verify SuiteCRM is accessible at http://localhost:8080
-- Check that user credentials are correct
-- Check browser console for CORS errors
-
-**CORS Errors:**
-- CORS is configured in `docker/suitecrm/apache-config.conf`
-- Restart containers after any Apache config changes
-
-**Database Issues:**
-- Check MySQL logs: `docker-compose logs mysql`
-- Ensure database credentials match in docker-compose.yml
-
-## 🔧 Development
-
-**Frontend Development:**
+### Backend Issues
 ```bash
-cd frontend
-bun install
-bun run dev  # Development server with hot reload
+# Check container status
+docker ps -a
+
+# View logs
+docker logs suitecrm-backend
+docker logs suitecrm-mysql
+
+# Restart containers
+docker-compose restart
+
+# Reset everything
+docker-compose down -v
+docker-compose up -d
 ```
 
-**SuiteCRM Customization:**
-- Add custom modules to `suitecrm/custom/modules/`
-- Add custom fields to `suitecrm/custom/Extension/modules/`
-- Always use `custom/` folder, never modify core files
-- Run Quick Repair after custom changes: Admin → Repair → Quick Repair and Rebuild
-
-**API Testing:**
+### Frontend Issues
 ```bash
-# Test login
-curl -X POST http://localhost:8080/service/v4_1/rest.php \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "method=login&input_type=JSON&response_type=JSON&rest_data={\"user_auth\":{\"user_name\":\"admin\",\"password\":\"your_password\"}}"
+# Clear cache
+rm -rf node_modules .vite
+npm install
+
+# Check for TypeScript errors
+npm run type-check
+
+# View browser console
+# Press F12 in browser
 ```
 
-**Database Access:**
-```bash
-docker exec -it suitecrm-mysql mysql -usuitecrm -psuitecrm suitecrm
-```
+### Common Problems
 
-## 🚀 Production Deployment
+**Dashboard shows no data**
+- Create test records first
+- Check API connection in Network tab (F12)
 
-This same Docker setup can be used in production:
+**Drag-drop not working**
+- Ensure you're in Pipeline view
+- Check browser console for errors
 
-1. **Environment Variables**: Update database passwords and URLs
-2. **SSL/HTTPS**: Add reverse proxy (nginx, Traefik, etc.)
-3. **Volumes**: Ensure data persistence with proper Docker volumes
-4. **Backups**: Regular MySQL backups of the `suitecrm` database
+**Login fails**
+- Verify backend is running
+- Check credentials: admin/admin123
+- Clear browser storage
 
-## 📚 Next Steps
+## Performance Benchmarks
 
-- **Custom Fields**: Add AI scoring field using SuiteCRM's Studio
-- **Custom Modules**: Create new modules for software sales workflow
-- **Frontend Features**: Build modern UI components in React
-- **API Integration**: Connect to external services (email, AI, etc.)
+| Operation | Target | Expected |
+|-----------|--------|----------|
+| Initial Load | < 3s | ~2s |
+| Dashboard | < 1s | ~800ms |
+| Page Navigation | < 1s | ~500ms |
+| Search/Filter | < 300ms | ~200ms |
+| Drag-Drop | < 500ms | ~400ms |
+
+## Contributing
+
+### Setup Development Environment
+1. Fork the repository
+2. Clone your fork
+3. Create feature branch: `git checkout -b feature/your-feature`
+4. Make changes
+5. Run tests: `npm run test`
+6. Commit: `git commit -m "Add your feature"`
+7. Push: `git push origin feature/your-feature`
+8. Create Pull Request
+
+### Coding Standards
+- TypeScript strict mode
+- ESLint rules enforced
+- Prettier formatting
+- Component-based architecture
+- Comprehensive error handling
+
+## Phase 3 Preview
+
+Coming next:
+- **AI Lead Scoring**: Automatic lead qualification
+- **Form Builder**: Drag-drop custom forms
+- **Knowledge Base**: Self-service portal
+- **AI Chatbot**: Customer support automation
+- **Activity Tracking**: Website visitor insights
+
+## Resources
+
+- [Phase 1 Documentation](.docs/phase-1/)
+- [Phase 2 Documentation](.docs/phase-2/)
+- [Phase 3 Documentation](.docs/phase-3/)
+- [API Documentation](backend/API_DOCUMENTATION.md)
+- [Integration Tests](frontend/tests/integration/README.md)
+- [Manual Testing Checklist](frontend/tests/manual-testing-checklist.md)
+
+## License
+
+This project is proprietary software. All rights reserved.
+
+## Support
+
+For issues or questions:
+1. Check the troubleshooting section
+2. Review test files for examples
+3. Check Docker logs for backend issues
+4. Review browser console for frontend issues
+
+---
+
+**Current Status**: Phase 2 Complete ✅ | Ready for Production Testing

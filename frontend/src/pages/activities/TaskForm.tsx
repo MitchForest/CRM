@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
+import { useForm, type SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { ArrowLeft, Loader2 } from 'lucide-react'
@@ -53,7 +53,15 @@ export function TaskForm() {
     formState: { errors, isSubmitting },
   } = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
-    defaultValues: task?.data || {
+    defaultValues: task ? {
+      name: task.name,
+      status: task.status,
+      priority: task.priority as 'High' | 'Medium' | 'Low',
+      dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+      parentType: task.parentType,
+      parentId: task.parentId,
+      description: task.description,
+    } : {
       status: 'Not Started',
       priority: 'Medium',
     },
@@ -61,7 +69,7 @@ export function TaskForm() {
 
   const parentType = watch('parentType')
 
-  const onSubmit = async (data: TaskFormData) => {
+  const onSubmit: SubmitHandler<TaskFormData> = async (data) => {
     try {
       const formattedData = {
         name: data.name,
@@ -125,7 +133,7 @@ export function TaskForm() {
             <Label htmlFor="status">Status</Label>
             <Select
               onValueChange={(value) => setValue('status', value)}
-              defaultValue={task?.data?.status || 'Not Started'}
+              defaultValue={task?.status || 'Not Started'}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -144,7 +152,7 @@ export function TaskForm() {
             <Label htmlFor="priority">Priority</Label>
             <Select
               onValueChange={(value) => setValue('priority', value as 'High' | 'Medium' | 'Low')}
-              defaultValue={task?.data?.priority || 'Medium'}
+              defaultValue={task?.priority || 'Medium'}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -186,7 +194,7 @@ export function TaskForm() {
                 setValue('parentType', value)
                 setValue('parentId', '')
               }}
-              defaultValue={task?.data?.parentType}
+              defaultValue={task?.parentType}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select type" />
@@ -206,7 +214,7 @@ export function TaskForm() {
               <Label htmlFor="parentId">Select {parentType.slice(0, -1)}</Label>
               <Select
                 onValueChange={(value) => setValue('parentId', value)}
-                defaultValue={task?.data?.parentId}
+                defaultValue={task?.parentId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={`Select ${parentType.toLowerCase()}`} />

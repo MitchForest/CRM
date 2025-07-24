@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
 import { toast } from 'sonner'
-import type { Call, Meeting, Task, Note } from '@/types/api.generated'
+import type { Call, Meeting, Task, Note, QueryParams, ListResponse, ApiResponse } from '@/types/api.generated'
 import type { BaseActivity, ActivityType } from '@/types/phase2.types'
 import { getErrorMessage } from '@/lib/error-utils'
 
@@ -12,29 +12,37 @@ type ExtendedTask = Task & Pick<BaseActivity, 'dateEntered' | 'dateModified'>
 type ExtendedNote = Note & Pick<BaseActivity, 'status' | 'dateEntered' | 'dateModified'>
 
 interface ActivityApiMethods<T> {
-  getAll: (params?: { page?: number; pageSize?: number; filters?: Record<string, string | number | boolean> }) => Promise<{ data: T[] }>;
-  getOne: (id: string) => Promise<T>;
-  create: (data: Partial<T>) => Promise<T>;
-  update: (id: string, data: Partial<T>) => Promise<T>;
-  delete: (id: string) => Promise<void>;
+  getAll: (params?: QueryParams) => Promise<ListResponse<T>>;
+  getOne: (id: string) => Promise<ApiResponse<T>>;
+  create: (data: Partial<T>) => Promise<ApiResponse<T>>;
+  update: (id: string, data: Partial<T>) => Promise<ApiResponse<T>>;
+  delete: (id: string) => Promise<ApiResponse<void>>;
 }
 
 // Base hook factory for common activity operations
-function createActivityHooks<T extends { id?: string }>(
+function createActivityHooks<T extends { id?: string }, BaseT = any>(
   moduleName: 'calls' | 'meetings' | 'tasks' | 'notes',
   moduleLabel: string,
-  apiMethods: ActivityApiMethods<T>
+  apiMethods: ActivityApiMethods<BaseT>
 ) {
   return {
     useGetAll: (page = 1, limit = 20, filters?: Record<string, string | number | boolean>) => {
       return useQuery({
         queryKey: [moduleName, page, limit, filters],
         queryFn: async () => {
-          return await apiMethods.getAll({ 
+          const response = await apiMethods.getAll({ 
             page, 
             pageSize: limit,
-            ...filters 
+            filters: filters ? Object.entries(filters).map(([field, value]) => ({
+              field,
+              operator: 'eq' as const,
+              value
+            })) : undefined
           })
+          return {
+            data: response.data as unknown as T[],
+            pagination: response.pagination
+          }
         },
       })
     },
@@ -43,7 +51,11 @@ function createActivityHooks<T extends { id?: string }>(
       return useQuery({
         queryKey: [moduleName, id],
         queryFn: async () => {
-          return await apiMethods.getOne(id)
+          const response = await apiMethods.getOne(id)
+          if (!response.success || !response.data) {
+            throw new Error(response.error?.error || 'Failed to fetch')
+          }
+          return response.data as unknown as T
         },
         enabled: !!id,
       })
@@ -54,7 +66,11 @@ function createActivityHooks<T extends { id?: string }>(
 
       return useMutation({
         mutationFn: async (data: Omit<T, 'id'>) => {
-          return await apiMethods.create(data as Partial<T>)
+          const response = await apiMethods.create(data as unknown as Partial<BaseT>)
+          if (!response.success || !response.data) {
+            throw new Error(response.error?.error || 'Failed to create')
+          }
+          return response.data as unknown as T
         },
         onSuccess: async () => {
           await queryClient.invalidateQueries({ queryKey: [moduleName] })
@@ -71,7 +87,11 @@ function createActivityHooks<T extends { id?: string }>(
 
       return useMutation({
         mutationFn: async (data: Partial<T>) => {
-          return await apiMethods.update(id, data)
+          const response = await apiMethods.update(id, data as unknown as Partial<BaseT>)
+          if (!response.success || !response.data) {
+            throw new Error(response.error?.error || 'Failed to update')
+          }
+          return response.data as unknown as T
         },
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: [moduleName, id] })
@@ -89,7 +109,10 @@ function createActivityHooks<T extends { id?: string }>(
 
       return useMutation({
         mutationFn: async (id: string) => {
-          return await apiMethods.delete(id)
+          const response = await apiMethods.delete(id)
+          if (!response.success) {
+            throw new Error(response.error?.error || 'Failed to delete')
+          }
         },
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: [moduleName] })
@@ -104,7 +127,7 @@ function createActivityHooks<T extends { id?: string }>(
 }
 
 // Call hooks
-const callHooks = createActivityHooks<ExtendedCall>('calls', 'Call', {
+const callHooks = createActivityHooks<ExtendedCall, Call>('calls', 'Call', {
   getAll: apiClient.getCalls.bind(apiClient),
   getOne: apiClient.getCall.bind(apiClient),
   create: apiClient.createCall.bind(apiClient),
@@ -119,7 +142,7 @@ export const useUpdateCall = callHooks.useUpdate
 export const useDeleteCall = callHooks.useDelete
 
 // Meeting hooks
-const meetingHooks = createActivityHooks<ExtendedMeeting>('meetings', 'Meeting', {
+const meetingHooks = createActivityHooks<ExtendedMeeting, Meeting>('meetings', 'Meeting', {
   getAll: apiClient.getMeetings.bind(apiClient),
   getOne: apiClient.getMeeting.bind(apiClient),
   create: apiClient.createMeeting.bind(apiClient),
@@ -134,7 +157,7 @@ export const useUpdateMeeting = meetingHooks.useUpdate
 export const useDeleteMeeting = meetingHooks.useDelete
 
 // Task hooks
-const taskHooks = createActivityHooks<ExtendedTask>('tasks', 'Task', {
+const taskHooks = createActivityHooks<ExtendedTask, Task>('tasks', 'Task', {
   getAll: apiClient.getTasks.bind(apiClient),
   getOne: apiClient.getTask.bind(apiClient),
   create: apiClient.createTask.bind(apiClient),
@@ -149,7 +172,7 @@ export const useUpdateTask = taskHooks.useUpdate
 export const useDeleteTask = taskHooks.useDelete
 
 // Note hooks
-const noteHooks = createActivityHooks<ExtendedNote>('notes', 'Note', {
+const noteHooks = createActivityHooks<ExtendedNote, Note>('notes', 'Note', {
   getAll: apiClient.getNotes.bind(apiClient),
   getOne: apiClient.getNote.bind(apiClient),
   create: apiClient.createNote.bind(apiClient),

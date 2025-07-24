@@ -161,25 +161,25 @@ export function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <MetricCard
           title="Today's Calls"
-          value={activityMetrics?.data?.callsToday || 0}
+          value={activityMetrics?.data?.data?.callsToday || 0}
           icon={Phone}
           color="text-blue-600"
         />
         <MetricCard
           title="Today's Meetings"
-          value={activityMetrics?.data?.meetingsToday || 0}
+          value={activityMetrics?.data?.data?.meetingsToday || 0}
           icon={Calendar}
           color="text-green-600"
         />
         <MetricCard
           title="Overdue Tasks"
-          value={activityMetrics?.data?.tasksOverdue || 0}
+          value={activityMetrics?.data?.data?.tasksOverdue || 0}
           icon={CheckSquare}
           color="text-red-600"
         />
         <MetricCard
           title="Open Cases"
-          value={caseMetrics?.data?.openCases || 0}
+          value={caseMetrics?.data?.data?.openCases || 0}
           icon={AlertCircle}
           color="text-orange-600"
         />
@@ -217,11 +217,11 @@ export function DashboardPage() {
             <CardTitle>Cases by Priority</CardTitle>
           </CardHeader>
           <CardContent>
-            {caseMetrics?.data?.casesByPriority && caseMetrics.data.casesByPriority.length > 0 ? (
+            {caseMetrics?.data?.data?.casesByPriority && caseMetrics.data.data.casesByPriority.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={caseMetrics.data.casesByPriority}
+                    data={caseMetrics.data.data.casesByPriority}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
@@ -230,7 +230,7 @@ export function DashboardPage() {
                     fill="#8884d8"
                     dataKey="count"
                   >
-                    {caseMetrics.data.casesByPriority.map((_, index) => (
+                    {caseMetrics.data.data.casesByPriority.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -300,68 +300,17 @@ export function DashboardPage() {
             </TabsContent>
             <TabsContent value="leads" className="mt-4">
               <div className="space-y-4">
-                {recentActivities?.data?.filter(a => a.type === 'Lead').map((activity) => (
-                  <div key={activity.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                    <div>
-                      <Link 
-                        to={`/leads/${activity.id}`}
-                        className="font-medium hover:underline"
-                      >
-                        {activity.name}
-                      </Link>
-                      <p className="text-sm text-muted-foreground">
-                        {activity.description}
-                      </p>
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDate(activity.date)}
-                    </span>
-                  </div>
-                ))}
+                <p className="text-muted-foreground">Lead activity tracking coming soon</p>
               </div>
             </TabsContent>
             <TabsContent value="opportunities" className="mt-4">
               <div className="space-y-4">
-                {recentActivities?.data?.filter(a => a.type === 'Opportunity').map((activity) => (
-                  <div key={activity.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                    <div>
-                      <Link 
-                        to={`/opportunities/${activity.id}`}
-                        className="font-medium hover:underline"
-                      >
-                        {activity.name}
-                      </Link>
-                      <p className="text-sm text-muted-foreground">
-                        {activity.description}
-                      </p>
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDate(activity.date)}
-                    </span>
-                  </div>
-                ))}
+                <p className="text-muted-foreground">Opportunity activity tracking coming soon</p>
               </div>
             </TabsContent>
             <TabsContent value="cases" className="mt-4">
               <div className="space-y-4">
-                {recentActivities?.data?.filter(a => a.type === 'Case').map((activity) => (
-                  <div key={activity.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                    <div>
-                      <Link 
-                        to={`/cases/${activity.id}`}
-                        className="font-medium hover:underline"
-                      >
-                        {activity.name}
-                      </Link>
-                      <p className="text-sm text-muted-foreground">
-                        {activity.description}
-                      </p>
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDate(activity.date)}
-                    </span>
-                  </div>
-                ))}
+                <p className="text-muted-foreground">Case activity tracking coming soon</p>
               </div>
             </TabsContent>
           </Tabs>
@@ -393,8 +342,8 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
-              {caseMetrics?.data?.avgResolutionTime ? 
-                `${caseMetrics.data.avgResolutionTime.toFixed(1)} days` : 
+              {caseMetrics?.data?.data?.avgResolutionTime ? 
+                `${caseMetrics.data.data.avgResolutionTime.toFixed(1)} days` : 
                 'N/A'
               }
             </div>
@@ -410,7 +359,7 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-red-600">
-              {caseMetrics?.data?.criticalCases || 0}
+              {caseMetrics?.data?.data?.criticalCases || 0}
             </div>
             <p className="text-sm text-muted-foreground mt-1">
               Require immediate attention

@@ -15,7 +15,7 @@ const mockCalls: Call[] = [
   {
     id: '1',
     name: 'Call with John',
-    status: 'Scheduled',
+    status: 'Planned',
     startDate: new Date().toISOString(),
     duration: 30,
     direction: 'Outbound',
@@ -31,8 +31,9 @@ const mockCalls: Call[] = [
 const mockMeetings: Meeting[] = [
   {
     id: '2',
+    type: 'Virtual',
     name: 'Strategy Meeting',
-    status: 'Scheduled',
+    status: 'Planned',
     startDate: new Date().toISOString(),
     endDate: new Date(Date.now() + 3600000).toISOString(),
     location: 'Conference Room A',
@@ -65,7 +66,7 @@ const mockUpcomingActivities: BaseActivity[] = [
   {
     id: '1',
     name: 'Call with John',
-    status: 'Scheduled',
+    status: 'Planned',
     type: 'Call',
     dateModified: new Date().toISOString(),
     dateEntered: new Date().toISOString(),
@@ -78,7 +79,7 @@ const mockUpcomingActivities: BaseActivity[] = [
   {
     id: '2',
     name: 'Strategy Meeting',
-    status: 'Scheduled',
+    status: 'Planned',
     type: 'Meeting',
     dateModified: new Date().toISOString(),
     dateEntered: new Date().toISOString(),

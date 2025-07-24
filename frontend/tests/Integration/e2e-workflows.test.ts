@@ -1,13 +1,12 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { getTestAuthTokens, createAuthenticatedClient } from './helpers/test-auth'
-import { testData } from './helpers/test-data'
 import type { AuthTokens } from './helpers/test-auth'
 
 describe('E2E Workflow Tests', () => {
   let tokens: AuthTokens
   let suitecrmClient: any
   let customApiClient: any
-  let createdIds: {
+  const createdIds: {
     leads: string[]
     accounts: string[]
     contacts: string[]
@@ -31,7 +30,7 @@ describe('E2E Workflow Tests', () => {
 
   afterAll(async () => {
     // Clean up all created records
-    const cleanupPromises = []
+    const cleanupPromises: Promise<any>[] = []
     
     Object.entries(createdIds).forEach(([module, ids]) => {
       const moduleName = module.charAt(0).toUpperCase() + module.slice(1, -1)
@@ -240,7 +239,7 @@ describe('E2E Workflow Tests', () => {
   describe('Customer Support Workflow', () => {
     let accountId: string
     let caseId: string
-    let activityIds: string[] = []
+    const activityIds: string[] = []
 
     it('Step 1: Customer reports critical issue', async () => {
       // Create customer account

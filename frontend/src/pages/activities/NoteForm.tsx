@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
+import { useForm, type SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { ArrowLeft, Loader2, Upload } from 'lucide-react'
@@ -52,7 +52,12 @@ export function NoteForm() {
     formState: { errors, isSubmitting },
   } = useForm<NoteFormData>({
     resolver: zodResolver(noteSchema),
-    defaultValues: note?.data || {},
+    defaultValues: note ? {
+      name: note.name,
+      description: note.description,
+      parentType: note.parentType,
+      parentId: note.parentId,
+    } : {},
   })
 
   const parentType = watch('parentType')
@@ -82,7 +87,7 @@ export function NoteForm() {
     },
   })
 
-  const onSubmit = async (data: NoteFormData) => {
+  const onSubmit: SubmitHandler<NoteFormData> = async (data) => {
     try {
       if (isEdit && id) {
         await updateNote.mutateAsync({ ...data, status: 'Active', dateEntered: '', dateModified: '' })
@@ -138,7 +143,7 @@ export function NoteForm() {
                 setValue('parentType', value)
                 setValue('parentId', '')
               }}
-              defaultValue={note?.data?.parentType}
+              defaultValue={note?.parentType}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select type" />
@@ -158,7 +163,7 @@ export function NoteForm() {
               <Label htmlFor="parentId">Select {parentType.slice(0, -1)}</Label>
               <Select
                 onValueChange={(value) => setValue('parentId', value)}
-                defaultValue={note?.data?.parentId}
+                defaultValue={note?.parentId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={`Select ${parentType.toLowerCase()}`} />

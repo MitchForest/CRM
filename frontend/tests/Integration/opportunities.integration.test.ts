@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { getTestAuthTokens, createAuthenticatedClient } from './helpers/test-auth'
-import { testData, opportunityStages } from './helpers/test-data'
+import { testData } from './helpers/test-data'
 import type { AuthTokens } from './helpers/test-auth'
 
 describe('Opportunities Integration Tests', () => {

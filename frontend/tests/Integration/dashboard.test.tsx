@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { DashboardPage } from '@/pages/Dashboard'
-import { useDashboard } from '@/hooks/use-dashboard'
+import { useDashboardData } from '@/hooks/use-dashboard'
 
 // Mock the dashboard hook
 vi.mock('@/hooks/use-dashboard')
@@ -59,7 +59,7 @@ const mockDashboardData = {
       name: 'Follow up meeting',
       parentName: 'Tech Solutions',
       assignedUserName: 'Sales Manager',
-      status: 'Scheduled',
+      status: 'Planned',
     },
   ],
 }
@@ -80,18 +80,29 @@ const createWrapper = () => {
 }
 
 describe('DashboardPage', () => {
-  const mockUseDashboard = vi.mocked(useDashboard)
+  const mockUseDashboard = vi.mocked(useDashboardData)
 
   beforeEach(() => {
     vi.clearAllMocks()
     
     mockUseDashboard.mockReturnValue({
-      metrics: mockDashboardData.metrics,
-      pipelineData: mockDashboardData.pipelineData,
-      casesByPriority: mockDashboardData.casesByPriority,
-      recentActivities: mockDashboardData.recentActivities,
+      stats: { data: { data: mockDashboardData.metrics } },
+      metrics: { data: { data: mockDashboardData.metrics } },
+      pipeline: { data: mockDashboardData.pipelineData },
+      activityMetrics: { data: { data: {
+        callsToday: mockDashboardData.metrics.callsToday,
+        meetingsToday: mockDashboardData.metrics.meetingsToday,
+        tasksOverdue: mockDashboardData.metrics.tasksOverdue,
+        upcomingActivities: mockDashboardData.recentActivities
+      }}},
+      caseMetrics: { data: { data: {
+        openCases: mockDashboardData.metrics.openCases,
+        casesByPriority: mockDashboardData.casesByPriority,
+        avgResolutionTime: 3.5,
+        criticalCases: 2
+      }}},
+      recentActivities: { data: mockDashboardData.recentActivities },
       isLoading: false,
-      error: null,
     } as any)
   })
 
@@ -237,7 +248,7 @@ describe('DashboardPage', () => {
   })
 
   it('updates data on refresh interval', async () => {
-    const { rerender } = render(<Dashboard />, { wrapper: createWrapper() })
+    const { rerender } = render(<DashboardPage />, { wrapper: createWrapper() })
 
     // Initial render
     expect(mockUseDashboard).toHaveBeenCalledTimes(1)
@@ -252,15 +263,26 @@ describe('DashboardPage', () => {
     }
 
     mockUseDashboard.mockReturnValue({
-      metrics: updatedData.metrics,
-      pipelineData: updatedData.pipelineData,
-      casesByPriority: updatedData.casesByPriority,
-      recentActivities: updatedData.recentActivities,
+      stats: { data: { data: updatedData.metrics } },
+      metrics: { data: { data: updatedData.metrics } },
+      pipeline: { data: updatedData.pipelineData },
+      activityMetrics: { data: { data: {
+        callsToday: updatedData.metrics.callsToday,
+        meetingsToday: updatedData.metrics.meetingsToday,
+        tasksOverdue: updatedData.metrics.tasksOverdue,
+        upcomingActivities: updatedData.recentActivities
+      }}},
+      caseMetrics: { data: { data: {
+        openCases: updatedData.metrics.openCases,
+        casesByPriority: updatedData.casesByPriority,
+        avgResolutionTime: 3.5,
+        criticalCases: 2
+      }}},
+      recentActivities: { data: updatedData.recentActivities },
       isLoading: false,
-      error: null,
     } as any)
 
-    rerender(<Dashboard />)
+    rerender(<DashboardPage />)
 
     await waitFor(() => {
       expect(screen.getByText('15')).toBeInTheDocument()
