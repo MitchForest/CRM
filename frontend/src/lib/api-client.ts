@@ -62,7 +62,7 @@ class ApiClient {
 
     // Custom API client for Phase 2 features
     this.customClient = axios.create({
-      baseURL: 'http://localhost:8080/custom-api',
+      baseURL: 'http://localhost:8080/api',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -198,8 +198,8 @@ class ApiClient {
         password
       })
       
-      if (response.data?.data?.token) {
-        this.customApiToken = response.data.data.token
+      if (response.data?.accessToken) {
+        this.customApiToken = response.data.accessToken
       }
     } catch (error) {
       console.error('Failed to authenticate with custom API:', error)

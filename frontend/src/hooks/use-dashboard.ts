@@ -5,7 +5,23 @@ import { apiClient } from '@/lib/api-client'
 export function useDashboardMetrics() {
   return useQuery({
     queryKey: ['dashboard-metrics'],
-    queryFn: () => apiClient.getDashboardMetrics(),
+    queryFn: async () => {
+      const response = await apiClient.getDashboardMetrics()
+      if (response.success && response.data) {
+        // Transform snake_case to camelCase
+        const rawData = response.data as any
+        return {
+          ...response,
+          data: {
+            totalLeads: rawData.total_leads || rawData.totalLeads || 0,
+            totalAccounts: rawData.total_accounts || rawData.totalAccounts || 0,
+            newLeadsToday: rawData.new_leads_today || rawData.newLeadsToday || 0,
+            pipelineValue: rawData.pipeline_value || rawData.pipelineValue || 0,
+          }
+        }
+      }
+      return response
+    },
   })
 }
 
@@ -37,7 +53,23 @@ export function usePipelineData() {
 export function useActivityMetrics() {
   return useQuery({
     queryKey: ['dashboard-activities'],
-    queryFn: () => apiClient.getActivityMetrics(),
+    queryFn: async () => {
+      const response = await apiClient.getActivityMetrics()
+      if (response.success && response.data) {
+        // Transform snake_case to camelCase
+        const rawData = response.data as any
+        return {
+          ...response,
+          data: {
+            callsToday: rawData.calls_today || rawData.callsToday || 0,
+            meetingsToday: rawData.meetings_today || rawData.meetingsToday || 0,
+            tasksOverdue: rawData.tasks_overdue || rawData.tasksOverdue || 0,
+            upcomingActivities: rawData.upcoming_activities || rawData.upcomingActivities || [],
+          }
+        }
+      }
+      return response
+    },
   })
 }
 
@@ -45,7 +77,23 @@ export function useActivityMetrics() {
 export function useCaseMetrics() {
   return useQuery({
     queryKey: ['dashboard-cases'],
-    queryFn: () => apiClient.getCaseMetrics(),
+    queryFn: async () => {
+      const response = await apiClient.getCaseMetrics()
+      if (response.success && response.data) {
+        // Transform snake_case to camelCase
+        const rawData = response.data as any
+        return {
+          ...response,
+          data: {
+            openCases: rawData.open_cases || rawData.openCases || 0,
+            criticalCases: rawData.critical_cases || rawData.criticalCases || 0,
+            avgResolutionTime: rawData.avg_resolution_time || rawData.avgResolutionTime || 0,
+            casesByPriority: rawData.cases_by_priority || rawData.casesByPriority || [],
+          }
+        }
+      }
+      return response
+    },
   })
 }
 
@@ -59,12 +107,14 @@ export function useRecentActivities() {
       if (!response.success || !response.data) return []
       
       // Transform upcoming activities into the expected format
-      return response.data.upcomingActivities.slice(0, 10).map(activity => ({
+      const rawData = response.data as any
+      const activities = rawData.upcomingActivities || rawData.upcoming_activities || []
+      return activities.slice(0, 10).map((activity: any) => ({
         id: activity.id,
         type: activity.type || 'Task' as const,
         name: activity.name,
         description: `${activity.status} - ${activity.priority || 'Normal'} priority`,
-        date: activity.dateEntered,
+        date: activity.date_start || activity.dateEntered || activity.date_entered,
         icon: activity.type === 'Call' ? 'Phone' : 
               activity.type === 'Meeting' ? 'Calendar' : 
               activity.type === 'Note' ? 'FileText' : 'CheckCircle2',
