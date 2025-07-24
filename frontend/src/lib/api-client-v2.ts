@@ -7,7 +7,7 @@ export class TypeSafeApiClient {
   private client: AxiosInstance
   private refreshPromise: Promise<string> | null = null
 
-  constructor(baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api') {
+  constructor(baseURL = import.meta.env['VITE_API_URL'] || 'http://localhost:8080/api') {
     this.client = axios.create({
       baseURL,
       timeout: 30000,
@@ -73,7 +73,7 @@ export class TypeSafeApiClient {
         accessToken,
         refreshToken: auth.refreshToken,
         expiresAt: Date.now() + (expiresIn * 1000),
-        user: auth.user
+        ...(auth.user && { user: auth.user })
       })
 
       return accessToken
@@ -110,8 +110,8 @@ export class TypeSafeApiClient {
 
     // Build the actual URL (replace :id params)
     let url = endpoint as string
-    if (params?.id) {
-      url = url.replace(':id', String(params.id))
+    if (params?.['id']) {
+      url = url.replace(':id', String(params['id']))
     }
 
     // Make the request

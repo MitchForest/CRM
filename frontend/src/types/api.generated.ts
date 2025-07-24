@@ -81,17 +81,18 @@ export interface Lead {
   description?: string;
   status: 'New' | 'Contacted' | 'Qualified' | 'Converted' | 'Dead';
   source?: string;
+  accountName?: string;
   assignedUserId?: string;
   assignedUserName?: string;
   convertedContactId?: string;
   convertedAt?: string;
   // AI custom fields
-  ai_score?: number;
-  ai_score_date?: string;
-  ai_insights?: string;
-  customFields?: Record<string, any>;
-  createdAt?: string;
-  updatedAt?: string;
+  aiScore?: number;
+  aiScoreDate?: string;
+  aiInsights?: string;
+  // SuiteCRM metadata fields
+  dateEntered?: string;
+  dateModified?: string;
 }
 
 export interface Opportunity {

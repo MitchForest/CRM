@@ -17,7 +17,8 @@ import {
   transformJsonApiErrors,
   buildJsonApiFilters,
   buildJsonApiSort,
-  buildJsonApiPagination
+  buildJsonApiPagination,
+  type JsonApiError
 } from './api-transformers'
 
 // Get auth token from localStorage
@@ -85,9 +86,14 @@ class ApiClient {
 
         // Transform JSON:API errors to our format
         if (error.response?.data && typeof error.response.data === 'object') {
+          console.error('API Error Response:', {
+            status: error.response.status,
+            data: error.response.data,
+            headers: error.response.headers
+          })
           const jsonApiError = error.response.data as Record<string, unknown>
-          if (jsonApiError.errors && Array.isArray(jsonApiError.errors)) {
-            const transformedErrorData = transformJsonApiErrors(jsonApiError.errors)
+          if (jsonApiError['errors'] && Array.isArray(jsonApiError['errors'])) {
+            const transformedErrorData = transformJsonApiErrors(jsonApiError['errors'] as JsonApiError[])
             const transformedError = {
               ...error,
               response: {
@@ -188,7 +194,7 @@ class ApiClient {
           }
         }
       }
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: {
@@ -244,7 +250,7 @@ class ApiClient {
   async updateAccount(id: string, data: Partial<Account>): Promise<ApiResponse<Account>> {
     const jsonApiData = transformToJsonApiDocument('Accounts', { ...data, id })
     
-    const response = await this.client.put(`/module/Accounts/${id}`, jsonApiData)
+    const response = await this.client.patch('/module', jsonApiData)
     
     return {
       data: transformFromJsonApi<Account>(response.data.data),
@@ -263,15 +269,19 @@ class ApiClient {
   // Contact methods
   async getContacts(params?: QueryParams): Promise<ListResponse<Contact>> {
     const queryParams: Record<string, string> = {
-      ...buildJsonApiPagination(params?.page, params?.pageSize),
-      ...(params?.sort ? { sort: buildJsonApiSort(params.sort[0]?.field, params.sort[0]?.direction) } : {})
+      ...buildJsonApiPagination(params?.page, params?.pageSize)
+    }
+    
+    const sortParam = params?.sort ? buildJsonApiSort(params.sort[0]?.field, params.sort[0]?.direction) : undefined
+    if (sortParam) {
+      queryParams['sort'] = sortParam
     }
     
     if (params?.search) {
       queryParams['filter[operator]'] = 'or'
       queryParams['filter[first_name][like]'] = `%${params.search}%`
       queryParams['filter[last_name][like]'] = `%${params.search}%`
-      queryParams['filter[email][like]'] = `%${params.search}%`
+      queryParams['filter[email1][like]'] = `%${params.search}%`
     }
     
     const response = await this.client.get('/module/Contacts', { params: queryParams })
@@ -305,7 +315,7 @@ class ApiClient {
   async updateContact(id: string, data: Partial<Contact>): Promise<ApiResponse<Contact>> {
     const jsonApiData = transformToJsonApiDocument('Contacts', { ...data, id })
     
-    const response = await this.client.put(`/module/Contacts/${id}`, jsonApiData)
+    const response = await this.client.patch('/module', jsonApiData)
     
     return {
       data: transformFromJsonApi<Contact>(response.data.data),
@@ -325,31 +335,25 @@ class ApiClient {
   // Lead methods
   async getLeads(params?: QueryParams): Promise<ListResponse<Lead>> {
     const queryParams: Record<string, string> = {
-      ...buildJsonApiPagination(params?.page, params?.pageSize),
-      ...(params?.sort ? { sort: buildJsonApiSort(params.sort[0]?.field, params.sort[0]?.direction) } : {})
+      ...buildJsonApiPagination(params?.page, params?.pageSize)
+    }
+    
+    const sortParam = params?.sort ? buildJsonApiSort(params.sort[0]?.field, params.sort[0]?.direction) : undefined
+    if (sortParam) {
+      queryParams['sort'] = sortParam
     }
     
     if (params?.search) {
       queryParams['filter[operator]'] = 'or'
       queryParams['filter[first_name][like]'] = `%${params.search}%`
       queryParams['filter[last_name][like]'] = `%${params.search}%`
-      queryParams['filter[email][like]'] = `%${params.search}%`
+      queryParams['filter[email1][like]'] = `%${params.search}%`
     }
     
     const response = await this.client.get('/module/Leads', { params: queryParams })
     
-    // Transform and add mock AI scores for demonstration
-    const leads = transformManyFromJsonApi<Lead>(response.data.data || [])
-    // Add mock AI scores since v8 API doesn't return custom fields by default
-    const leadsWithAI = leads.map(lead => ({
-      ...lead,
-      ai_score: Math.floor(Math.random() * 100),
-      ai_score_date: new Date().toISOString(),
-      ai_insights: 'High engagement potential based on recent activity'
-    }))
-    
     return {
-      data: leadsWithAI,
+      data: transformManyFromJsonApi<Lead>(response.data.data || []),
       pagination: extractPaginationMeta(response.data)
     }
   }
@@ -357,96 +361,31 @@ class ApiClient {
   async getLead(id: string): Promise<ApiResponse<Lead>> {
     const response = await this.client.get(`/module/Leads/${id}`)
     
-    const lead = transformFromJsonApi<Lead>(response.data.data)
-    // Add mock AI fields
-    const leadWithAI = {
-      ...lead,
-      ai_score: Math.floor(Math.random() * 100),
-      ai_score_date: new Date().toISOString(),
-      ai_insights: 'High engagement potential based on recent activity'
-    }
-    
     return {
-      data: leadWithAI,
+      data: transformFromJsonApi<Lead>(response.data.data),
       success: true
     }
   }
 
   async createLead(data: Partial<Lead>): Promise<ApiResponse<Lead>> {
-    // Manually map to snake_case for now to ensure it works
-    const leadData = {
-      first_name: data.firstName,
-      last_name: data.lastName,
-      email: data.email,
-      phone: data.phone || '',
-      mobile: data.mobile || '',
-      title: data.title || '',
-      company: data.company || '',
-      website: data.website || '',
-      description: data.description || '',
-      status: data.status || 'New',
-      lead_source: data.source || ''
-    }
-    
-    const jsonApiData = {
-      data: {
-        type: 'Leads',
-        attributes: leadData
-      }
-    }
+    const jsonApiData = transformToJsonApiDocument('Leads', data, false)
     
     const response = await this.client.post('/module', jsonApiData)
     
-    const lead = transformFromJsonApi<Lead>(response.data.data)
-    // Add mock AI fields
-    const leadWithAI = {
-      ...lead,
-      ai_score: 75,
-      ai_score_date: new Date().toISOString(),
-      ai_insights: 'New lead - AI scoring pending'
-    }
-    
     return {
-      data: leadWithAI,
+      data: transformFromJsonApi<Lead>(response.data.data),
       success: true
     }
   }
 
   async updateLead(id: string, data: Partial<Lead>): Promise<ApiResponse<Lead>> {
-    // SuiteCRM v8 API has a bug where updates don't work on individual resources
-    // Workaround: Get the full lead, merge changes, delete and recreate
-    try {
-      // First get the existing lead
-      const existingResponse = await this.getLead(id)
-      if (!existingResponse.data) {
-        throw new Error('Lead not found')
-      }
-      
-      // Merge the changes with existing data
-      const updatedLead = {
-        ...existingResponse.data,
-        ...data
-      }
-      
-      // Delete the old lead
-      await this.deleteLead(id)
-      
-      // Create a new lead with the updated data (excluding the ID)
-      const { id: _, ...leadDataWithoutId } = updatedLead
-      const createResponse = await this.createLead(leadDataWithoutId)
-      
-      return createResponse
-    } catch (error) {
-      // If workaround fails, return error
-      console.error('Update workaround failed:', error)
-      return {
-        success: false,
-        error: {
-          error: 'Update failed',
-          code: 'UPDATE_ERROR',
-          details: error
-        }
-      }
+    const jsonApiData = transformToJsonApiDocument('Leads', { ...data, id })
+    
+    const response = await this.client.patch('/module', jsonApiData)
+    
+    return {
+      data: transformFromJsonApi<Lead>(response.data.data),
+      success: true
     }
   }
 
@@ -455,7 +394,7 @@ class ApiClient {
     // For now, we'll update the status to 'Converted'
     const jsonApiData = transformToJsonApiDocument('Leads', { id, status: 'Converted' })
     
-    const response = await this.client.put(`/module/Leads/${id}`, jsonApiData)
+    const response = await this.client.patch('/module', jsonApiData)
     
     // In a real implementation, you'd need to handle the contact creation
     // and relationship linking according to SuiteCRM's lead conversion logic
@@ -512,7 +451,7 @@ class ApiClient {
   async updateTask(id: string, data: Partial<Task>): Promise<ApiResponse<Task>> {
     const jsonApiData = transformToJsonApiDocument('Tasks', { ...data, id })
     
-    const response = await this.client.put(`/module/Tasks/${id}`, jsonApiData)
+    const response = await this.client.patch('/module', jsonApiData)
     
     return {
       data: transformFromJsonApi<Task>(response.data.data),

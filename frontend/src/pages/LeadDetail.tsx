@@ -175,10 +175,10 @@ export function LeadDetailPage() {
                     <p className="text-sm">{lead.source}</p>
                   </div>
                 )}
-                {lead.customFields?.accountName && (
+                {lead.accountName && (
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Account Name</p>
-                    <p className="text-sm">{lead.customFields.accountName}</p>
+                    <p className="text-sm">{lead.accountName}</p>
                   </div>
                 )}
                 {lead.assignedUserName && (
@@ -262,11 +262,11 @@ export function LeadDetailPage() {
             <CardContent className="space-y-2 text-sm">
               <div>
                 <p className="text-muted-foreground">Created</p>
-                <p>{lead.createdAt ? formatDateTime(lead.createdAt) : 'Unknown'}</p>
+                <p>{lead.dateEntered ? formatDateTime(lead.dateEntered) : 'Unknown'}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Last Updated</p>
-                <p>{lead.updatedAt ? formatDateTime(lead.updatedAt) : 'Unknown'}</p>
+                <p>{lead.dateModified ? formatDateTime(lead.dateModified) : 'Unknown'}</p>
               </div>
               {lead.convertedContactId && (
                 <div>

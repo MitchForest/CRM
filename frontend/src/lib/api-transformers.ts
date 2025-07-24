@@ -33,7 +33,7 @@ interface JsonApiDocument {
   errors?: JsonApiError[]
 }
 
-interface JsonApiError {
+export interface JsonApiError {
   id?: string
   status?: string
   code?: string
@@ -80,7 +80,7 @@ export function transformFromJsonApi<T>(resource: JsonApiResource): T {
     }
     
     if (Object.keys(relationships).length > 0) {
-      (transformed as Record<string, unknown>).relationships = relationships
+      (transformed as Record<string, unknown>)['relationships'] = relationships
     }
   }
 
@@ -144,7 +144,15 @@ export function transformToJsonApi(
   // Convert camelCase fields from frontend to snake_case for SuiteCRM
   const snakeCaseData = mapFrontendToSuiteCRM(data)
   
-  const { id, relationships, ...attributes } = snakeCaseData as Record<string, unknown>
+  const { id, relationships, ...dirtyAttributes } = snakeCaseData as Record<string, unknown>
+  
+  // Filter out undefined, null, and empty string values
+  const attributes: Record<string, unknown> = {}
+  Object.entries(dirtyAttributes).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      attributes[key] = value
+    }
+  })
   
   let resource: JsonApiResource = {
     type,
@@ -175,11 +183,11 @@ export function transformToJsonApi(
             id: item.id
           }))
         }
-      } else if (typeof value === 'object' && value !== null && 'id' in value && (value as Record<string, unknown>).id) {
+      } else if (typeof value === 'object' && value !== null && 'id' in value && (value as Record<string, unknown>)['id']) {
         jsonApiRelationships[key] = {
           data: {
-            type: (value as Record<string, unknown>).type as string || key,
-            id: (value as Record<string, unknown>).id as string
+            type: (value as Record<string, unknown>)['type'] as string || key,
+            id: (value as Record<string, unknown>)['id'] as string
           }
         }
       }
@@ -227,12 +235,12 @@ export function extractPaginationMeta(document: JsonApiDocument): {
   const links = document.links || {}
   
   return {
-    page: Number(meta['page-number'] || meta.page || 1),
-    pageSize: Number(meta['page-size'] || meta.pageSize || 20),
-    totalPages: Number(meta['total-pages'] || meta.totalPages || 1),
-    totalCount: Number(meta['total-count'] || meta.totalCount || 0),
-    hasNext: !!links.next,
-    hasPrevious: !!links.prev || !!links.previous
+    page: Number(meta['page-number'] || meta['page'] || 1),
+    pageSize: Number(meta['page-size'] || meta['pageSize'] || 20),
+    totalPages: Number(meta['total-pages'] || meta['totalPages'] || 1),
+    totalCount: Number(meta['total-count'] || meta['totalCount'] || 0),
+    hasNext: !!links['next'],
+    hasPrevious: !!links['prev'] || !!links['previous']
   }
 }
 
@@ -253,9 +261,10 @@ export function transformJsonApiErrors(errors: JsonApiError[]): {
   const firstError = errors[0]
   
   return {
-    message: firstError.title || firstError.detail || 'An error occurred',
-    code: firstError.code || firstError.status,
-    details: errors.length > 1 ? errors : firstError.meta
+    message: firstError?.title || firstError?.detail || 'An error occurred',
+    ...(firstError?.code && { code: firstError.code }),
+    ...(firstError?.status && { code: firstError.status }),
+    ...(errors.length > 1 ? { details: errors } : firstError?.meta ? { details: firstError.meta } : {})
   }
 }
 

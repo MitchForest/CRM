@@ -51,7 +51,7 @@ export function LeadFormPage() {
         mobile: lead.mobile || '',
         title: lead.title || '',
         company: lead.company || '',
-        accountName: lead.customFields?.accountName || '',
+        accountName: lead.accountName || '',
         website: lead.website || '',
         description: lead.description || '',
         status: lead.status,
@@ -62,20 +62,12 @@ export function LeadFormPage() {
 
   const onSubmit = async (data: LeadFormData) => {
     try {
-      // Extract accountName and prepare the lead data
-      const { accountName, ...leadData } = data
-      const leadPayload = {
-        ...leadData,
-        customFields: {
-          accountName: accountName || undefined
-        }
-      }
-      
+      // Send the data directly - transformers will handle field mapping
       if (isEdit) {
-        await updateLead.mutateAsync(leadPayload)
+        await updateLead.mutateAsync(data)
         navigate(`/leads/${id}`)
       } else {
-        const result = await createLead.mutateAsync(leadPayload)
+        const result = await createLead.mutateAsync(data)
         navigate(`/leads/${result.data?.id || ''}`)
       }
     } catch {

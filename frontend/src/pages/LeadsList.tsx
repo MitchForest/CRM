@@ -78,10 +78,10 @@ const columns: ColumnDef<Lead>[] = [
     cell: ({ row }) => row.getValue('source') || '-',
   },
   {
-    accessorKey: 'ai_score',
+    accessorKey: 'aiScore',
     header: 'AI Score',
     cell: ({ row }) => {
-      const aiScore = row.original.ai_score
+      const aiScore = row.original.aiScore
       if (!aiScore && aiScore !== 0) return '-'
       const score = typeof aiScore === 'number' ? aiScore : parseInt(aiScore)
       let color = 'text-gray-600'

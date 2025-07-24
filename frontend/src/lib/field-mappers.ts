@@ -72,8 +72,25 @@ export function toSnakeCase<T = unknown>(obj: unknown): T {
  * Special field mappings that don't follow standard snake_case to camelCase conversion
  */
 const SPECIAL_FIELD_MAPPINGS: Record<string, string> = {
-  // Add any special cases here if needed
-  // For example: 'some_special_field': 'customFieldName'
+  // SuiteCRM uses email1 for primary email field
+  'email1': 'email',
+  'phone_work': 'phoneWork',
+  'phone_mobile': 'phoneMobile',
+  'phone_fax': 'phoneFax',
+  'phone_other': 'phoneOther',
+  // Lead specific
+  'lead_source': 'leadSource',
+  'lead_source_description': 'leadSourceDescription',
+  'status_description': 'statusDescription',
+  'account_name': 'accountName',
+  'opportunity_amount': 'opportunityAmount',
+  // AI fields
+  'ai_score': 'aiScore',
+  'ai_score_date': 'aiScoreDate',
+  'ai_insights': 'aiInsights',
+  // Account fields
+  'health_score': 'healthScore',
+  'last_activity': 'lastActivity'
 };
 
 const REVERSE_SPECIAL_FIELD_MAPPINGS: Record<string, string> = Object.fromEntries(
