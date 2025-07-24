@@ -8,7 +8,6 @@ export function Header() {
   return (
     <header className="flex h-16 items-center gap-4 border-b bg-background px-6">
       <SidebarTrigger />
-      <Separator orientation="vertical" className="h-6" />
       
       <div className="flex items-center flex-1 gap-4">
         <div className="relative w-96">

@@ -1,4 +1,5 @@
-import { apiClient } from '../api-client'
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { apiClient } from '@/lib/api-client'
 import type { Lead, Account } from '@/types/api.generated'
 
 // Integration tests for SuiteCRM v8 API
@@ -10,7 +11,6 @@ describe('SuiteCRM API Integration Tests', () => {
     password: 'apiuser123'
   }
 
-  let authToken: string
   let testLeadId: string
   let testAccountId: string
 
@@ -23,7 +23,7 @@ describe('SuiteCRM API Integration Tests', () => {
     
     expect(loginResult.success).toBe(true)
     if (loginResult.data) {
-      authToken = loginResult.data.accessToken
+      // authToken is stored internally in apiClient
     }
   })
 
@@ -55,7 +55,7 @@ describe('SuiteCRM API Integration Tests', () => {
         expect(result.data).toBeDefined()
         
         if (result.data) {
-          testLeadId = result.data.id
+          testLeadId = result.data.id!
           
           // Verify email was saved correctly
           expect(result.data.email).toBe(leadData.email)
@@ -123,7 +123,7 @@ describe('SuiteCRM API Integration Tests', () => {
 
         const updateData: Partial<Lead> = {
           firstName: 'Updated',
-          status: 'Assigned',
+          status: 'Qualified',
           description: 'Updated via integration test'
         }
 
@@ -153,14 +153,14 @@ describe('SuiteCRM API Integration Tests', () => {
         expect(createResult.success).toBe(true)
 
         if (createResult.data) {
-          const deleteResult = await apiClient.deleteLead(createResult.data.id)
+          const deleteResult = await apiClient.deleteLead(createResult.data.id!)
           expect(deleteResult.success).toBe(true)
 
           // Verify lead is deleted by trying to fetch it
           try {
-            await apiClient.getLead(createResult.data.id)
-            fail('Expected getLead to throw for deleted lead')
-          } catch (error) {
+            await apiClient.getLead(createResult.data.id!)
+            throw new Error('Expected getLead to throw for deleted lead')
+          } catch {
             // Expected - lead should not exist
           }
         }
@@ -175,9 +175,9 @@ describe('SuiteCRM API Integration Tests', () => {
           name: 'Test Integration Account',
           industry: 'Technology',
           website: 'https://test.example.com',
-          phoneOffice: '555-1234',
-          billingAddressCity: 'Test City',
-          billingAddressCountry: 'USA'
+          phone: '555-1234',
+          billingCity: 'Test City',
+          billingCountry: 'USA'
         }
 
         const result = await apiClient.createAccount(accountData)
@@ -186,7 +186,7 @@ describe('SuiteCRM API Integration Tests', () => {
         expect(result.data).toBeDefined()
         
         if (result.data) {
-          testAccountId = result.data.id
+          testAccountId = result.data.id!
           expect(result.data.name).toBe(accountData.name)
           expect(result.data.industry).toBe(accountData.industry)
           expect(result.data.website).toBe(accountData.website)
@@ -247,8 +247,8 @@ describe('SuiteCRM API Integration Tests', () => {
         // If we have multiple results, verify they're sorted
         if (result.data.length > 1) {
           for (let i = 1; i < result.data.length; i++) {
-            const prev = result.data[i - 1].name || ''
-            const curr = result.data[i].name || ''
+            const prev = result.data[i - 1]!.name || ''
+            const curr = result.data[i]!.name || ''
             expect(prev.localeCompare(curr)).toBeLessThanOrEqual(0)
           }
         }
@@ -260,9 +260,9 @@ describe('SuiteCRM API Integration Tests', () => {
     it('should handle 404 errors gracefully', async () => {
       try {
         await apiClient.getLead('non-existent-id')
-        fail('Expected getLead to throw for non-existent ID')
-      } catch (error: any) {
-        expect(error.response?.status).toBe(404)
+        throw new Error('Expected getLead to throw for non-existent ID')
+      } catch (error: unknown) {
+        expect((error as Error & { response?: { status: number } }).response?.status).toBe(404)
       }
     })
 

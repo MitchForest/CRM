@@ -5,13 +5,10 @@ import { leadSchema, type LeadFormData } from '@/lib/validation'
 import type { Lead } from '@/types/api.generated'
 
 // Mock axios to capture actual requests
-let mockAxiosPost: any
-let mockAxiosPatch: any
+const mockAxiosPost = vi.fn()
+const mockAxiosPatch = vi.fn()
 
 vi.mock('axios', () => {
-  mockAxiosPost = vi.fn()
-  mockAxiosPatch = vi.fn()
-  
   return {
     default: {
       create: () => ({
@@ -76,7 +73,7 @@ describe('Form to API Integration - REAL Tests', () => {
 
       // Verify the EXACT payload sent to the API
       expect(mockAxiosPost).toHaveBeenCalledTimes(1)
-      const [endpoint, payload] = mockAxiosPost.mock.calls[0]
+      const [endpoint, payload] = mockAxiosPost.mock.calls[0] ?? []
       
       console.log('=== CREATE LEAD - ACTUAL PAYLOAD SENT ===')
       console.log(JSON.stringify(payload, null, 2))
@@ -120,8 +117,9 @@ describe('Form to API Integration - REAL Tests', () => {
       // Simulate form edit - user changes status
       const updatedFormData: LeadFormData = {
         ...existingLead,
-        status: 'Qualified',
-        description: 'Updated description'
+        status: 'Qualified' as const,
+        description: 'Updated description',
+        source: existingLead.source as any
       }
 
       mockAxiosPatch.mockResolvedValueOnce({
@@ -139,7 +137,7 @@ describe('Form to API Integration - REAL Tests', () => {
 
       // Verify the EXACT payload sent
       expect(mockAxiosPatch).toHaveBeenCalledTimes(1)
-      const [endpoint, payload] = mockAxiosPatch.mock.calls[0]
+      const [endpoint, payload] = mockAxiosPatch.mock.calls[0] ?? []
 
       console.log('=== UPDATE LEAD - ACTUAL PAYLOAD SENT ===')
       console.log(JSON.stringify(payload, null, 2))
@@ -167,7 +165,7 @@ describe('Form to API Integration - REAL Tests', () => {
 
       await apiClient.createLead(minimalFormData)
 
-      const [, payload] = mockAxiosPost.mock.calls[0]
+      const [, payload] = mockAxiosPost.mock.calls[0] ?? []
 
       console.log('=== MINIMAL LEAD - PAYLOAD WITH OPTIONAL FIELDS ===')
       console.log(JSON.stringify(payload, null, 2))
@@ -200,13 +198,14 @@ describe('Form to API Integration - REAL Tests', () => {
       console.log('Transformed payload:', JSON.stringify(jsonApiPayload, null, 2))
 
       // Check if camelCase is leaking through
-      const hasInvalidFields = Object.keys(jsonApiPayload.data.attributes).some(
+      const attrs = jsonApiPayload.data as { attributes?: Record<string, any> }
+      const hasInvalidFields = attrs.attributes ? Object.keys(attrs.attributes).some(
         key => key.includes('firstName') || key.includes('lastName') || key === 'email'
-      )
+      ) : false
 
       if (hasInvalidFields) {
         console.error('ERROR: CamelCase fields found in payload!')
-        console.error('Invalid fields:', Object.keys(jsonApiPayload.data.attributes))
+        console.error('Invalid fields:', attrs.attributes ? Object.keys(attrs.attributes) : [])
       }
 
       expect(hasInvalidFields).toBe(false)
@@ -221,12 +220,11 @@ describe('Form to API Integration - REAL Tests', () => {
         email: 'john@example.com',
         phone: '111-1111',
         mobile: '222-2222',
-        phoneWork: '333-3333',
         aiScore: 85,
         aiScoreDate: '2023-01-01',
         aiInsights: 'High value',
         accountName: 'Acme Corp',
-        leadSource: 'Website'
+        source: 'Website' as any
       }
 
       const result = transformToJsonApiDocument('Leads', allFields, false)
@@ -235,7 +233,7 @@ describe('Form to API Integration - REAL Tests', () => {
       console.log('Input:', allFields)
       console.log('Output:', JSON.stringify(result, null, 2))
 
-      const attrs = result.data.attributes
+      const attrs = (result.data as { attributes?: Record<string, any> }).attributes || {}
 
       // Verify ALL mappings
       expect(attrs.first_name).toBe('John')

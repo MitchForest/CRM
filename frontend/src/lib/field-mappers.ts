@@ -156,9 +156,9 @@ export function isSuiteCRMRecord(value: unknown): boolean {
   return (
     typeof value === 'object' &&
     value !== null &&
-    typeof (value as Record<string, unknown>).id === 'string' &&
-    typeof (value as Record<string, unknown>).date_entered === 'string' &&
-    typeof (value as Record<string, unknown>).date_modified === 'string'
+    typeof (value as Record<string, unknown>)['id'] === 'string' &&
+    typeof (value as Record<string, unknown>)['date_entered'] === 'string' &&
+    typeof (value as Record<string, unknown>)['date_modified'] === 'string'
   );
 }
 
@@ -169,8 +169,8 @@ export function isFrontendRecord(value: unknown): boolean {
   return (
     typeof value === 'object' &&
     value !== null &&
-    typeof (value as Record<string, unknown>).id === 'string' &&
-    typeof (value as Record<string, unknown>).dateEntered === 'string' &&
-    typeof (value as Record<string, unknown>).dateModified === 'string'
+    typeof (value as Record<string, unknown>)['id'] === 'string' &&
+    typeof (value as Record<string, unknown>)['dateEntered'] === 'string' &&
+    typeof (value as Record<string, unknown>)['dateModified'] === 'string'
   );
 }

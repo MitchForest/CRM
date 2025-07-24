@@ -16,7 +16,7 @@ describe('Backend API Schema Validation', () => {
 
   beforeAll(async () => {
     // Skip these tests if not in CI or explicitly enabled
-    if (!process.env.RUN_BACKEND_TESTS && !process.env.CI) {
+    if (!process.env['RUN_BACKEND_TESTS'] && !process.env['CI']) {
       console.log('Skipping backend tests. Set RUN_BACKEND_TESTS=true to run.')
       return
     }
@@ -80,8 +80,8 @@ describe('Backend API Schema Validation', () => {
         return
       }
 
-      const contactId = listResponse.data[0].id
-      const response = await client.request('/contacts/:id', undefined, { id: contactId })
+      const contactId = listResponse.data[0]!.id
+      const response = await client.request('/contacts/:id', undefined, { id: contactId || '' })
 
       // Validate response structure
       expect(response).toHaveProperty('success')
@@ -214,8 +214,8 @@ describe('Backend API Schema Validation', () => {
       try {
         // Try to get non-existent contact
         await client.request('/contacts/:id', undefined, { id: 'non-existent-id' })
-      } catch (error) {
-        const errorResponse = error.response?.data
+      } catch (error: unknown) {
+        const errorResponse = (error as any).response?.data
         
         // Backend should return proper error structure
         expect(errorResponse).toHaveProperty('success')
@@ -234,9 +234,9 @@ describe('Backend API Schema Validation', () => {
           firstName: 'Test',
           // Missing required fields
         } as never)
-      } catch (error) {
+      } catch (error: unknown) {
         // Should fail on client-side validation first
-        expect(error.message).toContain('Invalid request data')
+        expect((error as Error).message).toContain('Invalid request data')
       }
     })
   })

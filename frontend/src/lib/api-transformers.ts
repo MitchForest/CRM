@@ -279,10 +279,10 @@ export function buildJsonApiFilters(filters: Record<string, unknown>): Record<st
   
   for (const [key, value] of Object.entries(snakeCaseFilters as Record<string, unknown>)) {
     if (value !== undefined && value !== null && value !== '') {
-      if (typeof value === 'object' && value !== null && 'operator' in value && (value as Record<string, unknown>).operator && (value as Record<string, unknown>).value !== undefined) {
+      if (typeof value === 'object' && value !== null && 'operator' in value && (value as Record<string, unknown>)['operator'] && (value as Record<string, unknown>)['value'] !== undefined) {
         // Handle complex filters like { operator: 'like', value: 'test' }
         const filterValue = value as Record<string, unknown>;
-        params[`filter[${key}][${filterValue.operator}]`] = String(filterValue.value)
+        params[`filter[${key}][${filterValue['operator']}]`] = String(filterValue['value'])
       } else {
         // Handle simple filters
         params[`filter[${key}]`] = String(value)

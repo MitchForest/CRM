@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Search, Download, Upload } from 'lucide-react'
+import { Plus, Download, Upload, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DataTable } from '@/components/ui/data-table'
 import { Badge } from '@/components/ui/badge'
+import { TablePageLayout } from '@/components/ui/table-page-layout'
+import { TableToolbar } from '@/components/ui/table-toolbar'
+import { TableActions } from '@/components/ui/table-actions'
 import { useLeads } from '@/hooks/use-leads'
 import { formatDate } from '@/lib/utils'
 import type { Lead } from '@/types/api.generated'
@@ -110,14 +112,18 @@ const columns: ColumnDef<Lead>[] = [
     cell: ({ row }) => {
       const lead = row.original
       return (
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to={`/leads/${lead.id}`}>View</Link>
-          </Button>
-          <Button variant="ghost" size="sm" asChild>
-            <Link to={`/leads/${lead.id}/edit`}>Edit</Link>
-          </Button>
-        </div>
+        <TableActions
+          actions={[
+            {
+              label: 'View',
+              onClick: () => window.location.href = `/leads/${lead.id}`,
+            },
+            {
+              label: 'Edit',
+              onClick: () => window.location.href = `/leads/${lead.id}/edit`,
+            },
+          ]}
+        />
       )
     },
   },
@@ -129,23 +135,26 @@ export function LeadsListPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const limit = 10
 
-  const filters: Record<string, string | number> = { search }
+  const filters: Record<string, string | number> = {}
+  if (search) {
+    filters['search'] = search
+  }
   if (statusFilter !== 'all') {
-    filters.status = statusFilter
+    filters['status'] = statusFilter
   }
 
-  const { data, isLoading } = useLeads(page, limit, filters)
+  const { data, isLoading, refetch } = useLeads(page, limit, filters)
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Leads</h1>
-          <p className="text-muted-foreground">
-            Manage your sales leads and track conversions
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <TablePageLayout
+      title="Leads"
+      description="Manage your sales leads and track conversions"
+      actions={
+        <>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
           <Button variant="outline" size="sm">
             <Upload className="mr-2 h-4 w-4" />
             Import
@@ -160,54 +169,47 @@ export function LeadsListPage() {
               Add Lead
             </Link>
           </Button>
-        </div>
-      </div>
+        </>
+      }
+    >
 
       <Card>
-        <CardHeader>
-          <CardTitle>All Leads</CardTitle>
-          <CardDescription>
-            A list of all leads including their status, source, and assigned team member.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4 flex items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search leads..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="New">New</SelectItem>
-                <SelectItem value="Contacted">Contacted</SelectItem>
-                <SelectItem value="Qualified">Qualified</SelectItem>
-                <SelectItem value="Converted">Converted</SelectItem>
-                <SelectItem value="Dead">Dead</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <CardContent className="pt-6">
+          <TableToolbar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Search leads..."
+            filters={
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="New">New</SelectItem>
+                  <SelectItem value="Contacted">Contacted</SelectItem>
+                  <SelectItem value="Qualified">Qualified</SelectItem>
+                  <SelectItem value="Converted">Converted</SelectItem>
+                  <SelectItem value="Dead">Dead</SelectItem>
+                </SelectContent>
+              </Select>
+            }
+          />
 
-          {isLoading ? (
-            <div className="flex justify-center p-8">
-              <div className="text-muted-foreground">Loading...</div>
-            </div>
-          ) : (
-            <DataTable
-              columns={columns}
-              data={data?.data || []}
-            />
-          )}
+          <div className="mt-4">
+            {isLoading ? (
+              <div className="flex justify-center p-8">
+                <div className="text-muted-foreground">Loading...</div>
+              </div>
+            ) : (
+              <DataTable
+                columns={columns}
+                data={data?.data || []}
+              />
+            )}
+          </div>
         </CardContent>
       </Card>
-    </div>
+    </TablePageLayout>
   )
 }

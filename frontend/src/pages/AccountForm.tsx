@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { useCreateAccount, useUpdateAccount, useAccount } from '@/hooks/use-accounts'
 import { accountSchema, type AccountFormData } from '@/lib/validation'
+import type { Account } from '@/types/api.generated'
 
 export function AccountFormPage() {
   const { id } = useParams<{ id: string }>()
@@ -72,19 +73,27 @@ export function AccountFormPage() {
 
   const onSubmit = async (data: AccountFormData) => {
     try {
-      // Convert empty strings to undefined for optional fields
-      const cleanedData = {
+      // Convert empty strings to undefined for optional fields and filter out undefined values
+      const baseData = {
         ...data,
         annualRevenue: data.annualRevenue ? Number(data.annualRevenue) : undefined,
         employees: data.employees ? Number(data.employees) : undefined,
         website: data.website || undefined,
       }
       
+      // Filter out undefined values to satisfy exactOptionalPropertyTypes
+      const cleanedData = Object.entries(baseData).reduce<Record<string, unknown>>((acc, [key, value]) => {
+        if (value !== undefined) {
+          acc[key] = value
+        }
+        return acc
+      }, {})
+      
       if (isEdit) {
-        await updateAccount.mutateAsync(cleanedData)
+        await updateAccount.mutateAsync(cleanedData as Partial<Account>)
         navigate(`/accounts/${id}`)
       } else {
-        const result = await createAccount.mutateAsync(cleanedData)
+        const result = await createAccount.mutateAsync(cleanedData as Omit<Account, 'id'>)
         navigate(`/accounts/${result.data?.id || ''}`)
       }
     } catch {

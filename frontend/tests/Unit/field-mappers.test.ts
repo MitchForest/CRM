@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest'
 import { 
   mapSuiteCRMToFrontend, 
   mapFrontendToSuiteCRM,
@@ -5,7 +6,7 @@ import {
   toSnakeCase,
   isSuiteCRMRecord,
   isFrontendRecord
-} from '../field-mappers'
+} from '@/lib/field-mappers'
 
 describe('Field Mappers', () => {
   describe('mapSuiteCRMToFrontend', () => {

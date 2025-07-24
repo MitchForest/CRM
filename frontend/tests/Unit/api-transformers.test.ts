@@ -7,7 +7,7 @@ import {
   buildJsonApiFilters,
   buildJsonApiSort,
   buildJsonApiPagination
-} from '../api-transformers'
+} from '@/lib/api-transformers'
 
 describe('API Transformers', () => {
   describe('transformFromJsonApi', () => {

@@ -17,7 +17,7 @@ describe('Full Stack API Integration - LIVE TEST', () => {
       if (loginResult.success && loginResult.data) {
         authToken = loginResult.data.accessToken
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to authenticate:', error)
     }
   })
@@ -53,7 +53,7 @@ describe('Full Stack API Integration - LIVE TEST', () => {
       console.log('=== API RESPONSE ===')
       console.log('Success:', result.success)
       console.log('Data:', result.data)
-      console.log('Error:', (result as any).error)
+      console.log('Error:', (result as { error?: unknown }).error)
 
       if (result.success && result.data) {
         // Verify the data was saved correctly
@@ -70,10 +70,11 @@ describe('Full Stack API Integration - LIVE TEST', () => {
         // Clean up
         await apiClient.deleteLead(result.data.id!)
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as Error & { response?: { status: number; data: unknown } }
       console.error('=== API ERROR ===')
-      console.error('Status:', error.response?.status)
-      console.error('Data:', error.response?.data)
+      console.error('Status:', err.response?.status)
+      console.error('Data:', err.response?.data)
       console.error('Full error:', error)
       
       // This will show us the exact error from SuiteCRM
@@ -122,10 +123,11 @@ describe('Full Stack API Integration - LIVE TEST', () => {
         
         // Clean up
         await apiClient.deleteLead(leadId)
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as Error & { response?: { status: number; data: unknown } }
         console.error('=== UPDATE ERROR ===')
-        console.error('Status:', error.response?.status)
-        console.error('Data:', error.response?.data)
+        console.error('Status:', err.response?.status)
+        console.error('Data:', err.response?.data)
         throw error
       }
     }

@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCreateLead, useUpdateLead, useLead } from '@/hooks/use-leads'
 import { leadSchema, type LeadFormData } from '@/lib/validation'
+import type { Lead } from '@/types/api.generated'
 
 export function LeadFormPage() {
   const { id } = useParams<{ id: string }>()
@@ -62,13 +63,21 @@ export function LeadFormPage() {
 
   const onSubmit = async (data: LeadFormData) => {
     try {
-      // Send the data directly - transformers will handle field mapping
+      // Filter out undefined values to satisfy exactOptionalPropertyTypes
+      const cleanedData = Object.entries(data).reduce<Record<string, unknown>>((acc, [key, value]) => {
+        if (value !== undefined) {
+          acc[key] = value
+        }
+        return acc
+      }, {})
+      
       if (isEdit) {
-        await updateLead.mutateAsync(data)
+        await updateLead.mutateAsync(cleanedData as Partial<Lead>)
         navigate(`/leads/${id}`)
       } else {
-        const result = await createLead.mutateAsync(data)
-        navigate(`/leads/${result.data?.id || ''}`)
+        const result = await createLead.mutateAsync(cleanedData as Omit<Lead, 'id'>)
+        // Navigate to leads list instead of detail page to see if it appears
+        navigate('/leads')
       }
     } catch {
       // Error is handled by the mutation

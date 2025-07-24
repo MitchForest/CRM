@@ -13,6 +13,7 @@ import { LeadDetailPage } from '@/pages/LeadDetail'
 import { LeadFormPage } from '@/pages/LeadForm'
 import { AccountsListPage } from '@/pages/AccountsList'
 import { AccountFormPage } from '@/pages/AccountForm'
+import { LeadDebugPage } from '@/pages/LeadDebug'
 import { Toaster } from '@/components/ui/sonner'
 
 // Create a client
@@ -51,6 +52,7 @@ export function App() {
             <Route path="/accounts" element={<AccountsListPage />} />
             <Route path="/accounts/new" element={<AccountFormPage />} />
             <Route path="/accounts/:id/edit" element={<AccountFormPage />} />
+            <Route path="/debug/leads" element={<LeadDebugPage />} />
             <Route path="/settings" element={<div>Settings Page (Coming Soon)</div>} />
           </Route>
           

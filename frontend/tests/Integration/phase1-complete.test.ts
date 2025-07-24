@@ -2,14 +2,13 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import { apiClient } from '@/lib/api-client'
 
 describe('Phase 1 Complete Integration Test', () => {
-  let authToken: string
   let createdLeadId: string
   let createdAccountId: string
   
   beforeAll(async () => {
     const loginResult = await apiClient.login('apiuser', 'apiuser123')
     expect(loginResult.success).toBe(true)
-    authToken = loginResult.data!.accessToken
+    // authToken is stored internally in apiClient
   })
 
   describe('Leads Module - FULL TEST', () => {
@@ -33,7 +32,7 @@ describe('Phase 1 Complete Integration Test', () => {
         aiInsights: 'High value prospect'
       }
 
-      const result = await apiClient.createLead(leadData)
+      const result = await apiClient.createLead(leadData as any)
       
       expect(result.success).toBe(true)
       expect(result.data).toBeDefined()
@@ -67,7 +66,7 @@ describe('Phase 1 Complete Integration Test', () => {
         aiInsights: 'Very high value - ready to convert'
       }
 
-      const result = await apiClient.updateLead(createdLeadId, updateData)
+      const result = await apiClient.updateLead(createdLeadId, updateData as any)
       
       expect(result.success).toBe(true)
       
@@ -99,7 +98,7 @@ describe('Phase 1 Complete Integration Test', () => {
       try {
         await apiClient.getLead(createdLeadId)
         expect(true).toBe(false) // Should not reach here
-      } catch (error) {
+      } catch (error: unknown) {
         expect(error).toBeDefined() // Should get 404
       }
     })
@@ -135,8 +134,8 @@ describe('Phase 1 Complete Integration Test', () => {
       
       expect(result.success).toBe(true)
       expect(result.data!.name).toBe('Phase1 Test Account')
-      expect(result.data!.healthScore).toBe(85)
-      expect(result.data!.mrr).toBe(5000)
+      expect((result.data as any).healthScore).toBe(85)
+      expect((result.data as any).mrr).toBe(5000)
     })
 
     it('should UPDATE the account', async () => {
@@ -152,8 +151,8 @@ describe('Phase 1 Complete Integration Test', () => {
       
       // Verify
       const getResult = await apiClient.getAccount(createdAccountId)
-      expect(getResult.data!.healthScore).toBe(95)
-      expect(getResult.data!.mrr).toBe(7500)
+      expect((getResult.data as any).healthScore).toBe(95)
+      expect((getResult.data as any).mrr).toBe(7500)
     })
 
     it('should LIST accounts with pagination', async () => {
@@ -212,8 +211,8 @@ describe('Phase 1 Complete Integration Test', () => {
       
       // Verify all mappings worked
       expect(getResult.data!.email).toBe('fieldtest@example.com') // email1 -> email
-      expect(getResult.data!.phoneWork).toBe('555-4444') // phone_work -> phoneWork
-      expect(getResult.data!.leadSource).toBe('API Test') // lead_source -> leadSource
+      expect((getResult.data as any).phoneWork).toBe('555-4444') // phone_work -> phoneWork
+      expect((getResult.data as any).leadSource).toBe('API Test') // lead_source -> leadSource
       
       // Clean up
       await apiClient.deleteLead(result.data!.id!)

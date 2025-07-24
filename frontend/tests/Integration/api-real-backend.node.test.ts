@@ -47,12 +47,12 @@ describe('Real Backend API Integration (Node Environment)', () => {
       // Set auth header for all subsequent requests
       apiClient.defaults.headers.common['Authorization'] = `Bearer ${authToken}`
       console.log('Authentication successful! Token:', authToken.substring(0, 20) + '...')
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to authenticate:')
       console.error('Error message:', error instanceof Error ? error.message : String(error))
-      console.error('Error response:', error.response?.data)
-      console.error('Error status:', error.response?.status)
-      throw new Error(`Backend authentication failed: ${error.message}`)
+      console.error('Error response:', (error as any).response?.data)
+      console.error('Error status:', (error as any).response?.status)
+      throw new Error(`Backend authentication failed: ${error instanceof Error ? error.message : String(error)}`)
     }
   })
 
@@ -80,7 +80,7 @@ describe('Real Backend API Integration (Node Environment)', () => {
         expect(pagination).toHaveProperty('pages')
 
         console.log(`✓ Fetched ${response.data.data.length} contacts`)
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Contacts API error:', axios.isAxiosError(error) ? error.response?.data : error)
         throw error
       }
@@ -118,7 +118,7 @@ describe('Real Backend API Integration (Node Environment)', () => {
         expect(created.email).toBe(newContact.email)
 
         console.log(`✓ Created contact with ID: ${created.id}`)
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Create contact error:', axios.isAxiosError(error) ? error.response?.data : error)
         throw error
       }
@@ -142,7 +142,7 @@ describe('Real Backend API Integration (Node Environment)', () => {
         expect(Array.isArray(response.data.data)).toBe(true)
 
         console.log(`✓ Fetched ${response.data.data.length} leads`)
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Leads API error:', axios.isAxiosError(error) ? error.response?.data : error)
         throw error
       }
@@ -159,8 +159,8 @@ describe('Real Backend API Integration (Node Environment)', () => {
 
       try {
         await unauthClient.get('/contacts')
-        expect.fail('Should have thrown an error')
-      } catch (error) {
+        throw new Error('Should have thrown an error')
+      } catch (error: unknown) {
         console.log('Unauth error status:', axios.isAxiosError(error) ? error.response?.status : 'unknown')
         expect(axios.isAxiosError(error) && error.response?.status).toBe(401)
       }

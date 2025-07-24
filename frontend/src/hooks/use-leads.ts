@@ -51,8 +51,10 @@ export function useCreateLead() {
     mutationFn: async (data: Omit<Lead, 'id'>) => {
       return await apiClient.createLead(data)
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['leads'] })
+    onSuccess: async () => {
+      // Invalidate and refetch immediately
+      await queryClient.invalidateQueries({ queryKey: ['leads'] })
+      await queryClient.refetchQueries({ queryKey: ['leads'] })
       toast.success('Lead created successfully')
     },
     onError: (error: unknown) => {

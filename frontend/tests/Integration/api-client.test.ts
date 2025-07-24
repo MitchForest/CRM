@@ -51,7 +51,7 @@ describe('TypeSafeApiClient', () => {
     }
 
     const axiosCreate = vi.mocked(axios.create)
-    axiosCreate.mockReturnValue(mockAxiosInstance)
+    axiosCreate.mockReturnValue(mockAxiosInstance as any)
     client = new TypeSafeApiClient()
   })
 
@@ -204,12 +204,12 @@ describe('TypeSafeApiClient', () => {
       }
       
       vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(JSON.stringify(mockAuth))
-      vi.spyOn(Storage.prototype, 'setItem')
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {})
 
       // This should trigger token refresh
       try {
         await client.request('/contacts')
-      } catch {
+      } catch (error: unknown) {
         // Expected to fail after refresh attempt
       }
 

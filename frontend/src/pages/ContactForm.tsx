@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useContact, useCreateContact, useUpdateContact } from '@/hooks/use-contacts'
 import { toast } from 'sonner'
 import { contactSchema, type ContactFormData } from '@/lib/validation'
+import type { Contact } from '@/types/api.generated'
 
 export function ContactFormPage() {
   const { id } = useParams<{ id?: string }>()
@@ -56,16 +57,24 @@ export function ContactFormPage() {
 
   const onSubmit = async (data: ContactFormData) => {
     try {
-      const contactData = {
+      const baseData = {
         ...data,
         tags: data.tags ? data.tags.split(',').map(tag => tag.trim()).filter(Boolean) : undefined,
       }
+      
+      // Filter out undefined values to satisfy exactOptionalPropertyTypes
+      const contactData = Object.entries(baseData).reduce<Record<string, unknown>>((acc, [key, value]) => {
+        if (value !== undefined) {
+          acc[key] = value
+        }
+        return acc
+      }, {})
 
       if (isEdit) {
-        await updateContact.mutateAsync({ id: id!, data: contactData })
+        await updateContact.mutateAsync({ id: id!, data: contactData as Partial<Contact> })
         toast.success('Contact updated successfully')
       } else {
-        await createContact.mutateAsync(contactData)
+        await createContact.mutateAsync(contactData as Partial<Contact>)
         toast.success('Contact created successfully')
       }
       navigate('/contacts')
@@ -201,7 +210,7 @@ export function ContactFormPage() {
                     <FormLabel>Preferred Contact Method</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      defaultValue={field.value || undefined}
                       disabled={isSubmitting}
                     >
                       <FormControl>

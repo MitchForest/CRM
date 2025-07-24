@@ -40,7 +40,7 @@ describe('Real Backend API Integration', () => {
       // Set auth header for all subsequent requests
       apiClient.defaults.headers.common['Authorization'] = `Bearer ${authToken}`
       console.log('Authentication successful!')
-    } catch (error) {
+    } catch (error: unknown) {
       const message = axios.isAxiosError(error) ? error.response?.data || error.message : String(error)
       console.error('Failed to authenticate:', message)
       throw new Error(`Backend authentication failed: ${message}`)
@@ -230,12 +230,12 @@ describe('Real Backend API Integration', () => {
 
       try {
         await apiClient.get('/contacts/non-existent-id')
-        expect.fail('Should have thrown an error')
-      } catch (error) {
-        expect(error.response.status).toBe(404)
-        expect(error.response.data).toHaveProperty('success')
-        expect(error.response.data.success).toBe(false)
-        expect(error.response.data).toHaveProperty('error')
+        throw new Error('Should have thrown an error')
+      } catch (error: unknown) {
+        expect((error as any).response.status).toBe(404)
+        expect((error as any).response.data).toHaveProperty('success')
+        expect((error as any).response.data.success).toBe(false)
+        expect((error as any).response.data).toHaveProperty('error')
       }
     })
 
@@ -247,12 +247,12 @@ describe('Real Backend API Integration', () => {
           // Missing required fields
           firstName: 'Test'
         })
-        expect.fail('Should have thrown an error')
-      } catch (error) {
-        expect(error.response.status).toBe(400)
-        expect(error.response.data).toHaveProperty('success')
-        expect(error.response.data.success).toBe(false)
-        expect(error.response.data).toHaveProperty('error')
+        throw new Error('Should have thrown an error')
+      } catch (error: unknown) {
+        expect((error as any).response.status).toBe(400)
+        expect((error as any).response.data).toHaveProperty('success')
+        expect((error as any).response.data.success).toBe(false)
+        expect((error as any).response.data).toHaveProperty('error')
       }
     })
   })
@@ -267,9 +267,9 @@ describe('Real Backend API Integration', () => {
 
       try {
         await unauthClient.get('/contacts')
-        expect.fail('Should have thrown an error')
-      } catch (error) {
-        expect(error.response.status).toBe(401)
+        throw new Error('Should have thrown an error')
+      } catch (error: unknown) {
+        expect((error as any).response.status).toBe(401)
       }
     })
 

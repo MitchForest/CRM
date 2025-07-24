@@ -102,8 +102,8 @@ describe('API Schema Completeness', () => {
         const schema = config.request
         
         // Try to get the shape of the schema
-        if (schema._def && schema._def.typeName === 'ZodObject') {
-          const shape = schema._def.shape()
+        if ('shape' in schema && typeof schema.shape === 'function') {
+          const shape = schema.shape
           
           // POST/PUT should generally have at least one field
           if (!endpoint.includes('logout') && !endpoint.includes('refresh')) {
@@ -154,8 +154,8 @@ describe('API Schema Completeness', () => {
       
       // This might throw because data is empty, but structure should be correct
       try {
-        responseSchema.parse(mockDetailResponse)
-      } catch (error) {
+        schema.response.parse(mockDetailResponse)
+      } catch (error: unknown) {
         // Check that it's failing on data validation, not structure
         if (error instanceof z.ZodError) {
           const issues = error.issues

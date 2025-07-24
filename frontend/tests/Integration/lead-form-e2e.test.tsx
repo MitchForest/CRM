@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
@@ -7,7 +7,7 @@ import { LeadFormPage } from '@/pages/LeadForm'
 import { apiClient } from '@/lib/api-client'
 
 // Capture actual API calls
-const apiCalls: { method: string; endpoint: string; payload: any }[] = []
+const apiCalls: { method: string; endpoint: string; payload: unknown }[] = []
 
 // Mock the API client to capture calls
 vi.mock('@/lib/api-client', () => ({
@@ -101,7 +101,7 @@ describe('Lead Form E2E Test - What Actually Gets Sent', () => {
     
     // Check what was actually sent
     expect(apiCalls).toHaveLength(1)
-    const actualPayload = apiCalls[0].payload
+    const actualPayload = apiCalls[0]!.payload
     
     console.log('=== ACTUAL FORM SUBMISSION ===')
     console.log('Payload sent to apiClient.createLead:', actualPayload)
@@ -134,13 +134,13 @@ describe('Lead Form E2E Test - What Actually Gets Sent', () => {
       expect(apiClient.createLead).toHaveBeenCalled()
     })
     
-    const fullPayload = apiCalls[0].payload
+    const fullPayload = apiCalls[0]!.payload
     
     console.log('=== FULL PAYLOAD WITH ALL FIELDS ===')
     console.log(JSON.stringify(fullPayload, null, 2))
     
     // List ALL fields that get sent
-    console.log('Fields sent:', Object.keys(fullPayload))
+    console.log('Fields sent:', Object.keys(fullPayload as Record<string, unknown>))
     
     // Check for unexpected fields
     const expectedFields = [
@@ -149,7 +149,7 @@ describe('Lead Form E2E Test - What Actually Gets Sent', () => {
       'status', 'source'
     ]
     
-    const unexpectedFields = Object.keys(fullPayload).filter(
+    const unexpectedFields = Object.keys(fullPayload as Record<string, unknown>).filter(
       field => !expectedFields.includes(field)
     )
     
