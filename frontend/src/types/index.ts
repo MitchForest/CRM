@@ -45,3 +45,6 @@ export type {
   SuiteCRMModuleName,
   SUITECRM_MODULES
 } from './suitecrm.types';
+
+// Export Phase 2 specific types
+export * from './phase2.types';

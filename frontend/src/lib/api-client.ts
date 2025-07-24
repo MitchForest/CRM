@@ -7,7 +7,12 @@ import type {
   Account,
   Contact,
   Lead,
-  Task
+  Task,
+  Opportunity,
+  Call,
+  Meeting,
+  Note,
+  Case
 } from '@/types/api.generated'
 import {
   transformFromJsonApi,
@@ -455,6 +460,299 @@ class ApiClient {
     
     return {
       data: transformFromJsonApi<Task>(response.data.data),
+      success: true
+    }
+  }
+
+  // Opportunity methods
+  async getOpportunities(params?: QueryParams): Promise<ListResponse<Opportunity>> {
+    const queryParams = {
+      ...buildJsonApiPagination(params?.page, params?.pageSize),
+      ...(params?.search ? buildJsonApiFilters({ name: { operator: 'like', value: `%${params.search}%` } }) : {}),
+      ...(params?.sort ? { sort: buildJsonApiSort(params.sort[0]?.field, params.sort[0]?.direction) } : {})
+    }
+    
+    const response = await this.client.get('/module/Opportunities', { params: queryParams })
+    
+    return {
+      data: transformManyFromJsonApi<Opportunity>(response.data.data || []),
+      pagination: extractPaginationMeta(response.data)
+    }
+  }
+
+  async getOpportunity(id: string): Promise<ApiResponse<Opportunity>> {
+    const response = await this.client.get(`/module/Opportunities/${id}`)
+    
+    return {
+      data: transformFromJsonApi<Opportunity>(response.data.data),
+      success: true
+    }
+  }
+
+  async createOpportunity(data: Partial<Opportunity>): Promise<ApiResponse<Opportunity>> {
+    const jsonApiData = transformToJsonApiDocument('Opportunities', data, false)
+    
+    const response = await this.client.post('/module', jsonApiData)
+    
+    return {
+      data: transformFromJsonApi<Opportunity>(response.data.data),
+      success: true
+    }
+  }
+
+  async updateOpportunity(id: string, data: Partial<Opportunity>): Promise<ApiResponse<Opportunity>> {
+    const jsonApiData = transformToJsonApiDocument('Opportunities', { ...data, id })
+    
+    const response = await this.client.patch('/module', jsonApiData)
+    
+    return {
+      data: transformFromJsonApi<Opportunity>(response.data.data),
+      success: true
+    }
+  }
+
+  async deleteOpportunity(id: string): Promise<ApiResponse<void>> {
+    await this.client.delete(`/module/Opportunities/${id}`)
+    
+    return {
+      success: true
+    }
+  }
+
+  async updateOpportunityStage(id: string, stage: string): Promise<ApiResponse<Opportunity>> {
+    return this.updateOpportunity(id, { salesStage: stage })
+  }
+
+  // Call methods
+  async getCalls(params?: QueryParams): Promise<ListResponse<Call>> {
+    const queryParams = {
+      ...buildJsonApiPagination(params?.page, params?.pageSize),
+      ...(params?.search ? buildJsonApiFilters({ name: { operator: 'like', value: `%${params.search}%` } }) : {}),
+      ...(params?.sort ? { sort: buildJsonApiSort(params.sort[0]?.field, params.sort[0]?.direction) } : {})
+    }
+    
+    const response = await this.client.get('/module/Calls', { params: queryParams })
+    
+    return {
+      data: transformManyFromJsonApi<Call>(response.data.data || []),
+      pagination: extractPaginationMeta(response.data)
+    }
+  }
+
+  async getCall(id: string): Promise<ApiResponse<Call>> {
+    const response = await this.client.get(`/module/Calls/${id}`)
+    
+    return {
+      data: transformFromJsonApi<Call>(response.data.data),
+      success: true
+    }
+  }
+
+  async createCall(data: Partial<Call>): Promise<ApiResponse<Call>> {
+    const jsonApiData = transformToJsonApiDocument('Calls', data, false)
+    
+    const response = await this.client.post('/module', jsonApiData)
+    
+    return {
+      data: transformFromJsonApi<Call>(response.data.data),
+      success: true
+    }
+  }
+
+  async updateCall(id: string, data: Partial<Call>): Promise<ApiResponse<Call>> {
+    const jsonApiData = transformToJsonApiDocument('Calls', { ...data, id })
+    
+    const response = await this.client.patch('/module', jsonApiData)
+    
+    return {
+      data: transformFromJsonApi<Call>(response.data.data),
+      success: true
+    }
+  }
+
+  async deleteCall(id: string): Promise<ApiResponse<void>> {
+    await this.client.delete(`/module/Calls/${id}`)
+    
+    return {
+      success: true
+    }
+  }
+
+  // Meeting methods
+  async getMeetings(params?: QueryParams): Promise<ListResponse<Meeting>> {
+    const queryParams = {
+      ...buildJsonApiPagination(params?.page, params?.pageSize),
+      ...(params?.search ? buildJsonApiFilters({ name: { operator: 'like', value: `%${params.search}%` } }) : {}),
+      ...(params?.sort ? { sort: buildJsonApiSort(params.sort[0]?.field, params.sort[0]?.direction) } : {})
+    }
+    
+    const response = await this.client.get('/module/Meetings', { params: queryParams })
+    
+    return {
+      data: transformManyFromJsonApi<Meeting>(response.data.data || []),
+      pagination: extractPaginationMeta(response.data)
+    }
+  }
+
+  async getMeeting(id: string): Promise<ApiResponse<Meeting>> {
+    const response = await this.client.get(`/module/Meetings/${id}`)
+    
+    return {
+      data: transformFromJsonApi<Meeting>(response.data.data),
+      success: true
+    }
+  }
+
+  async createMeeting(data: Partial<Meeting>): Promise<ApiResponse<Meeting>> {
+    const jsonApiData = transformToJsonApiDocument('Meetings', data, false)
+    
+    const response = await this.client.post('/module', jsonApiData)
+    
+    return {
+      data: transformFromJsonApi<Meeting>(response.data.data),
+      success: true
+    }
+  }
+
+  async updateMeeting(id: string, data: Partial<Meeting>): Promise<ApiResponse<Meeting>> {
+    const jsonApiData = transformToJsonApiDocument('Meetings', { ...data, id })
+    
+    const response = await this.client.patch('/module', jsonApiData)
+    
+    return {
+      data: transformFromJsonApi<Meeting>(response.data.data),
+      success: true
+    }
+  }
+
+  async deleteMeeting(id: string): Promise<ApiResponse<void>> {
+    await this.client.delete(`/module/Meetings/${id}`)
+    
+    return {
+      success: true
+    }
+  }
+
+  // Note methods
+  async getNotes(params?: QueryParams): Promise<ListResponse<Note>> {
+    const queryParams = {
+      ...buildJsonApiPagination(params?.page, params?.pageSize),
+      ...(params?.search ? buildJsonApiFilters({ name: { operator: 'like', value: `%${params.search}%` } }) : {}),
+      ...(params?.sort ? { sort: buildJsonApiSort(params.sort[0]?.field, params.sort[0]?.direction) } : {})
+    }
+    
+    const response = await this.client.get('/module/Notes', { params: queryParams })
+    
+    return {
+      data: transformManyFromJsonApi<Note>(response.data.data || []),
+      pagination: extractPaginationMeta(response.data)
+    }
+  }
+
+  async getNote(id: string): Promise<ApiResponse<Note>> {
+    const response = await this.client.get(`/module/Notes/${id}`)
+    
+    return {
+      data: transformFromJsonApi<Note>(response.data.data),
+      success: true
+    }
+  }
+
+  async createNote(data: Partial<Note>): Promise<ApiResponse<Note>> {
+    const jsonApiData = transformToJsonApiDocument('Notes', data, false)
+    
+    const response = await this.client.post('/module', jsonApiData)
+    
+    return {
+      data: transformFromJsonApi<Note>(response.data.data),
+      success: true
+    }
+  }
+
+  async updateNote(id: string, data: Partial<Note>): Promise<ApiResponse<Note>> {
+    const jsonApiData = transformToJsonApiDocument('Notes', { ...data, id })
+    
+    const response = await this.client.patch('/module', jsonApiData)
+    
+    return {
+      data: transformFromJsonApi<Note>(response.data.data),
+      success: true
+    }
+  }
+
+  async deleteNote(id: string): Promise<ApiResponse<void>> {
+    await this.client.delete(`/module/Notes/${id}`)
+    
+    return {
+      success: true
+    }
+  }
+
+  // Case methods
+  async getCases(params?: QueryParams & { status?: string; priority?: string }): Promise<ListResponse<Case>> {
+    const queryParams: Record<string, string> = {
+      ...buildJsonApiPagination(params?.page, params?.pageSize)
+    }
+    
+    if (params?.status) {
+      queryParams['filter[status]'] = params.status
+    }
+    
+    if (params?.priority) {
+      queryParams['filter[priority]'] = params.priority
+    }
+    
+    if (params?.search) {
+      queryParams['filter[name][like]'] = `%${params.search}%`
+    }
+    
+    if (params?.sort) {
+      queryParams['sort'] = buildJsonApiSort(params.sort[0]?.field, params.sort[0]?.direction)
+    }
+    
+    const response = await this.client.get('/module/Cases', { params: queryParams })
+    
+    return {
+      data: transformManyFromJsonApi<Case>(response.data.data || []),
+      pagination: extractPaginationMeta(response.data)
+    }
+  }
+
+  async getCase(id: string): Promise<ApiResponse<Case>> {
+    const response = await this.client.get(`/module/Cases/${id}`)
+    
+    return {
+      data: transformFromJsonApi<Case>(response.data.data),
+      success: true
+    }
+  }
+
+  async createCase(data: Partial<Case>): Promise<ApiResponse<Case>> {
+    const jsonApiData = transformToJsonApiDocument('Cases', data, false)
+    
+    const response = await this.client.post('/module', jsonApiData)
+    
+    return {
+      data: transformFromJsonApi<Case>(response.data.data),
+      success: true
+    }
+  }
+
+  async updateCase(id: string, data: Partial<Case>): Promise<ApiResponse<Case>> {
+    const jsonApiData = transformToJsonApiDocument('Cases', { ...data, id })
+    
+    const response = await this.client.patch('/module', jsonApiData)
+    
+    return {
+      data: transformFromJsonApi<Case>(response.data.data),
+      success: true
+    }
+  }
+
+  async deleteCase(id: string): Promise<ApiResponse<void>> {
+    await this.client.delete(`/module/Cases/${id}`)
+    
+    return {
       success: true
     }
   }
