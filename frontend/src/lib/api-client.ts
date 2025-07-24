@@ -14,6 +14,12 @@ import type {
   Note,
   Case
 } from '@/types/api.generated'
+import type {
+  DashboardMetrics,
+  PipelineData,
+  ActivityMetrics,
+  CaseMetrics
+} from '@/types/phase2.types'
 import {
   transformFromJsonApi,
   transformManyFromJsonApi,
@@ -40,9 +46,12 @@ const getStoredAuth = () => {
 
 class ApiClient {
   private client: AxiosInstance
+  private customClient: AxiosInstance // For Phase 2 custom API
   private refreshingToken: Promise<string> | null = null
+  private customApiToken: string | null = null
 
   constructor() {
+    // SuiteCRM V8 API client
     this.client = axios.create({
       baseURL: 'http://localhost:8080/Api/V8', // Direct to SuiteCRM v8 API with correct casing
       headers: {
@@ -51,12 +60,32 @@ class ApiClient {
       },
     })
 
-    // Request interceptor
+    // Custom API client for Phase 2 features
+    this.customClient = axios.create({
+      baseURL: 'http://localhost:8080/custom-api',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    })
+
+    // Request interceptor for V8 API
     this.client.interceptors.request.use(
       (config) => {
         const auth = getStoredAuth()
         if (auth?.accessToken) {
           config.headers.Authorization = `Bearer ${auth.accessToken}`
+        }
+        return config
+      },
+      (error) => Promise.reject(error)
+    )
+
+    // Request interceptor for Custom API
+    this.customClient.interceptors.request.use(
+      (config) => {
+        if (this.customApiToken) {
+          config.headers.Authorization = `Bearer ${this.customApiToken}`
         }
         return config
       },
@@ -161,6 +190,22 @@ class ApiClient {
     return accessToken
   }
 
+  // Initialize custom API authentication
+  private async initCustomApiAuth(username: string, password: string): Promise<void> {
+    try {
+      const response = await this.customClient.post('/auth/login', {
+        username,
+        password
+      })
+      
+      if (response.data?.data?.token) {
+        this.customApiToken = response.data.data.token
+      }
+    } catch (error) {
+      console.error('Failed to authenticate with custom API:', error)
+    }
+  }
+
   // Auth methods
   async login(username: string, password: string): Promise<ApiResponse<LoginResponse>> {
     // SuiteCRM v8 uses OAuth2 password grant at /Api/access_token
@@ -181,6 +226,9 @@ class ApiClient {
           }
         }
       )
+      
+      // Also authenticate with custom API for Phase 2 features
+      await this.initCustomApiAuth(username, password)
       
       // Transform OAuth2 response to our format
       return {
@@ -707,7 +755,7 @@ class ApiClient {
     }
     
     if (params?.sort) {
-      queryParams['sort'] = buildJsonApiSort(params.sort[0]?.field, params.sort[0]?.direction)
+      queryParams['sort'] = buildJsonApiSort(params.sort[0]?.field, params.sort[0]?.direction) || ''
     }
     
     const response = await this.client.get('/module/Cases', { params: queryParams })
@@ -757,47 +805,114 @@ class ApiClient {
     }
   }
 
-  // Dashboard methods
+  // Dashboard methods - Phase 2 Custom API
+  async getDashboardMetrics(): Promise<ApiResponse<DashboardMetrics>> {
+    try {
+      const response = await this.customClient.get('/dashboard/metrics')
+      return {
+        success: true,
+        data: response.data.data
+      }
+    } catch (error) {
+      console.error('Failed to fetch dashboard metrics:', error)
+      return {
+        success: false,
+        error: {
+          error: 'Failed to fetch dashboard metrics',
+          code: 'DASHBOARD_ERROR',
+          details: { message: 'Unable to load dashboard data' }
+        }
+      }
+    }
+  }
+
+  async getPipelineData(): Promise<ApiResponse<PipelineData>> {
+    try {
+      const response = await this.customClient.get('/dashboard/pipeline')
+      return {
+        success: true,
+        data: response.data.data
+      }
+    } catch (error) {
+      console.error('Failed to fetch pipeline data:', error)
+      return {
+        success: false,
+        error: {
+          error: 'Failed to fetch pipeline data',
+          code: 'PIPELINE_ERROR',
+          details: { message: 'Unable to load pipeline data' }
+        }
+      }
+    }
+  }
+
+  async getActivityMetrics(): Promise<ApiResponse<ActivityMetrics>> {
+    try {
+      const response = await this.customClient.get('/dashboard/activities')
+      return {
+        success: true,
+        data: response.data.data
+      }
+    } catch (error) {
+      console.error('Failed to fetch activity metrics:', error)
+      return {
+        success: false,
+        error: {
+          error: 'Failed to fetch activity metrics',
+          code: 'ACTIVITY_ERROR',
+          details: { message: 'Unable to load activity data' }
+        }
+      }
+    }
+  }
+
+  async getCaseMetrics(): Promise<ApiResponse<CaseMetrics>> {
+    try {
+      const response = await this.customClient.get('/dashboard/cases')
+      return {
+        success: true,
+        data: response.data.data
+      }
+    } catch (error) {
+      console.error('Failed to fetch case metrics:', error)
+      return {
+        success: false,
+        error: {
+          error: 'Failed to fetch case metrics',
+          code: 'CASE_ERROR',
+          details: { message: 'Unable to load case data' }
+        }
+      }
+    }
+  }
+
+  // Legacy method for backward compatibility
   async getDashboardStats(): Promise<ApiResponse<{
     totalLeads: number
     totalAccounts: number
     newLeadsToday: number
     pipelineValue: number
   }>> {
-    // Dashboard stats would typically require multiple API calls or a custom endpoint
-    // For now, we'll implement a basic version using the list endpoints
-    try {
-      const today = new Date().toISOString().split('T')[0]
-      
-      const [leadsResponse, accountsResponse, todayLeadsResponse] = await Promise.all([
-        this.client.get('/module/Leads', { params: { 'page[size]': 1 } }),
-        this.client.get('/module/Accounts', { params: { 'page[size]': 1 } }),
-        this.client.get('/module/Leads', { 
-          params: { 
-            'page[size]': 1,
-            'filter[date_entered][gte]': today
-          } 
-        })
-      ])
-      
+    const response = await this.getDashboardMetrics()
+    if (!response.success || !response.data) {
       return {
-        data: {
-          totalLeads: leadsResponse.data.meta?.['total-count'] || 0,
-          totalAccounts: accountsResponse.data.meta?.['total-count'] || 0,
-          newLeadsToday: todayLeadsResponse.data.meta?.['total-count'] || 0,
-          pipelineValue: 0 // Would need to sum opportunity amounts
-        },
-        success: true
-      }
-    } catch {
-      return {
+        success: false,
         data: {
           totalLeads: 0,
           totalAccounts: 0,
           newLeadsToday: 0,
           pipelineValue: 0
-        },
-        success: false
+        }
+      }
+    }
+    
+    return {
+      success: true,
+      data: {
+        totalLeads: response.data.totalLeads,
+        totalAccounts: response.data.totalAccounts,
+        newLeadsToday: response.data.newLeadsToday,
+        pipelineValue: response.data.pipelineValue
       }
     }
   }

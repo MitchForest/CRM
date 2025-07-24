@@ -3,7 +3,7 @@
  * These types extend the base types with additional functionality for Phase 2
  */
 
-import type { Opportunity, Task, Case, Call, Meeting, Note } from './api.generated';
+import type { Opportunity } from './api.generated';
 
 // Opportunity Pipeline Types
 export type OpportunityStage = 
@@ -87,6 +87,15 @@ export interface DashboardMetrics {
   avgDealSize: number;
 }
 
+export interface PipelineData {
+  stages: Array<{
+    stage: OpportunityStage;
+    count: number;
+    value: number;
+  }>;
+  total: number;
+}
+
 // Module Permission Types
 export type CRMModule = 'Leads' | 'Accounts' | 'Opportunities' | 'Cases' | 'Activities';
 export type CRMAction = 'view' | 'create' | 'edit' | 'delete';
@@ -107,7 +116,7 @@ export type ViewMode = 'list' | 'grid' | 'kanban' | 'calendar';
 
 export interface ViewState {
   mode: ViewMode;
-  filters: Record<string, any>;
+  filters: Record<string, unknown>;
   sort: {
     field: string;
     direction: 'asc' | 'desc';
@@ -122,7 +131,7 @@ export interface ViewState {
 export interface DragItem {
   id: string;
   type: string;
-  data: any;
+  data: unknown;
 }
 
 export interface DropResult {
@@ -236,7 +245,7 @@ export interface ApiListResponse<T> {
 export interface ApiErrorResponse {
   error: string;
   message: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 // Utility Types

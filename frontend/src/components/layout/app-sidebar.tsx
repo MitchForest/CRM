@@ -3,6 +3,9 @@ import {
   Users, 
   Target, 
   Building2,
+  TrendingUp,
+  Calendar,
+  HeadphonesIcon,
   Settings,
   LogOut
 } from "lucide-react"
@@ -21,27 +24,50 @@ import {
 import { useAuthStore } from '@/stores/auth-store'
 import { apiClient } from '@/lib/api-client'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { usePermissions } from '@/hooks/use-permissions'
 
 const mainNavItems = [
   {
     title: "Dashboard",
     url: "/",
     icon: LayoutDashboard,
+    module: null, // Dashboard is always visible
   },
   {
     title: "Leads",
     url: "/leads",
     icon: Target,
+    module: "Leads" as const,
   },
   {
     title: "Contacts",
     url: "/contacts",
     icon: Users,
+    module: "Contacts" as const,
   },
   {
     title: "Accounts",
     url: "/accounts",
     icon: Building2,
+    module: "Accounts" as const,
+  },
+  {
+    title: "Opportunities",
+    url: "/opportunities",
+    icon: TrendingUp,
+    module: "Opportunities" as const,
+  },
+  {
+    title: "Activities",
+    url: "/activities",
+    icon: Calendar,
+    module: "Activities" as const,
+  },
+  {
+    title: "Cases",
+    url: "/cases",
+    icon: HeadphonesIcon,
+    module: "Cases" as const,
   },
 ]
 
@@ -58,6 +84,7 @@ export function AppSidebar() {
   const user = useAuthStore((state) => state.user)
   const navigate = useNavigate()
   const location = useLocation()
+  const { hasModuleAccess } = usePermissions()
 
   const handleLogout = async () => {
     try {
@@ -82,17 +109,19 @@ export function AppSidebar() {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainNavItems.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton 
-                    onClick={() => navigate(item.url)}
-                    isActive={location.pathname === item.url}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {mainNavItems
+                .filter(item => !item.module || hasModuleAccess(item.module))
+                .map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton 
+                      onClick={() => navigate(item.url)}
+                      isActive={location.pathname === item.url || location.pathname.startsWith(item.url + '/')}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -105,7 +134,7 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton 
                     onClick={() => navigate(item.url)}
-                    isActive={location.pathname === item.url}
+                    isActive={location.pathname === item.url || location.pathname.startsWith(item.url + '/')}
                   >
                     <item.icon className="h-4 w-4" />
                     <span>{item.title}</span>

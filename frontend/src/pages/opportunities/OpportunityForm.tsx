@@ -16,7 +16,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { DatePicker } from '@/components/ui/date-picker'
-import { useToast } from '@/hooks/use-toast'
 import { 
   useOpportunity, 
   useCreateOpportunity, 
@@ -54,7 +53,6 @@ const stages: OpportunityStage[] = [
 export function OpportunityForm() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { toast } = useToast()
   const isEdit = Boolean(id)
 
   const { data: opportunityData, isLoading: isLoadingOpportunity } = useOpportunity(id || '')
@@ -88,7 +86,7 @@ export function OpportunityForm() {
       setValue('amount', opp.amount)
       setValue('probability', opp.probability || 0)
       setValue('closeDate', new Date(opp.closeDate))
-      setValue('leadSource', opp.leadSource || '')
+      // leadSource not available in Opportunity type
       setValue('nextStep', opp.nextStep || '')
       setValue('description', opp.description || '')
       // Note: accountId might need to be extracted from relationships
@@ -108,8 +106,7 @@ export function OpportunityForm() {
       salesStage: data.salesStage,
       amount: data.amount,
       probability: data.probability,
-      closeDate: data.closeDate.toISOString().split('T')[0],
-      leadSource: data.leadSource,
+      closeDate: data.closeDate?.toISOString().split('T')[0] || '',
       nextStep: data.nextStep,
       description: data.description,
       // Note: In a real app, you'd need to handle the account relationship properly
@@ -122,7 +119,7 @@ export function OpportunityForm() {
         await createMutation.mutateAsync(formattedData)
       }
       navigate('/opportunities')
-    } catch (error) {
+    } catch {
       // Error is handled by the mutation
     }
   }

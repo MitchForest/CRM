@@ -11,6 +11,8 @@ import { TableToolbar } from '@/components/ui/table-toolbar'
 import { TableActions } from '@/components/ui/table-actions'
 import { useLeads } from '@/hooks/use-leads'
 import { formatDate } from '@/lib/utils'
+import { usePermissions } from '@/hooks/use-permissions'
+import { PermissionGuard } from '@/components/auth/PermissionGuard'
 import type { Lead } from '@/types/api.generated'
 import type { ColumnDef } from '@tanstack/react-table'
 
@@ -109,22 +111,25 @@ const columns: ColumnDef<Lead>[] = [
   },
   {
     id: 'actions',
-    cell: ({ row }) => {
+    cell: function ActionsCell({ row }) {
       const lead = row.original
-      return (
-        <TableActions
-          actions={[
-            {
-              label: 'View',
-              onClick: () => window.location.href = `/leads/${lead.id}`,
-            },
-            {
-              label: 'Edit',
-              onClick: () => window.location.href = `/leads/${lead.id}/edit`,
-            },
-          ]}
-        />
-      )
+      const { canEdit } = usePermissions()
+      
+      const actions = [
+        {
+          label: 'View',
+          onClick: () => window.location.href = `/leads/${lead.id}`,
+        },
+      ]
+      
+      if (canEdit('Leads')) {
+        actions.push({
+          label: 'Edit',
+          onClick: () => window.location.href = `/leads/${lead.id}/edit`,
+        })
+      }
+      
+      return <TableActions actions={actions} />
     },
   },
 ]
@@ -163,12 +168,14 @@ export function LeadsListPage() {
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
-          <Button asChild>
-            <Link to="/leads/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Lead
-            </Link>
-          </Button>
+          <PermissionGuard module="Leads" action="create">
+            <Button asChild>
+              <Link to="/leads/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Lead
+              </Link>
+            </Button>
+          </PermissionGuard>
         </>
       }
     >

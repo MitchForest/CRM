@@ -3,13 +3,31 @@ import { apiClient } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
+interface TestResults {
+  createResult?: unknown;
+  immediateGet?: unknown;
+  delayedGet?: unknown;
+  searchResult?: {
+    found: boolean;
+    totalResults: number;
+    results: unknown[];
+  };
+  listResult?: {
+    found: boolean;
+    totalResults: number;
+    firstFew: unknown[];
+  };
+  cleanup?: string;
+  error?: unknown;
+}
+
 export function LeadDebugPage() {
-  const [results, setResults] = useState<any>({})
+  const [results, setResults] = useState<TestResults>({})
   const [loading, setLoading] = useState(false)
 
   const testLeadCreation = async () => {
     setLoading(true)
-    const testResults: any = {}
+    const testResults: TestResults = {}
 
     try {
       // 1. Create a test lead

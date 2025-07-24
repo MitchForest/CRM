@@ -140,7 +140,7 @@ export function useCaseMetrics() {
       const cases = response.data
 
       const openCases = cases.filter(c => c.status !== 'Closed').length
-      const criticalCases = cases.filter(c => c.priority === 'High' || c.priority === 'P1').length
+      const criticalCases = cases.filter(c => c.priority === 'High').length
       
       // Calculate average resolution time (would be better done on backend)
       const closedCases = cases.filter(c => c.status === 'Closed')
@@ -161,9 +161,9 @@ export function useCaseMetrics() {
 
       // Cases by priority
       const casesByPriority = [
-        { priority: 'P1' as CasePriority, count: cases.filter(c => c.priority === 'High' || c.priority === 'P1').length },
-        { priority: 'P2' as CasePriority, count: cases.filter(c => c.priority === 'Medium' || c.priority === 'P2').length },
-        { priority: 'P3' as CasePriority, count: cases.filter(c => c.priority === 'Low' || c.priority === 'P3').length },
+        { priority: 'P1' as CasePriority, count: cases.filter(c => c.priority === 'High').length },
+        { priority: 'P2' as CasePriority, count: cases.filter(c => c.priority === 'Medium').length },
+        { priority: 'P3' as CasePriority, count: cases.filter(c => c.priority === 'Low').length },
       ]
 
       return {
@@ -188,7 +188,7 @@ export function useCriticalCases() {
       
       return response.data.filter(c => 
         c.status !== 'Closed' && 
-        (c.priority === 'High' || c.priority === 'P1')
+        c.priority === 'High'
       )
     },
   })

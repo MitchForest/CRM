@@ -75,7 +75,7 @@ export function LeadFormPage() {
         await updateLead.mutateAsync(cleanedData as Partial<Lead>)
         navigate(`/leads/${id}`)
       } else {
-        const result = await createLead.mutateAsync(cleanedData as Omit<Lead, 'id'>)
+        await createLead.mutateAsync(cleanedData as Omit<Lead, 'id'>)
         // Navigate to leads list instead of detail page to see if it appears
         navigate('/leads')
       }
