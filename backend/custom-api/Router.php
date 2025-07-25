@@ -47,8 +47,8 @@ class Router {
     public function dispatch() {
         $method = $_SERVER['REQUEST_METHOD'];
         $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-        // Remove both /api and /api/index.php (for Apache alias)
-        $path = preg_replace('#^/api(/index\.php)?#', '', $path);
+        // Remove various API prefixes
+        $path = preg_replace('#^(/custom)?/api(/index\.php)?#', '', $path);
         if (empty($path)) {
             $path = '/';
         }
@@ -92,7 +92,13 @@ class Router {
         // Call handler
         list($class, $method) = explode('::', $matchedRoute['handler']);
         $controller = new $class();
-        $response = $controller->$method($request);
+        
+        // Check if route has parameters
+        if (!empty($params)) {
+            $response = $controller->$method($request, $params);
+        } else {
+            $response = $controller->$method($request);
+        }
         
         // Send response
         $this->sendResponse($response);

@@ -65,4 +65,13 @@ function configureRoutes($router) {
     $router->get('/track/pixel/{tracking_id}.gif', 'Api\Controllers\ActivityTrackingController::trackingPixel', ['skipAuth' => true]); // Public endpoint
     $router->get('/analytics/visitors', 'Api\Controllers\ActivityTrackingController::getVisitorAnalytics');
     $router->get('/analytics/leads/{id}/activity', 'Api\Controllers\ActivityTrackingController::getLeadActivity');
+    
+    // Customer Health Scoring Routes (Phase 3)
+    $router->post('/accounts/{id}/health-score', 'Api\Controllers\CustomerHealthController::calculateHealthScore');
+    $router->post('/accounts/health-score-batch', 'Api\Controllers\CustomerHealthController::batchCalculateHealthScores');
+    $router->get('/accounts/{id}/health-history', 'Api\Controllers\CustomerHealthController::getHealthHistory');
+    $router->get('/accounts/at-risk', 'Api\Controllers\CustomerHealthController::getAtRiskAccounts');
+    $router->get('/analytics/health-dashboard', 'Api\Controllers\CustomerHealthController::getHealthDashboard');
+    $router->post('/admin/recalculate-health-scores', 'Api\Controllers\CustomerHealthController::recalculateAllScores');
+    $router->post('/webhooks/health-check', 'Api\Controllers\CustomerHealthController::webhookHealthCheck', ['skipAuth' => true]);
 }

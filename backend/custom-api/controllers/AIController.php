@@ -19,10 +19,10 @@ class AIController extends BaseController
     
     public function __construct()
     {
-        parent::__construct();
+        // parent::__construct(); // BaseController has no constructor
         
         // Load AI configuration
-        require_once __DIR__ . '/../../suitecrm-custom/config/ai_config.php';
+        require_once "/var/www/html/suitecrm-custom/config/ai_config.php";
         
         // Initialize OpenAI service
         require_once __DIR__ . '/../../suitecrm-custom/services/OpenAIService.php';
