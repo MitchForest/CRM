@@ -33,7 +33,7 @@ class AIService {
    * Get AI score history for a lead
    */
   async getScoreHistory(leadId: string): Promise<AIScoreHistory[]> {
-    const response = await apiClient.customGet(`/leads/${leadId}/ai-score-history`);
+    const response = await apiClient.customGet(`/leads/${leadId}/score-history`);
     if (!response.success) {
       throw new Error(response.error || 'Failed to get score history');
     }
@@ -52,7 +52,7 @@ class AIService {
     message: string;
     intent?: string;
     suggested_actions?: string[];
-    metadata?: any;
+    metadata?: Record<string, string | number | boolean>;
   }> {
     const response = await apiClient.customPost('/ai/chat', {
       conversation_id: conversationId,
@@ -122,6 +122,29 @@ class AIService {
     
     if (!response.success) {
       throw new Error(response.error || 'Failed to analyze sentiment');
+    }
+    return response.data;
+  }
+
+  /**
+   * Create a support ticket through AI
+   */
+  async createSupportTicket(issue: string, userInfo?: {
+    name?: string;
+    email?: string;
+    company?: string;
+  }): Promise<{
+    ticketId: string;
+    message: string;
+    ticket: any;
+  }> {
+    const response = await apiClient.customPost('/ai/create-ticket', {
+      issue,
+      userInfo
+    });
+    
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to create support ticket');
     }
     return response.data;
   }

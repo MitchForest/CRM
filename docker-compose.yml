@@ -31,14 +31,22 @@ services:
     ports:
       - "8080:80"
     volumes:
+      # Core SuiteCRM
       - ./backend/suitecrm:/var/www/html:rw
-      - ./backend/custom-api:/var/www/html/custom/api:rw
-      - ./backend/custom-extensions:/var/www/html/custom/Extension:rw
-      - ./backend/config/config.php:/var/www/html/config.php:rw
-      - ./backend/config/config_override.php:/var/www/html/config_override.php:rw
+      
+      # Mount our custom code into SuiteCRM structure
+      - ./backend/custom/api:/var/www/html/custom/api:rw
+      - ./backend/custom/Extension:/var/www/html/custom/Extension:rw
+      - ./backend/custom/modules:/var/www/html/custom/modules:rw
+      - ./backend/custom/services:/var/www/html/custom/services:rw
+      - ./backend/custom/public:/var/www/html/public/custom:rw
+      
+      # Config override
+      - ./backend/custom/config/config_override.php:/var/www/html/config_override.php:rw
+      
+      # Tests and environment
       - ./backend/tests:/var/www/html/tests:rw
-      - ./backend/phpunit.xml:/var/www/html/phpunit.xml:rw
-      - ./backend/composer.json:/var/www/html/composer-backend.json:rw
+      - ./backend/.env:/var/www/html/.env:ro
     environment:
       DATABASE_HOST: mysql
       DATABASE_NAME: suitecrm

@@ -34,8 +34,14 @@ export function LoginPage() {
       const response = await apiClient.login(data.username, data.password)
       
       if (response.success && response.data) {
+        // Store auth data
         setAuth(response.data)
-        navigate('/')
+        
+        // Add a small delay to ensure token propagation
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
+        // Navigate to dashboard
+        navigate('/app')
       } else {
         setError(response.error?.error || 'Login failed')
       }
@@ -51,7 +57,7 @@ export function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
-            SaaS CRM
+            AI CRM
           </CardTitle>
           <CardDescription className="text-center">
             Enter your credentials to access your account

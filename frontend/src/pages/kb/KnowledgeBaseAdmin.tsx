@@ -31,7 +31,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { knowledgeBaseService } from '@/services/knowledgeBase.service';
 import { formatDistanceToNow } from 'date-fns';
-import type { KBCategory } from '@/types/phase3.types';
+import type { KBCategory, KBArticle } from '@/types/phase3.types';
 
 export function KnowledgeBaseAdmin() {
   const navigate = useNavigate();
@@ -161,7 +161,7 @@ export function KnowledgeBaseAdmin() {
     {
       accessorKey: 'title',
       header: 'Article',
-      cell: ({ row }: any) => (
+      cell: ({ row }: { row: { original: KBArticle } }) => (
         <div className="flex items-start gap-2">
           <FileText className="h-4 w-4 text-muted-foreground mt-1" />
           <div>
@@ -178,7 +178,7 @@ export function KnowledgeBaseAdmin() {
     {
       accessorKey: 'category_name',
       header: 'Category',
-      cell: ({ row }: any) => (
+      cell: ({ row }: { row: { original: KBArticle } }) => (
         row.original.category_name ? (
           <Badge variant="secondary">{row.original.category_name}</Badge>
         ) : null
@@ -187,7 +187,7 @@ export function KnowledgeBaseAdmin() {
     {
       accessorKey: 'is_public',
       header: 'Status',
-      cell: ({ row }: any) => (
+      cell: ({ row }: { row: { original: KBArticle } }) => (
         <div className="flex items-center gap-2">
           <Badge variant={row.original.is_public ? 'default' : 'secondary'}>
             {row.original.is_public ? 'Public' : 'Draft'}
@@ -201,7 +201,7 @@ export function KnowledgeBaseAdmin() {
     {
       accessorKey: 'views',
       header: 'Views',
-      cell: ({ row }: any) => (
+      cell: ({ row }: { row: { original: KBArticle } }) => (
         <div className="flex items-center gap-1">
           <Eye className="h-4 w-4 text-muted-foreground" />
           <span>{row.original.views || 0}</span>
@@ -211,7 +211,7 @@ export function KnowledgeBaseAdmin() {
     {
       accessorKey: 'helpful_yes',
       header: 'Helpful',
-      cell: ({ row }: any) => {
+      cell: ({ row }: { row: { original: KBArticle } }) => {
         const helpful = row.original.helpful_yes || 0;
         const notHelpful = row.original.helpful_no || 0;
         const total = helpful + notHelpful;
@@ -230,7 +230,7 @@ export function KnowledgeBaseAdmin() {
     {
       accessorKey: 'date_modified',
       header: 'Last Updated',
-      cell: ({ row }: any) => (
+      cell: ({ row }: { row: { original: KBArticle } }) => (
         <span className="text-sm text-muted-foreground">
           {formatDistanceToNow(new Date(row.original.date_modified), { addSuffix: true })}
         </span>
@@ -238,7 +238,7 @@ export function KnowledgeBaseAdmin() {
     },
     {
       id: 'actions',
-      cell: ({ row }: any) => (
+      cell: ({ row }: { row: { original: KBArticle } }) => (
         <div className="flex items-center gap-2">
           <Button
             size="sm"

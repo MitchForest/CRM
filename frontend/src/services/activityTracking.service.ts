@@ -58,7 +58,7 @@ class ActivityTrackingService {
     page_url?: string;
     title?: string;
     referrer?: string;
-    custom_data?: Record<string, any>;
+    custom_data?: Record<string, string | number | boolean>;
   }): Promise<void> {
     try {
       // End previous page tracking
@@ -129,7 +129,7 @@ class ActivityTrackingService {
   /**
    * Track a conversion event
    */
-  async trackConversion(event: string, value?: any, metadata?: Record<string, any>): Promise<void> {
+  async trackConversion(event: string, value?: string | number, metadata?: Record<string, string | number | boolean>): Promise<void> {
     try {
       await apiClient.publicPost('/track/conversion', {
         visitor_id: this.visitorId || undefined,
@@ -163,7 +163,7 @@ class ActivityTrackingService {
   /**
    * Identify visitor with lead/contact
    */
-  async identifyVisitor(leadId?: string, contactId?: string, customData?: Record<string, any>): Promise<void> {
+  async identifyVisitor(leadId?: string, contactId?: string, customData?: Record<string, string | number | boolean>): Promise<void> {
     if (!this.visitorId) return;
     
     try {

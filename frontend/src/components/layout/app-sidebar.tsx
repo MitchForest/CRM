@@ -35,43 +35,43 @@ import { usePermissions } from '@/hooks/use-permissions'
 const mainNavItems = [
   {
     title: "Dashboard",
-    url: "/",
+    url: "/app",
     icon: LayoutDashboard,
     module: null, // Dashboard is always visible
   },
   {
     title: "Leads",
-    url: "/leads",
+    url: "/app/leads",
     icon: Target,
     module: "Leads" as const,
   },
   {
     title: "Contacts",
-    url: "/contacts",
+    url: "/app/contacts",
     icon: Users,
     module: "Contacts" as const,
   },
   {
     title: "Accounts",
-    url: "/accounts",
+    url: "/app/accounts",
     icon: Building2,
     module: "Accounts" as const,
   },
   {
     title: "Opportunities",
-    url: "/opportunities",
+    url: "/app/opportunities",
     icon: TrendingUp,
     module: "Opportunities" as const,
   },
   {
     title: "Activities",
-    url: "/activities",
+    url: "/app/activities",
     icon: Calendar,
     module: "Activities" as const,
   },
   {
     title: "Cases",
-    url: "/cases",
+    url: "/app/cases",
     icon: HeadphonesIcon,
     module: "Cases" as const,
   },
@@ -80,37 +80,37 @@ const mainNavItems = [
 const phase3NavItems = [
   {
     title: "AI Lead Scoring",
-    url: "/leads/scoring",
+    url: "/app/leads/scoring",
     icon: Brain,
     module: "Leads" as const,
   },
   {
     title: "Forms",
-    url: "/forms",
+    url: "/app/forms",
     icon: FileText,
     module: null, // Forms might be accessible to all
   },
   {
     title: "Knowledge Base",
-    url: "/kb",
+    url: "/app/kb",
     icon: BookOpen,
     module: null, // KB might be accessible to all
   },
   {
     title: "Activity Tracking",
-    url: "/tracking",
+    url: "/app/tracking",
     icon: Activity,
     module: null, // Tracking might be accessible to all
   },
   {
     title: "Customer Health",
-    url: "/health",
+    url: "/app/health",
     icon: Heart,
     module: "Accounts" as const,
   },
   {
     title: "Chatbot",
-    url: "/chatbot",
+    url: "/app/chatbot",
     icon: MessageCircle,
     module: null, // Chatbot settings might be accessible to all
   },
@@ -119,7 +119,7 @@ const phase3NavItems = [
 const bottomNavItems = [
   {
     title: "Settings",
-    url: "/settings",
+    url: "/app/settings",
     icon: Settings,
   },
 ]
@@ -145,7 +145,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b">
         <div className="px-2 py-4">
-          <h1 className="text-xl font-bold">SaaS CRM</h1>
+          <h1 className="text-xl font-bold">AI CRM</h1>
         </div>
       </SidebarHeader>
       

@@ -16,30 +16,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
-import { apiClient } from '@/lib/api-client'
 import { formatDistanceToNow, format } from 'date-fns'
-import type { WebsiteSession } from '@/types'
 
-interface SessionDetailData extends WebsiteSession {
-  device_info?: {
-    type: string
-    browser: string
-    os: string
-    screenResolution?: string
-  }
-  leadInfo?: {
-    id: string
-    name: string
-    email: string
-    company?: string
-    score?: number
-  }
-  events?: Array<{
-    type: string
-    timestamp: string
-    properties?: Record<string, unknown>
-  }>
-}
 
 export function SessionDetail() {
   const { id } = useParams()
@@ -48,8 +26,64 @@ export function SessionDetail() {
   const { data: session, isLoading } = useQuery({
     queryKey: ['session-detail', id],
     queryFn: async () => {
-      const response = await apiClient.customGet(`/analytics/sessions/${id}`)
-      return response.data as SessionDetailData
+      // Mock data for now - backend endpoint needs to be added
+      return {
+        id: id,
+        visitor_id: 'visitor-123',
+        lead_id: null,
+        ip_address: '192.168.1.1',
+        user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        referrer: 'https://google.com',
+        pages_viewed: [
+          {
+            url: '/features',
+            title: 'Features',
+            timestamp: new Date().toISOString(),
+            duration: 45,
+            scroll_depth: 75,
+            clicks: 3
+          },
+          {
+            url: '/pricing',
+            title: 'Pricing',
+            timestamp: new Date().toISOString(),
+            duration: 120,
+            scroll_depth: 100,
+            clicks: 5
+          }
+        ],
+        total_time: 165,
+        is_active: true,
+        date_created: new Date().toISOString(),
+        location: {
+          country: 'United States',
+          city: 'New York'
+        },
+        device_info: {
+          type: 'Desktop',
+          browser: 'Chrome',
+          os: 'Windows 10'
+        },
+        events: [
+          {
+            type: 'page_view',
+            timestamp: new Date().toISOString(),
+            properties: { page: '/features' }
+          },
+          {
+            type: 'click',
+            timestamp: new Date().toISOString(),
+            properties: { element: 'pricing-button' }
+          }
+        ],
+        leadInfo: {
+          id: 'lead-123',
+          name: 'John Doe',
+          email: 'john@example.com',
+          company: 'Acme Corp',
+          score: 85
+        }
+      }
     }
   })
 
@@ -68,7 +102,7 @@ export function SessionDetail() {
     if (!session) return 0
     const pageViews = session.pages_viewed?.length || 0
     const duration = session.total_time || 0
-    const hasConversion = session.events?.some(e => e.type === 'conversion')
+    const hasConversion = session.events?.some((e) => e.type === 'conversion')
     
     let score = 0
     score += Math.min(pageViews * 10, 30) // Max 30 points for page views
@@ -236,7 +270,7 @@ export function SessionDetail() {
                             </div>
                             <div>
                               <span className="text-muted-foreground">Scroll depth:</span>
-                              <p className="font-medium">{page.scrollDepth}%</p>
+                              <p className="font-medium">{page.scroll_depth}%</p>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Interactions:</span>

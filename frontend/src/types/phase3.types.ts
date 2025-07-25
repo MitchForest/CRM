@@ -81,7 +81,7 @@ export interface FormSubmission {
   id: string;
   form_id: string;
   form_name?: string;
-  data: Record<string, any>;
+  data: Record<string, string | number | boolean | null>;
   ip_address: string;
   user_agent: string;
   date_submitted: string;
@@ -147,7 +147,7 @@ export interface ChatMessage {
     suggested_articles?: string[];
     suggested_actions?: string[];
     lead_score?: number;
-    entities?: Record<string, any>;
+    entities?: Record<string, { name: string; type: string; value: string }>;
   };
 }
 
@@ -166,7 +166,7 @@ export interface ChatSession {
       company?: string;
       phone?: string;
     };
-    custom_data?: Record<string, any>;
+    custom_data?: Record<string, string | number | boolean>;
   };
   status: 'active' | 'ended' | 'transferred';
   started_at: string;
@@ -202,7 +202,7 @@ export interface PageView {
   exit_intent?: boolean;
   custom_events?: {
     event: string;
-    value?: any;
+    value?: string | number | boolean | string[];
     timestamp: string;
   }[];
 }
@@ -262,7 +262,7 @@ export interface ActivityHeatmap {
 
 export interface TrackingEvent {
   event: string;
-  properties?: Record<string, any>;
+  properties?: Record<string, string | number | boolean>;
   timestamp: string;
   visitor_id: string;
   session_id?: string;
@@ -341,7 +341,7 @@ export interface Phase3ApiError {
   success: false;
   error: string;
   message?: string;
-  details?: Record<string, any>;
+  details?: Record<string, string | number | boolean | null>;
 }
 
 // Utility Types
@@ -371,6 +371,6 @@ export interface ChatConfig {
   theme?: ChatWidget['theme'];
   primaryColor?: string;
   greeting?: string;
-  onLeadCapture?: (lead: any) => void;
+  onLeadCapture?: (lead: { name: string; email: string; company?: string }) => void;
   onChatEnd?: (session: ChatSession) => void;
 }

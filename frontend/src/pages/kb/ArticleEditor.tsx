@@ -1,27 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEditor } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Link from '@tiptap/extension-link';
-import Image from '@tiptap/extension-image';
+import { DefaultEditor } from 'react-simple-wysiwyg';
 import { 
   Save, 
   ArrowLeft, 
-  Eye, 
-  Bold, 
-  Italic, 
-  List, 
-  ListOrdered,
-  Quote,
-  Code,
-  Link2,
-  Image as ImageIcon,
-  Undo,
-  Redo,
-  Heading1,
-  Heading2,
-  Heading3
+  Eye
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,39 +20,10 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { knowledgeBaseService } from '@/services/knowledgeBase.service';
 import type { KBArticle } from '@/types/phase3.types';
-import { cn } from '@/lib/utils';
-
-// TipTap editor toolbar button
-const ToolbarButton = ({ 
-  onClick, 
-  active = false, 
-  disabled = false, 
-  children, 
-  title 
-}: {
-  onClick: () => void;
-  active?: boolean;
-  disabled?: boolean;
-  children: React.ReactNode;
-  title: string;
-}) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    title={title}
-    className={cn(
-      "p-2 rounded hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed",
-      active && "bg-muted"
-    )}
-  >
-    {children}
-  </button>
-);
 
 export function ArticleEditor() {
   const { id } = useParams();
@@ -81,11 +36,12 @@ export function ArticleEditor() {
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
   const [excerpt, setExcerpt] = useState('');
-  const [categoryId, setCategoryId] = useState('');
+  const [categoryId, setCategoryId] = useState('none');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [isPublic, setIsPublic] = useState(false);
   const [isFeatured, setIsFeatured] = useState(false);
+  const [content, setContent] = useState('');
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
@@ -100,43 +56,19 @@ export function ArticleEditor() {
     enabled: isEditing
   });
 
-  // TipTap editor
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'text-primary underline'
-        }
-      }),
-      Image.configure({
-        HTMLAttributes: {
-          class: 'max-w-full h-auto rounded-lg'
-        }
-      })
-    ],
-    content: '',
-    editorProps: {
-      attributes: {
-        class: 'prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[400px] p-4'
-      }
-    }
-  });
-
   // Load article data
   useEffect(() => {
-    if (article && editor) {
+    if (article) {
       setTitle(article.title);
       setSlug(article.slug);
       setExcerpt(article.excerpt || '');
-      setCategoryId(article.category_id || '');
+      setCategoryId(article.category_id || 'none');
       setTags(article.tags || []);
       setIsPublic(article.is_public);
       setIsFeatured(article.is_featured);
-      editor.commands.setContent(article.content);
+      setContent(article.content || '');
     }
-  }, [article, editor]);
+  }, [article]);
 
   // Auto-generate slug from title
   useEffect(() => {
@@ -171,7 +103,7 @@ export function ArticleEditor() {
       });
       navigate('/kb');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: 'Save failed',
         description: error.message || 'Unable to save the article. Please try again.',
@@ -181,7 +113,7 @@ export function ArticleEditor() {
   });
 
   const handleSave = () => {
-    if (!title || !slug || !editor?.getHTML()) {
+    if (!title || !slug || !content) {
       toast({
         title: 'Validation error',
         description: 'Please fill in all required fields.',
@@ -193,9 +125,9 @@ export function ArticleEditor() {
     const articleData: Partial<KBArticle> = {
       title,
       slug,
-      content: editor.getHTML(),
+      content,
       excerpt: excerpt || undefined,
-      category_id: categoryId || undefined,
+      category_id: categoryId === 'none' ? undefined : categoryId || undefined,
       tags,
       is_public: isPublic,
       is_featured: isFeatured
@@ -214,22 +146,6 @@ export function ArticleEditor() {
   const removeTag = (tagToRemove: string) => {
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
-
-  const setLink = () => {
-    const url = prompt('Enter URL:');
-    if (url) {
-      editor?.chain().focus().setLink({ href: url }).run();
-    }
-  };
-
-  const addImage = () => {
-    const url = prompt('Enter image URL:');
-    if (url) {
-      editor?.chain().focus().setImage({ src: url }).run();
-    }
-  };
-
-  if (!editor) return null;
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -269,8 +185,9 @@ export function ArticleEditor() {
             <CardContent className="p-6 space-y-4">
               {/* Title */}
               <div>
-                <Label>Title</Label>
+                <Label htmlFor="title">Title</Label>
                 <Input
+                  id="title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Enter article title"
@@ -280,8 +197,9 @@ export function ArticleEditor() {
 
               {/* Slug */}
               <div>
-                <Label>Slug</Label>
+                <Label htmlFor="slug">Slug</Label>
                 <Input
+                  id="slug"
                   value={slug}
                   onChange={(e) => setSlug(e.target.value)}
                   placeholder="article-url-slug"
@@ -291,121 +209,21 @@ export function ArticleEditor() {
                 </p>
               </div>
 
-              {/* Editor Toolbar */}
-              <div className="border rounded-lg">
-                <div className="flex items-center gap-1 p-2 border-b flex-wrap">
-                  <ToolbarButton
-                    onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-                    active={editor.isActive('heading', { level: 1 })}
-                    title="Heading 1"
-                  >
-                    <Heading1 className="h-4 w-4" />
-                  </ToolbarButton>
-                  <ToolbarButton
-                    onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-                    active={editor.isActive('heading', { level: 2 })}
-                    title="Heading 2"
-                  >
-                    <Heading2 className="h-4 w-4" />
-                  </ToolbarButton>
-                  <ToolbarButton
-                    onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-                    active={editor.isActive('heading', { level: 3 })}
-                    title="Heading 3"
-                  >
-                    <Heading3 className="h-4 w-4" />
-                  </ToolbarButton>
-                  
-                  <Separator orientation="vertical" className="h-6 mx-1" />
-                  
-                  <ToolbarButton
-                    onClick={() => editor.chain().focus().toggleBold().run()}
-                    active={editor.isActive('bold')}
-                    title="Bold"
-                  >
-                    <Bold className="h-4 w-4" />
-                  </ToolbarButton>
-                  <ToolbarButton
-                    onClick={() => editor.chain().focus().toggleItalic().run()}
-                    active={editor.isActive('italic')}
-                    title="Italic"
-                  >
-                    <Italic className="h-4 w-4" />
-                  </ToolbarButton>
-                  <ToolbarButton
-                    onClick={() => editor.chain().focus().toggleCode().run()}
-                    active={editor.isActive('code')}
-                    title="Code"
-                  >
-                    <Code className="h-4 w-4" />
-                  </ToolbarButton>
-                  
-                  <Separator orientation="vertical" className="h-6 mx-1" />
-                  
-                  <ToolbarButton
-                    onClick={() => editor.chain().focus().toggleBulletList().run()}
-                    active={editor.isActive('bulletList')}
-                    title="Bullet List"
-                  >
-                    <List className="h-4 w-4" />
-                  </ToolbarButton>
-                  <ToolbarButton
-                    onClick={() => editor.chain().focus().toggleOrderedList().run()}
-                    active={editor.isActive('orderedList')}
-                    title="Numbered List"
-                  >
-                    <ListOrdered className="h-4 w-4" />
-                  </ToolbarButton>
-                  <ToolbarButton
-                    onClick={() => editor.chain().focus().toggleBlockquote().run()}
-                    active={editor.isActive('blockquote')}
-                    title="Quote"
-                  >
-                    <Quote className="h-4 w-4" />
-                  </ToolbarButton>
-                  
-                  <Separator orientation="vertical" className="h-6 mx-1" />
-                  
-                  <ToolbarButton
-                    onClick={setLink}
-                    active={editor.isActive('link')}
-                    title="Add Link"
-                  >
-                    <Link2 className="h-4 w-4" />
-                  </ToolbarButton>
-                  <ToolbarButton
-                    onClick={addImage}
-                    title="Add Image"
-                  >
-                    <ImageIcon className="h-4 w-4" />
-                  </ToolbarButton>
-                  
-                  <Separator orientation="vertical" className="h-6 mx-1" />
-                  
-                  <ToolbarButton
-                    onClick={() => editor.chain().focus().undo().run()}
-                    disabled={!editor.can().undo()}
-                    title="Undo"
-                  >
-                    <Undo className="h-4 w-4" />
-                  </ToolbarButton>
-                  <ToolbarButton
-                    onClick={() => editor.chain().focus().redo().run()}
-                    disabled={!editor.can().redo()}
-                    title="Redo"
-                  >
-                    <Redo className="h-4 w-4" />
-                  </ToolbarButton>
-                </div>
-                
-                {/* Editor Content */}
-                <div
-                  onClick={() => editor.chain().focus().run()}
-                  className="min-h-[400px] cursor-text"
-                >
-                  <div
-                    dangerouslySetInnerHTML={{ __html: editor.getHTML() }}
-                    className="prose prose-sm dark:prose-invert max-w-none p-4"
+              {/* Content Editor */}
+              <div className="space-y-2">
+                <Label>Content</Label>
+                <div className="border rounded-md overflow-hidden">
+                  <DefaultEditor 
+                    value={content} 
+                    onChange={(e) => setContent(e.target.value)}
+                    placeholder="Write your article content here..."
+                    containerProps={{
+                      style: {
+                        minHeight: '400px',
+                        maxHeight: '600px',
+                        overflowY: 'auto'
+                      }
+                    }}
                   />
                 </div>
               </div>
@@ -451,7 +269,7 @@ export function ArticleEditor() {
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No category</SelectItem>
+                  <SelectItem value="none">No category</SelectItem>
                   {categories.map(cat => (
                     <SelectItem key={cat.id} value={cat.id}>
                       {cat.icon && `${cat.icon} `}{cat.name}
@@ -490,23 +308,51 @@ export function ArticleEditor() {
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
                   placeholder="Add a tag"
                 />
-                <Button type="button" onClick={addTag}>Add</Button>
+                <Button type="button" onClick={addTag} size="sm">
+                  Add
+                </Button>
               </div>
               <div className="flex flex-wrap gap-2">
                 {tags.map(tag => (
-                  <Badge key={tag} variant="secondary" className="gap-1">
-                    {tag}
-                    <button
-                      onClick={() => removeTag(tag)}
-                      className="ml-1 hover:text-destructive"
-                    >
-                      ×
-                    </button>
+                  <Badge 
+                    key={tag} 
+                    variant="secondary" 
+                    className="cursor-pointer"
+                    onClick={() => removeTag(tag)}
+                  >
+                    {tag} ×
                   </Badge>
                 ))}
               </div>
             </CardContent>
           </Card>
+
+          {/* Article Info */}
+          {article && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Article Info</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Views</span>
+                  <span>{article.views || 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Helpful</span>
+                  <span>{article.helpful_yes || 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Created</span>
+                  <span>{new Date(article.date_created).toLocaleDateString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Updated</span>
+                  <span>{new Date(article.date_modified).toLocaleDateString()}</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

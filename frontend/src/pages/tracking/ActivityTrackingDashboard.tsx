@@ -7,8 +7,7 @@ import {
   Clock, 
   TrendingUp,
   MousePointer,
-  Globe,
-  Filter
+  Globe
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -38,7 +37,7 @@ import {
   Pie,
   Cell
 } from 'recharts'
-import type { WebsiteSession, PageView } from '@/types'
+import type { WebsiteSession } from '@/types'
 
 interface VisitorMetrics {
   totalVisitors: number
@@ -55,7 +54,7 @@ export function ActivityTrackingDashboard() {
   const [timeRange, setTimeRange] = useState('24h')
   const [selectedSession, setSelectedSession] = useState<WebsiteSession | null>(null)
 
-  const { data: metrics, isLoading: isLoadingMetrics } = useQuery({
+  const { data: metrics } = useQuery({
     queryKey: ['visitor-metrics', timeRange],
     queryFn: async () => {
       const response = await apiClient.customGet('/analytics/visitors', {
@@ -414,19 +413,19 @@ export function ActivityTrackingDashboard() {
                         <span className="text-muted-foreground">Session ID:</span>
                         <span className="font-mono">{selectedSession.id}</span>
                       </div>
-                      {selectedSession.leadId && (
+                      {selectedSession.lead_id && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Lead ID:</span>
-                          <span>{selectedSession.leadId}</span>
+                          <span>{selectedSession.lead_id}</span>
                         </div>
                       )}
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Started:</span>
-                        <span>{new Date(selectedSession.dateCreated).toLocaleString()}</span>
+                        <span>{new Date(selectedSession.date_created).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Duration:</span>
-                        <span>{Math.round((selectedSession.totalTime || 0) / 60)}m</span>
+                        <span>{Math.round((selectedSession.total_time || 0) / 60)}m</span>
                       </div>
                       {selectedSession.referrer && (
                         <div className="flex justify-between">
@@ -440,7 +439,7 @@ export function ActivityTrackingDashboard() {
                   <div>
                     <h3 className="font-medium mb-2">Page Journey</h3>
                     <div className="space-y-3">
-                      {selectedSession.pages_viewed?.map((page: any, index: number) => (
+                      {selectedSession.pages_viewed?.map((page: { title: string; url: string; timestamp: string; duration?: number; scrollDepth?: number; clicks?: number }, index: number) => (
                         <div key={index} className="flex items-start gap-3">
                           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
                             {index + 1}

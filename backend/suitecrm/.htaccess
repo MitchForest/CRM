@@ -13,9 +13,9 @@
     RewriteCond %{REQUEST_URI} ^/Api/V8
     RewriteRule ^Api/(.*)$ Api/index.php [QSA,L]
     
-    # Route custom API requests to custom/api/index.php
-    RewriteCond %{REQUEST_URI} ^/custom/api
-    RewriteRule ^custom/api/(.*)$ custom/api/index.php [QSA,L]
+    # Route all /api requests to standalone API
+    RewriteCond %{REQUEST_URI} ^/api
+    RewriteRule ^api/(.*)$ custom/api/standalone.php/api/$1 [QSA,L]
     
     # Allow access to API endpoints
     RewriteCond %{REQUEST_URI} ^/api [OR]

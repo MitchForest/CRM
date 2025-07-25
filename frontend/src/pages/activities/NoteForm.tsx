@@ -20,6 +20,7 @@ import { useAccounts } from '@/hooks/use-accounts'
 import { useContacts } from '@/hooks/use-contacts'
 import { useCallback, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
+import type { Note } from '@/types/api.generated'
 
 const noteSchema = z.object({
   name: z.string().min(1, 'Note subject is required'),
@@ -67,8 +68,8 @@ export function NoteForm() {
         description: note.description,
         parentType: note.parentType,
         parentId: note.parentId,
-        fileName: (note as any).fileName,
-        fileMimeType: (note as any).fileMimeType,
+        fileName: (note as Note & { fileName?: string }).fileName,
+        fileMimeType: (note as Note & { fileMimeType?: string }).fileMimeType,
       })
     }
   }, [note, isEdit, reset])

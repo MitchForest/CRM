@@ -11,7 +11,8 @@ import { AIScoreDisplay } from '@/components/features/ai-scoring/AIScoreDisplay'
 import { apiClient } from '@/lib/api-client';
 import { aiService } from '@/services/ai.service';
 import { useToast } from '@/components/ui/use-toast';
-// import type { Lead } from '@/types/api.generated'; // Type already available from global imports
+import type { Lead } from '@/types/api.generated';
+import type { ColumnDef } from '@tanstack/react-table';
 import {
   BarChart,
   Bar,
@@ -73,7 +74,7 @@ export function LeadScoringDashboard() {
         description: `AI Score: ${data.score}/100`,
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: 'Scoring failed',
         description: error.message || 'Unable to calculate AI score. Please try again.',
@@ -93,7 +94,7 @@ export function LeadScoringDashboard() {
       });
       setSelectedLeads([]);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: 'Batch scoring failed',
         description: error.message || 'Unable to score leads. Please try again.',
@@ -122,17 +123,17 @@ export function LeadScoringDashboard() {
   const warmLeads = scoredLeads.filter(l => l.aiScore! >= 60 && l.aiScore! < 80).length;
 
   // Table columns
-  const columns = [
+  const columns: ColumnDef<Lead>[] = [
     {
       id: 'select',
-      header: ({ table }: any) => (
+      header: ({ table }) => (
         <input
           type="checkbox"
           checked={table.getIsAllPageRowsSelected()}
           onChange={(e) => {
             table.toggleAllPageRowsSelected(!!e.target.checked);
             if (e.target.checked) {
-              setSelectedLeads(table.getRowModel().rows.map((row: any) => row.original.id));
+              setSelectedLeads(table.getRowModel().rows.map((row) => row.original.id || ''));
             } else {
               setSelectedLeads([]);
             }
@@ -140,12 +141,12 @@ export function LeadScoringDashboard() {
           className="rounded border-gray-300"
         />
       ),
-      cell: ({ row }: any) => (
+      cell: ({ row }: { row: { original: Lead } }) => (
         <input
           type="checkbox"
-          checked={selectedLeads.includes(row.original.id)}
+          checked={selectedLeads.includes(row.original.id!)}
           onChange={(e) => {
-            if (e.target.checked) {
+            if (e.target.checked && row.original.id) {
               setSelectedLeads([...selectedLeads, row.original.id]);
             } else {
               setSelectedLeads(selectedLeads.filter(id => id !== row.original.id));
@@ -160,7 +161,7 @@ export function LeadScoringDashboard() {
     {
       accessorKey: 'name',
       header: 'Lead Name',
-      cell: ({ row }: any) => (
+      cell: ({ row }: { row: { original: Lead } }) => (
         <div>
           <div className="font-medium">
             {row.original.firstName} {row.original.lastName}
@@ -180,14 +181,14 @@ export function LeadScoringDashboard() {
     {
       accessorKey: 'aiScore',
       header: 'AI Score',
-      cell: ({ row }: any) => {
+      cell: ({ row }: { row: { original: Lead } }) => {
         const score = row.original.aiScore;
         if (!score || score === 0) {
           return (
             <Button
               size="sm"
               variant="outline"
-              onClick={() => scoreMutation.mutate(row.original.id)}
+              onClick={() => scoreMutation.mutate(row.original.id!)}
               disabled={scoreMutation.isPending}
             >
               {scoreMutation.isPending ? (
@@ -219,7 +220,7 @@ export function LeadScoringDashboard() {
     {
       accessorKey: 'status',
       header: 'Status',
-      cell: ({ row }: any) => (
+      cell: ({ row }: { row: { original: Lead } }) => (
         <Badge variant={row.original.status === 'New' ? 'default' : 'secondary'}>
           {row.original.status}
         </Badge>
@@ -227,12 +228,12 @@ export function LeadScoringDashboard() {
     },
     {
       id: 'actions',
-      cell: ({ row }: any) => (
+      cell: ({ row }: { row: { original: Lead } }) => (
         <div className="flex items-center gap-2">
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => setSelectedLeadId(row.original.id)}
+            onClick={() => setSelectedLeadId(row.original.id || null)}
           >
             View Details
           </Button>
@@ -240,7 +241,7 @@ export function LeadScoringDashboard() {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => scoreMutation.mutate(row.original.id)}
+              onClick={() => scoreMutation.mutate(row.original.id!)}
             >
               <Brain className="h-4 w-4" />
             </Button>
@@ -370,7 +371,7 @@ export function LeadScoringDashboard() {
               <div className="flex items-center justify-between">
                 <CardTitle>Leads</CardTitle>
                 <div className="flex items-center gap-2">
-                  <Select value={filterStatus} onValueChange={(value: any) => setFilterStatus(value)}>
+                  <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as 'all' | 'scored' | 'unscored')}>
                     <SelectTrigger className="w-32">
                       <SelectValue />
                     </SelectTrigger>

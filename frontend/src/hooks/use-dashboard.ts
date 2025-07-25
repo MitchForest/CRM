@@ -1,22 +1,27 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
+import type { DashboardMetrics, ActivityMetrics } from '@/types/phase2.types'
+import { useAuthStore } from '@/stores/auth-store'
 
 // Get dashboard metrics from custom API
 export function useDashboardMetrics() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  
   return useQuery({
     queryKey: ['dashboard-metrics'],
+    enabled: isAuthenticated,
     queryFn: async () => {
       const response = await apiClient.getDashboardMetrics()
       if (response.success && response.data) {
         // Transform snake_case to camelCase
-        const rawData = response.data as any
+        const rawData = response.data as DashboardMetrics & Record<string, unknown>
         return {
           ...response,
           data: {
-            totalLeads: rawData.total_leads || rawData.totalLeads || 0,
-            totalAccounts: rawData.total_accounts || rawData.totalAccounts || 0,
-            newLeadsToday: rawData.new_leads_today || rawData.newLeadsToday || 0,
-            pipelineValue: rawData.pipeline_value || rawData.pipelineValue || 0,
+            totalLeads: rawData.totalLeads || 0,
+            totalAccounts: rawData.totalAccounts || 0,
+            newLeadsToday: rawData.newLeadsToday || 0,
+            pipelineValue: rawData.pipelineValue || 0,
           }
         }
       }
@@ -32,8 +37,11 @@ export function useDashboardStats() {
 
 // Get pipeline data from custom API
 export function usePipelineData() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  
   return useQuery({
     queryKey: ['dashboard-pipeline'],
+    enabled: isAuthenticated,
     queryFn: async () => {
       const response = await apiClient.getPipelineData()
       if (!response.success || !response.data) return []
@@ -51,20 +59,23 @@ export function usePipelineData() {
 
 // Get activity metrics from custom API
 export function useActivityMetrics() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  
   return useQuery({
     queryKey: ['dashboard-activities'],
+    enabled: isAuthenticated,
     queryFn: async () => {
       const response = await apiClient.getActivityMetrics()
       if (response.success && response.data) {
         // Transform snake_case to camelCase
-        const rawData = response.data as any
+        const rawData = response.data as ActivityMetrics & Record<string, unknown>
         return {
           ...response,
           data: {
-            callsToday: rawData.calls_today || rawData.callsToday || 0,
-            meetingsToday: rawData.meetings_today || rawData.meetingsToday || 0,
-            tasksOverdue: rawData.tasks_overdue || rawData.tasksOverdue || 0,
-            upcomingActivities: rawData.upcoming_activities || rawData.upcomingActivities || [],
+            callsToday: rawData.callsToday || 0,
+            meetingsToday: rawData.meetingsToday || 0,
+            tasksOverdue: rawData.tasksOverdue || 0,
+            upcomingActivities: rawData.upcomingActivities || [],
           }
         }
       }
@@ -75,13 +86,26 @@ export function useActivityMetrics() {
 
 // Get case metrics from custom API
 export function useCaseMetrics() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  
   return useQuery({
     queryKey: ['dashboard-cases'],
+    enabled: isAuthenticated,
     queryFn: async () => {
       const response = await apiClient.getCaseMetrics()
       if (response.success && response.data) {
         // Transform snake_case to camelCase
-        const rawData = response.data as any
+        interface CaseMetricsRaw {
+          open_cases?: number;
+          openCases?: number;
+          critical_cases?: number;
+          criticalCases?: number;
+          avg_resolution_time?: number;
+          avgResolutionTime?: number;
+          cases_by_priority?: Array<{ priority: string; count: number }>;
+          casesByPriority?: Array<{ priority: string; count: number }>;
+        }
+        const rawData = response.data as CaseMetricsRaw
         return {
           ...response,
           data: {
@@ -99,17 +123,30 @@ export function useCaseMetrics() {
 
 // Get recent activity data
 export function useRecentActivities() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  
   return useQuery({
     queryKey: ['dashboard-recent-activities'],
+    enabled: isAuthenticated,
     queryFn: async () => {
       // Get upcoming activities from the custom API
       const response = await apiClient.getActivityMetrics()
       if (!response.success || !response.data) return []
       
       // Transform upcoming activities into the expected format
-      const rawData = response.data as any
-      const activities = (rawData.upcomingActivities || rawData.upcoming_activities || []) as any[]
-      return activities.slice(0, 10).map((activity: any) => ({
+      const rawData = response.data as ActivityMetrics
+      interface Activity {
+        id: string;
+        type?: string;
+        name: string;
+        status?: string;
+        priority?: string;
+        date_start?: string;
+        dateEntered?: string;
+        date_entered?: string;
+      }
+      const activities = (rawData.upcomingActivities || []) as Activity[]
+      return activities.slice(0, 10).map((activity) => ({
         id: activity.id,
         type: activity.type || 'Task' as const,
         name: activity.name,

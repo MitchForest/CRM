@@ -155,7 +155,7 @@ export function FormBuilderPage() {
     const newField: FormFieldType = {
       id: Date.now().toString(),
       name: `field_${fields.length + 1}`,
-      type: type as any,
+      type: type as FormFieldType['type'],
       label: `${type.charAt(0).toUpperCase() + type.slice(1)} Field`,
       placeholder: '',
       required: false,

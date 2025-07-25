@@ -78,7 +78,7 @@ export function FormsList() {
     {
       accessorKey: 'name',
       header: 'Form Name',
-      cell: ({ row }: any) => (
+      cell: ({ row }: { row: { original: Form } }) => (
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-muted-foreground" />
           <span className="font-medium">{row.original.name}</span>
@@ -88,7 +88,7 @@ export function FormsList() {
     {
       accessorKey: 'fields',
       header: 'Fields',
-      cell: ({ row }: any) => (
+      cell: ({ row }: { row: { original: Form } }) => (
         <Badge variant="secondary">
           {row.original.fields.length} fields
         </Badge>
@@ -97,7 +97,7 @@ export function FormsList() {
     {
       accessorKey: 'submissions_count',
       header: 'Submissions',
-      cell: ({ row }: any) => (
+      cell: ({ row }: { row: { original: Form } }) => (
         <div className="flex items-center gap-2">
           <BarChart3 className="h-4 w-4 text-muted-foreground" />
           <span>{row.original.submissions_count || 0}</span>
@@ -107,7 +107,7 @@ export function FormsList() {
     {
       accessorKey: 'date_created',
       header: 'Created',
-      cell: ({ row }: any) => (
+      cell: ({ row }: { row: { original: Form } }) => (
         <span className="text-sm text-muted-foreground">
           {formatDistanceToNow(new Date(row.original.date_created), { addSuffix: true })}
         </span>
@@ -115,7 +115,7 @@ export function FormsList() {
     },
     {
       id: 'actions',
-      cell: ({ row }: any) => (
+      cell: ({ row }: { row: { original: Form } }) => (
         <div className="flex items-center gap-2">
           <Button
             size="sm"

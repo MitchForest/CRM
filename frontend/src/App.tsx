@@ -1,7 +1,7 @@
 import { useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+// import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { Layout } from '@/components/layout/Layout'
 import { LoginPage } from '@/pages/Login'
@@ -48,6 +48,16 @@ const ActivityTrackingDashboard = lazy(() => import('@/pages/tracking/ActivityTr
 const SessionDetail = lazy(() => import('@/pages/tracking/SessionDetail').then(m => ({ default: m.SessionDetail })))
 const ChatbotSettings = lazy(() => import('@/pages/chatbot/ChatbotSettings').then(m => ({ default: m.ChatbotSettings })))
 const CustomerHealthDashboard = lazy(() => import('@/pages/health/CustomerHealthDashboard').then(m => ({ default: m.CustomerHealthDashboard })))
+
+// Phase 4 - Marketing Pages
+const Homepage = lazy(() => import('@/pages/marketing/Homepage').then(m => ({ default: m.Homepage })))
+const Pricing = lazy(() => import('@/pages/marketing/Pricing').then(m => ({ default: m.Pricing })))
+const DemoBooking = lazy(() => import('@/pages/marketing/DemoBooking').then(m => ({ default: m.DemoBooking })))
+const GetStarted = lazy(() => import('@/pages/marketing/GetStarted').then(m => ({ default: m.GetStarted })))
+const Support = lazy(() => import('@/pages/marketing/Support').then(m => ({ default: m.Support })))
+
+// Layouts
+import { PublicLayout } from '@/components/layout/PublicLayout'
 
 import { Toaster } from '@/components/ui/sonner'
 import { ChatWidget } from '@/components/features/chatbot/ChatWidget'
@@ -102,6 +112,7 @@ function AppContent() {
   // Initialize activity tracking
   useEffect(() => {
     const handleRouteChange = () => {
+      // Track all page views including public pages
       activityTrackingService.trackPageView({
         page_url: window.location.pathname + window.location.search,
         title: document.title,
@@ -122,139 +133,175 @@ function AppContent() {
   return (
       <Router>
         <Routes>
+          {/* Public Marketing Routes */}
+          <Route element={<PublicLayout />}>
+            <Route path="/" element={
+              <Suspense fallback={<PageLoader />}>
+                <Homepage />
+              </Suspense>
+            } />
+            <Route path="/pricing" element={
+              <Suspense fallback={<PageLoader />}>
+                <Pricing />
+              </Suspense>
+            } />
+            <Route path="/demo" element={
+              <Suspense fallback={<PageLoader />}>
+                <DemoBooking />
+              </Suspense>
+            } />
+            <Route path="/get-started" element={
+              <Suspense fallback={<PageLoader />}>
+                <GetStarted />
+              </Suspense>
+            } />
+            <Route path="/support" element={
+              <Suspense fallback={<PageLoader />}>
+                <Support />
+              </Suspense>
+            } />
+          </Route>
+          
+          {/* Public KB Route */}
+          <Route path="/kb/public/*" element={
+            <Suspense fallback={<PageLoader />}>
+              <KnowledgeBasePublic />
+            </Suspense>
+          } />
+          
+          {/* Auth Route */}
           <Route path="/login" element={<LoginPage />} />
           
-          <Route element={
+          {/* Protected CRM Routes */}
+          <Route path="/app" element={
             <ProtectedRoute>
               <Layout />
             </ProtectedRoute>
           }>
-            <Route path="/" element={<DashboardPage />} />
+            <Route index element={<DashboardPage />} />
             
             {/* Contacts Routes */}
-            <Route path="/contacts" element={<ContactsPage />} />
-            <Route path="/contacts/new" element={<ContactFormPage />} />
-            <Route path="/contacts/:id" element={<ContactDetailPage />} />
-            <Route path="/contacts/:id/edit" element={<ContactFormPage />} />
+            <Route path="contacts" element={<ContactsPage />} />
+            <Route path="contacts/new" element={<ContactFormPage />} />
+            <Route path="contacts/:id" element={<ContactDetailPage />} />
+            <Route path="contacts/:id/edit" element={<ContactFormPage />} />
             
             {/* Leads Routes */}
-            <Route path="/leads" element={<LeadsListPage />} />
-            <Route path="/leads/new" element={<LeadFormPage />} />
-            <Route path="/leads/:id" element={<LeadDetailPage />} />
-            <Route path="/leads/:id/edit" element={<LeadFormPage />} />
+            <Route path="leads" element={<LeadsListPage />} />
+            <Route path="leads/new" element={<LeadFormPage />} />
+            <Route path="leads/:id" element={<LeadDetailPage />} />
+            <Route path="leads/:id/edit" element={<LeadFormPage />} />
             
             {/* Accounts Routes */}
-            <Route path="/accounts" element={<AccountsListPage />} />
-            <Route path="/accounts/new" element={<AccountFormPage />} />
-            <Route path="/accounts/:id" element={<AccountDetailPage />} />
-            <Route path="/accounts/:id/edit" element={<AccountFormPage />} />
+            <Route path="accounts" element={<AccountsListPage />} />
+            <Route path="accounts/new" element={<AccountFormPage />} />
+            <Route path="accounts/:id" element={<AccountDetailPage />} />
+            <Route path="accounts/:id/edit" element={<AccountFormPage />} />
             
             {/* Opportunities Routes */}
-            <Route path="/opportunities" element={<OpportunitiesPipeline />} />
-            <Route path="/opportunities/new" element={<OpportunityForm />} />
-            <Route path="/opportunities/:id" element={<OpportunityDetailPage />} />
-            <Route path="/opportunities/:id/edit" element={<OpportunityForm />} />
+            <Route path="opportunities" element={<OpportunitiesPipeline />} />
+            <Route path="opportunities/new" element={<OpportunityForm />} />
+            <Route path="opportunities/:id" element={<OpportunityDetailPage />} />
+            <Route path="opportunities/:id/edit" element={<OpportunityForm />} />
             
             {/* Activities Routes */}
-            <Route path="/activities" element={<ActivitiesList />} />
-            <Route path="/activities/calls/new" element={<CallForm />} />
-            <Route path="/activities/calls/:id" element={<CallForm />} />
-            <Route path="/activities/meetings/new" element={<MeetingForm />} />
-            <Route path="/activities/meetings/:id" element={<MeetingForm />} />
-            <Route path="/activities/tasks/new" element={<TaskForm />} />
-            <Route path="/activities/tasks/:id" element={<TaskForm />} />
-            <Route path="/activities/notes/new" element={<NoteForm />} />
-            <Route path="/activities/notes/:id" element={<NoteForm />} />
+            <Route path="activities" element={<ActivitiesList />} />
+            <Route path="activities/calls/new" element={<CallForm />} />
+            <Route path="activities/calls/:id" element={<CallForm />} />
+            <Route path="activities/meetings/new" element={<MeetingForm />} />
+            <Route path="activities/meetings/:id" element={<MeetingForm />} />
+            <Route path="activities/tasks/new" element={<TaskForm />} />
+            <Route path="activities/tasks/:id" element={<TaskForm />} />
+            <Route path="activities/notes/new" element={<NoteForm />} />
+            <Route path="activities/notes/:id" element={<NoteForm />} />
             
             {/* Cases Routes */}
-            <Route path="/cases" element={<CasesList />} />
-            <Route path="/cases/new" element={<CaseForm />} />
-            <Route path="/cases/:id" element={<CaseDetail />} />
-            <Route path="/cases/:id/edit" element={<CaseForm />} />
+            <Route path="cases" element={<CasesList />} />
+            <Route path="cases/new" element={<CaseForm />} />
+            <Route path="cases/:id" element={<CaseDetail />} />
+            <Route path="cases/:id/edit" element={<CaseForm />} />
             
             {/* Phase 3 Routes */}
             {/* AI Lead Scoring */}
-            <Route path="/leads/scoring" element={
+            <Route path="leads/scoring" element={
               <Suspense fallback={<PageLoader />}>
                 <LeadScoringDashboard />
               </Suspense>
             } />
             
-            {/* Form Builder - TODO: Create these pages */}
-            <Route path="/forms" element={
+            {/* Form Builder */}
+            <Route path="forms" element={
               <Suspense fallback={<PageLoader />}>
                 <FormsList />
               </Suspense>
             } />
-            <Route path="/forms/new" element={
+            <Route path="forms/new" element={
               <Suspense fallback={<PageLoader />}>
                 <FormBuilderPage />
               </Suspense>
             } />
-            <Route path="/forms/:id" element={
+            <Route path="forms/:id" element={
               <Suspense fallback={<PageLoader />}>
                 <FormBuilderPage />
               </Suspense>
             } />
             
-            {/* Knowledge Base - TODO: Create these pages */}
-            <Route path="/kb" element={
+            {/* Knowledge Base */}
+            <Route path="kb" element={
               <Suspense fallback={<PageLoader />}>
                 <KnowledgeBaseAdmin />
               </Suspense>
             } />
-            <Route path="/kb/new" element={
+            <Route path="kb/new" element={
               <Suspense fallback={<PageLoader />}>
                 <ArticleEditor />
               </Suspense>
             } />
-            <Route path="/kb/edit/:id" element={
+            <Route path="kb/edit/:id" element={
               <Suspense fallback={<PageLoader />}>
                 <ArticleEditor />
               </Suspense>
             } />
             
             {/* Activity Tracking */}
-            <Route path="/tracking" element={
+            <Route path="tracking" element={
               <Suspense fallback={<PageLoader />}>
                 <ActivityTrackingDashboard />
               </Suspense>
             } />
-            <Route path="/tracking/sessions/:id" element={
+            <Route path="tracking/sessions/:id" element={
               <Suspense fallback={<PageLoader />}>
                 <SessionDetail />
               </Suspense>
             } />
             
             {/* Chatbot Settings */}
-            <Route path="/chatbot" element={
+            <Route path="chatbot" element={
               <Suspense fallback={<PageLoader />}>
                 <ChatbotSettings />
               </Suspense>
             } />
             
             {/* Customer Health */}
-            <Route path="/health" element={
+            <Route path="health" element={
               <Suspense fallback={<PageLoader />}>
                 <CustomerHealthDashboard />
               </Suspense>
             } />
             
-            <Route path="/debug/leads" element={<LeadDebugPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="debug/leads" element={<LeadDebugPage />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
           
-          {/* Public KB Route - TODO: Create this page */}
-          <Route path="/kb/public/:slug" element={
-            <Suspense fallback={<PageLoader />}>
-              <KnowledgeBasePublic />
-            </Suspense>
-          } />
+          {/* Redirect old routes to /app */}
+          <Route path="/contacts" element={<Navigate to="/app/contacts" replace />} />
+          <Route path="/leads" element={<Navigate to="/app/leads" replace />} />
+          <Route path="/accounts" element={<Navigate to="/app/accounts" replace />} />
           
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         
-        {/* Global Chat Widget */}
+        {/* Global Chat Widget - Show on all pages */}
         <ChatWidget 
           position="bottom-right"
           theme="auto"
@@ -272,7 +319,7 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <AppContent />
       <Toaster position="top-right" />
-      <ReactQueryDevtools initialIsOpen={false} />
+      {/* <ReactQueryDevtools initialIsOpen={false} /> */}
     </QueryClientProvider>
   )
 }

@@ -108,7 +108,7 @@ class FormBuilderService {
   /**
    * Submit a form (public endpoint - no auth required)
    */
-  async submitForm(formId: string, data: Record<string, any>): Promise<{
+  async submitForm(formId: string, data: Record<string, string | number | boolean | string[]>): Promise<{
     success: boolean;
     message: string;
     lead_id?: string;
@@ -193,7 +193,7 @@ class FormBuilderService {
    */
   async validateField(
     field: FormField, 
-    value: any
+    value: string | number | boolean | string[]
   ): Promise<{
     valid: boolean;
     errors?: string[];
@@ -206,25 +206,25 @@ class FormBuilderService {
     }
 
     if (field.validation) {
-      if (field.validation.pattern && value) {
+      if (field.validation.pattern && value && typeof value === 'string') {
         const regex = new RegExp(field.validation.pattern);
         if (!regex.test(value)) {
           errors.push(`${field.label} format is invalid`);
         }
       }
 
-      if (field.type === 'email' && value) {
+      if (field.type === 'email' && value && typeof value === 'string') {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(value)) {
           errors.push('Please enter a valid email address');
         }
       }
 
-      if (field.validation.minLength && value && value.length < field.validation.minLength) {
+      if (field.validation.minLength && value && typeof value === 'string' && value.length < field.validation.minLength) {
         errors.push(`${field.label} must be at least ${field.validation.minLength} characters`);
       }
 
-      if (field.validation.maxLength && value && value.length > field.validation.maxLength) {
+      if (field.validation.maxLength && value && typeof value === 'string' && value.length > field.validation.maxLength) {
         errors.push(`${field.label} must be no more than ${field.validation.maxLength} characters`);
       }
     }

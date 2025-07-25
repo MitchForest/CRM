@@ -183,7 +183,7 @@ class CustomerHealthService {
     message: string;
     created_at: string;
     resolved_at?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, string | number | boolean>;
   }>> {
     const response = await apiClient.customGet(`/accounts/${accountId}/health-alerts`, { params });
     if (!response.success) {
