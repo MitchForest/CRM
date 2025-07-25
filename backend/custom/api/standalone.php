@@ -1,387 +1,25 @@
 <?php
-// Simple standalone API that works without loading full SuiteCRM
-
+// Standalone API for CRM functionality
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
+// Handle preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
 
-// Simple file-based token storage for MVP
-$tokenFile = __DIR__ . '/tokens.json';
-$tokens = [];
-if (file_exists($tokenFile)) {
-    $tokens = json_decode(file_get_contents($tokenFile), true) ?: [];
-}
-
-// Function to save tokens
-function saveTokens($tokens) {
-    global $tokenFile;
-    file_put_contents($tokenFile, json_encode($tokens));
-}
-
-// Function to validate token
-function validateToken($token) {
-    global $tokens;
-    if (!$token) return false;
-    
-    // Check if token exists and is not expired (24 hours)
-    if (isset($tokens[$token])) {
-        $tokenData = $tokens[$token];
-        if (time() - $tokenData['created'] < 86400) { // 24 hours
-            return $tokenData;
-        }
-    }
-    return false;
-}
-
-// Get request path
-$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-$path = preg_replace('#^/custom/api/standalone\.php#', '', $path);
-$path = preg_replace('#^/api#', '', $path);
-if (empty($path)) $path = '/';
-
+// Parse request
 $method = $_SERVER['REQUEST_METHOD'];
-$data = json_decode(file_get_contents('php://input'), true);
+$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$path = str_replace(['/custom/api/standalone.php', '/api'], '', $path);
+$path = '/' . trim($path, '/');
 
-// Get authorization header
-$headers = getallheaders();
-$authHeader = $headers['Authorization'] ?? '';
-$token = '';
-if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-    $token = $matches[1];
-}
-
-// Public endpoints that don't require authentication
-$publicEndpoints = [
-    '/auth/login',
-    '/auth/refresh',
-    '/health',
-    '/track/pageview',
-    '/track/event',
-    '/track/page-exit',
-    '/track/conversion',
-    '/track/identify',
-    '/forms/submit',
-    '/kb/search',
-    '/ai/chat'
-];
-
-// Check if endpoint requires authentication
-$requiresAuth = true;
-foreach ($publicEndpoints as $endpoint) {
-    if (strpos($path, $endpoint) === 0) {
-        $requiresAuth = false;
-        break;
-    }
-}
-
-// TEMPORARILY DISABLED FOR DEMO - ALL ENDPOINTS ARE PUBLIC
-// Validate token for protected endpoints
-// if ($requiresAuth) {
-//     $tokenData = validateToken($token);
-//     if (!$tokenData) {
-//         http_response_code(401);
-//         echo json_encode(['error' => 'Unauthorized', 'message' => 'Invalid or expired token']);
-//         exit;
-//     }
-// }
-
-// Set fake token data for all requests
-$tokenData = [
-    'user' => [
-        'id' => '1',
-        'username' => 'admin',
-        'email' => 'admin@example.com',
-        'firstName' => 'Admin',
-        'lastName' => 'User'
-    ]
-];
-
-// Simple routing
-if ($method === 'POST' && $path === '/auth/login') {
-    // Simple login - just check if username is admin and password is admin123
-    if ($data['username'] === 'admin' && $data['password'] === 'admin123') {
-        $accessToken = 'simple-token-' . uniqid();
-        $refreshToken = 'refresh-token-' . uniqid();
-        
-        // Store tokens
-        $tokens[$accessToken] = [
-            'type' => 'access',
-            'refresh' => $refreshToken,
-            'user' => [
-                'id' => '1',
-                'username' => 'admin',
-                'email' => 'admin@example.com',
-                'firstName' => 'Admin',
-                'lastName' => 'User'
-            ],
-            'created' => time()
-        ];
-        
-        $tokens[$refreshToken] = [
-            'type' => 'refresh',
-            'access' => $accessToken,
-            'user' => [
-                'id' => '1',
-                'username' => 'admin',
-                'email' => 'admin@example.com',
-                'firstName' => 'Admin',
-                'lastName' => 'User'
-            ],
-            'created' => time()
-        ];
-        
-        saveTokens($tokens);
-        
-        echo json_encode([
-            'success' => true,
-            'data' => [
-                'accessToken' => $accessToken,
-                'refreshToken' => $refreshToken,
-                'user' => [
-                    'id' => '1',
-                    'username' => 'admin',
-                    'email' => 'admin@example.com',
-                    'firstName' => 'Admin',
-                    'lastName' => 'User'
-                ]
-            ]
-        ]);
-    } else {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'error' => 'Invalid credentials']);
-    }
-    exit;
-}
-
-// Refresh token endpoint
-if ($method === 'POST' && $path === '/auth/refresh') {
-    $refreshToken = $data['refreshToken'] ?? '';
-    
-    if (!$refreshToken) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Refresh token required']);
-        exit;
-    }
-    
-    $tokenData = validateToken($refreshToken);
-    if (!$tokenData || $tokenData['type'] !== 'refresh') {
-        http_response_code(401);
-        echo json_encode(['error' => 'Invalid refresh token']);
-        exit;
-    }
-    
-    // Generate new access token
-    $newAccessToken = 'simple-token-' . uniqid();
-    
-    // Store new token
-    $tokens[$newAccessToken] = [
-        'type' => 'access',
-        'refresh' => $refreshToken,
-        'user' => $tokenData['user'],
-        'created' => time()
-    ];
-    
-    // Update refresh token to point to new access token
-    $tokens[$refreshToken]['access'] = $newAccessToken;
-    
-    saveTokens($tokens);
-    
-    echo json_encode([
-        'success' => true,
-        'data' => [
-            'accessToken' => $newAccessToken,
-            'refreshToken' => $refreshToken,
-            'user' => $tokenData['user']
-        ]
-    ]);
-    exit;
-}
-
-// Logout endpoint
-if ($method === 'POST' && $path === '/auth/logout') {
-    // Remove token from storage
-    if ($token && isset($tokens[$token])) {
-        $refreshToken = $tokens[$token]['refresh'] ?? null;
-        unset($tokens[$token]);
-        if ($refreshToken && isset($tokens[$refreshToken])) {
-            unset($tokens[$refreshToken]);
-        }
-        saveTokens($tokens);
-    }
-    
-    echo json_encode([
-        'success' => true,
-        'message' => 'Logged out successfully'
-    ]);
-    exit;
-}
-
-// Get current user endpoint
-if ($method === 'GET' && $path === '/auth/me') {
-    if (!$requiresAuth || !$tokenData) {
-        http_response_code(401);
-        echo json_encode(['error' => 'Unauthorized']);
-        exit;
-    }
-    
-    echo json_encode([
-        'success' => true,
-        'data' => $tokenData['user']
-    ]);
-    exit;
-}
-
-// Dashboard endpoints
-if ($method === 'GET' && strpos($path, '/dashboard/') === 0) {
-    $endpoint = str_replace('/dashboard/', '', $path);
-    
-    switch ($endpoint) {
-        case 'metrics':
-            echo json_encode([
-                'data' => [
-                    'totalLeads' => 42,
-                    'totalAccounts' => 15,
-                    'newLeadsToday' => 3,
-                    'pipelineValue' => 125000.00,
-                ]
-            ]);
-            break;
-            
-        case 'pipeline':
-            echo json_encode([
-                'data' => [
-                    ['stage' => 'Prospecting', 'count' => 12, 'value' => 45000],
-                    ['stage' => 'Qualification', 'count' => 8, 'value' => 32000],
-                    ['stage' => 'Needs Analysis', 'count' => 5, 'value' => 25000],
-                    ['stage' => 'Proposal', 'count' => 3, 'value' => 18000],
-                    ['stage' => 'Negotiation', 'count' => 2, 'value' => 15000],
-                ]
-            ]);
-            break;
-            
-        case 'activities':
-            echo json_encode([
-                'data' => [
-                    'callsToday' => 5,
-                    'meetingsToday' => 3,
-                    'tasksOverdue' => 7,
-                    'upcomingActivities' => []
-                ]
-            ]);
-            break;
-            
-        case 'cases':
-            echo json_encode([
-                'data' => [
-                    'openCases' => 23,
-                    'highPriorityCases' => 5,
-                    'avgResolutionTime' => 48.5,
-                    'casesByStatus' => [
-                        ['status' => 'New', 'count' => 8],
-                        ['status' => 'Assigned', 'count' => 10],
-                        ['status' => 'Pending Input', 'count' => 5]
-                    ]
-                ]
-            ]);
-            break;
-            
-        default:
-            http_response_code(404);
-            echo json_encode(['error' => 'Endpoint not found']);
-    }
-    exit;
-}
-
-// Health check
-if ($method === 'GET' && $path === '/health') {
-    echo json_encode([
-        'status' => 'healthy',
-        'timestamp' => date('Y-m-d H:i:s'),
-        'checks' => [
-            'api' => ['status' => 'ok', 'message' => 'Standalone API is working']
-        ]
-    ]);
-    exit;
-}
-
-// Get leads from persisted data or mock data
-if (!isset($persistedData['leads']) || empty($persistedData['leads'])) {
-    $persistedData['leads'] = isset($mockData['leads']) ? $mockData['leads'] : [];
-    file_put_contents($dataFile, json_encode($persistedData));
-}
-    
-    // AI score endpoints for leads
-    if ($method === 'POST' && preg_match('#^/leads/(\w+)/ai-score$#', $path, $matches)) {
-        $leadId = $matches[1];
-        echo json_encode([
-            'success' => true,
-            'data' => [
-                'lead_id' => $leadId,
-                'score' => rand(65, 95),
-                'confidence' => rand(70, 90) / 100,
-                'factors' => [
-                    ['name' => 'Company Size', 'value' => 85, 'weight' => 0.25],
-                    ['name' => 'Industry Match', 'value' => 90, 'weight' => 0.20],
-                    ['name' => 'Engagement Level', 'value' => 75, 'weight' => 0.20],
-                    ['name' => 'Budget Fit', 'value' => 80, 'weight' => 0.15],
-                    ['name' => 'Timeline', 'value' => 70, 'weight' => 0.10],
-                    ['name' => 'Decision Authority', 'value' => 85, 'weight' => 0.10]
-                ],
-                'recommendation' => 'High priority lead - schedule follow-up within 24 hours',
-                'timestamp' => date('Y-m-d H:i:s')
-            ]
-        ]);
-        exit;
-    }
-    
-    if ($method === 'POST' && $path === '/leads/ai-score-batch') {
-        $leadIds = $data['lead_ids'] ?? [];
-        $results = [];
-        foreach ($leadIds as $leadId) {
-            $results[$leadId] = [
-                'lead_id' => $leadId,
-                'score' => rand(65, 95),
-                'confidence' => rand(70, 90) / 100,
-                'timestamp' => date('Y-m-d H:i:s')
-            ];
-        }
-        echo json_encode(['success' => true, 'data' => $results]);
-        exit;
-    }
-    
-    if ($method === 'GET' && preg_match('#^/leads/(\w+)/score-history$#', $path, $matches)) {
-        $leadId = $matches[1];
-        echo json_encode([
-            'success' => true,
-            'data' => [
-                [
-                    'lead_id' => $leadId,
-                    'score' => 85,
-                    'confidence' => 0.88,
-                    'timestamp' => date('Y-m-d H:i:s', strtotime('-7 days'))
-                ],
-                [
-                    'lead_id' => $leadId,
-                    'score' => 87,
-                    'confidence' => 0.90,
-                    'timestamp' => date('Y-m-d H:i:s', strtotime('-3 days'))
-                ],
-                [
-                    'lead_id' => $leadId,
-                    'score' => 92,
-                    'confidence' => 0.93,
-                    'timestamp' => date('Y-m-d H:i:s')
-                ]
-            ]
-        ]);
-        exit;
-    }
+// Get request data
+$input = file_get_contents('php://input');
+$data = json_decode($input, true);
 
 // Simple file storage for persistence
 $dataFile = __DIR__ . '/data.json';
@@ -390,7 +28,7 @@ if (!file_exists($dataFile)) {
 }
 $persistedData = json_decode(file_get_contents($dataFile), true) ?: [];
 
-// Mock data for all modules
+// Initialize mock data
 $mockData = [
     'leads' => [
         ['id' => '1', 'firstName' => 'John', 'lastName' => 'Doe', 'email' => 'john@example.com', 'phone' => '555-0123', 'company' => 'ABC Corp', 'status' => 'New', 'leadSource' => 'Website', 'score' => 85, 'dateEntered' => date('Y-m-d H:i:s', strtotime('-2 days')), 'dateModified' => date('Y-m-d H:i:s', strtotime('-1 day'))],
@@ -402,792 +40,498 @@ $mockData = [
     'accounts' => [
         ['id' => '1', 'name' => 'Acme Corporation', 'industry' => 'Technology', 'type' => 'Customer', 'annualRevenue' => 5000000, 'employees' => 250, 'website' => 'www.acme.com', 'phone' => '555-0100', 'billingCity' => 'San Francisco', 'billingState' => 'CA', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-30 days'))],
         ['id' => '2', 'name' => 'Global Industries', 'industry' => 'Manufacturing', 'type' => 'Prospect', 'annualRevenue' => 10000000, 'employees' => 500, 'website' => 'www.global.com', 'phone' => '555-0101', 'billingCity' => 'New York', 'billingState' => 'NY', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-25 days'))],
-        ['id' => '3', 'name' => 'Tech Innovators', 'industry' => 'Software', 'type' => 'Customer', 'annualRevenue' => 3000000, 'employees' => 100, 'website' => 'www.techinnovators.com', 'phone' => '555-0102', 'billingCity' => 'Austin', 'billingState' => 'TX', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-20 days'))],
+        ['id' => '3', 'name' => 'Tech Innovators', 'industry' => 'Software', 'type' => 'Customer', 'annualRevenue' => 3000000, 'employees' => 100, 'website' => 'www.techinnovators.com', 'phone' => '555-0102', 'billingCity' => 'Austin', 'billingState' => 'TX', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-20 days'))]
     ],
     'contacts' => [
         ['id' => '1', 'firstName' => 'John', 'lastName' => 'Smith', 'title' => 'CEO', 'email' => 'john.smith@acme.com', 'phone' => '555-0200', 'mobile' => '555-0300', 'accountId' => '1', 'accountName' => 'Acme Corporation', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-28 days'))],
         ['id' => '2', 'firstName' => 'Sarah', 'lastName' => 'Johnson', 'title' => 'VP Sales', 'email' => 'sarah@global.com', 'phone' => '555-0201', 'mobile' => '555-0301', 'accountId' => '2', 'accountName' => 'Global Industries', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-24 days'))],
-        ['id' => '3', 'firstName' => 'Mike', 'lastName' => 'Wilson', 'title' => 'CTO', 'email' => 'mike@techinnovators.com', 'phone' => '555-0202', 'mobile' => '555-0302', 'accountId' => '3', 'accountName' => 'Tech Innovators', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-19 days'))],
+        ['id' => '3', 'firstName' => 'Mike', 'lastName' => 'Wilson', 'title' => 'CTO', 'email' => 'mike@techinnovators.com', 'phone' => '555-0202', 'mobile' => '555-0302', 'accountId' => '3', 'accountName' => 'Tech Innovators', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-19 days'))]
     ],
     'opportunities' => [
-        ['id' => '1', 'name' => 'Acme Cloud Migration', 'accountName' => 'Acme Corporation', 'amount' => 150000, 'salesStage' => 'Proposal', 'probability' => 70, 'closeDate' => date('Y-m-d', strtotime('+30 days')), 'description' => 'Cloud infrastructure migration project', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-15 days'))],
-        ['id' => '2', 'name' => 'Global ERP Implementation', 'accountName' => 'Global Industries', 'amount' => 500000, 'salesStage' => 'Negotiation', 'probability' => 85, 'closeDate' => date('Y-m-d', strtotime('+15 days')), 'description' => 'Enterprise resource planning system', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-10 days'))],
-        ['id' => '3', 'name' => 'Tech Innovators Security Audit', 'accountName' => 'Tech Innovators', 'amount' => 75000, 'salesStage' => 'Qualification', 'probability' => 40, 'closeDate' => date('Y-m-d', strtotime('+45 days')), 'description' => 'Comprehensive security assessment', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-5 days'))],
-    ],
-    'tasks' => [
-        ['id' => '1', 'name' => 'Follow up with John Smith', 'status' => 'Not Started', 'priority' => 'High', 'dueDate' => date('Y-m-d', strtotime('+2 days')), 'assignedTo' => 'Admin User', 'relatedTo' => 'Acme Corporation', 'description' => 'Discuss cloud migration timeline', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-1 day'))],
-        ['id' => '2', 'name' => 'Prepare ERP proposal', 'status' => 'In Progress', 'priority' => 'High', 'dueDate' => date('Y-m-d', strtotime('+5 days')), 'assignedTo' => 'Admin User', 'relatedTo' => 'Global Industries', 'description' => 'Complete pricing and timeline', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-3 days'))],
-        ['id' => '3', 'name' => 'Schedule security audit kickoff', 'status' => 'Not Started', 'priority' => 'Medium', 'dueDate' => date('Y-m-d', strtotime('+7 days')), 'assignedTo' => 'Admin User', 'relatedTo' => 'Tech Innovators', 'description' => 'Set up initial meeting', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-2 days'))],
-    ],
-    'calls' => [
-        ['id' => '1', 'name' => 'Initial discovery call', 'status' => 'Held', 'direction' => 'Outbound', 'duration' => '30 min', 'startDate' => date('Y-m-d H:i:s', strtotime('-7 days')), 'assignedTo' => 'Admin User', 'relatedTo' => 'John Smith', 'description' => 'Discussed cloud migration needs', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-7 days'))],
-        ['id' => '2', 'name' => 'ERP requirements review', 'status' => 'Planned', 'direction' => 'Inbound', 'duration' => '60 min', 'startDate' => date('Y-m-d H:i:s', strtotime('+3 days')), 'assignedTo' => 'Admin User', 'relatedTo' => 'Sarah Johnson', 'description' => 'Review technical requirements', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-1 day'))],
-    ],
-    'meetings' => [
-        ['id' => '1', 'name' => 'Quarterly Business Review', 'status' => 'Held', 'location' => 'Conference Room A', 'duration' => '2 hours', 'startDate' => date('Y-m-d H:i:s', strtotime('-14 days')), 'endDate' => date('Y-m-d H:i:s', strtotime('-14 days +2 hours')), 'assignedTo' => 'Admin User', 'relatedTo' => 'Acme Corporation', 'description' => 'Review Q3 performance', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-20 days'))],
-        ['id' => '2', 'name' => 'ERP Demo Session', 'status' => 'Planned', 'location' => 'Virtual - Zoom', 'duration' => '90 min', 'startDate' => date('Y-m-d H:i:s', strtotime('+7 days')), 'endDate' => date('Y-m-d H:i:s', strtotime('+7 days +90 minutes')), 'assignedTo' => 'Admin User', 'relatedTo' => 'Global Industries', 'description' => 'Live demo of ERP features', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-2 days'))],
+        ['id' => '1', 'name' => 'Acme Corp - Enterprise Deal', 'accountId' => '1', 'accountName' => 'Acme Corporation', 'salesStage' => 'Proposal', 'amount' => 150000, 'probability' => 75, 'closeDate' => date('Y-m-d', strtotime('+30 days')), 'type' => 'New Business', 'leadSource' => 'Website', 'description' => 'Enterprise software upgrade', 'assignedTo' => 'Admin User', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-14 days'))],
+        ['id' => '2', 'name' => 'Global Industries - Expansion', 'accountId' => '2', 'accountName' => 'Global Industries', 'salesStage' => 'Negotiation', 'amount' => 250000, 'probability' => 60, 'closeDate' => date('Y-m-d', strtotime('+45 days')), 'type' => 'Existing Business', 'leadSource' => 'Referral', 'description' => 'Expansion to new facilities', 'assignedTo' => 'Admin User', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-10 days'))],
+        ['id' => '3', 'name' => 'Tech Innovators - Pilot', 'accountId' => '3', 'accountName' => 'Tech Innovators', 'salesStage' => 'Qualification', 'amount' => 50000, 'probability' => 30, 'closeDate' => date('Y-m-d', strtotime('+60 days')), 'type' => 'New Business', 'leadSource' => 'Cold Call', 'description' => 'Pilot program for new product', 'assignedTo' => 'Admin User', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-5 days'))]
     ],
     'cases' => [
-        ['id' => '1', 'name' => 'Login issues reported', 'status' => 'Open', 'priority' => 'High', 'type' => 'Technical', 'accountName' => 'Acme Corporation', 'assignedTo' => 'Admin User', 'description' => 'Users unable to login to portal', 'resolution' => '', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-2 days'))],
-        ['id' => '2', 'name' => 'Feature request - Reporting', 'status' => 'In Progress', 'priority' => 'Medium', 'type' => 'Feature Request', 'accountName' => 'Tech Innovators', 'assignedTo' => 'Admin User', 'description' => 'Need custom reporting dashboard', 'resolution' => '', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-5 days'))],
-        ['id' => '3', 'name' => 'Billing discrepancy', 'status' => 'Closed', 'priority' => 'Low', 'type' => 'Billing', 'accountName' => 'Global Industries', 'assignedTo' => 'Admin User', 'description' => 'Invoice amount incorrect', 'resolution' => 'Credit issued', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-10 days'))],
+        ['id' => '1', 'name' => 'Login Issue', 'accountId' => '1', 'accountName' => 'Acme Corporation', 'status' => 'Open', 'priority' => 'High', 'type' => 'Technical', 'description' => 'User cannot login to the system', 'assignedTo' => 'Support Team', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-2 days'))],
+        ['id' => '2', 'name' => 'Feature Request', 'accountId' => '2', 'accountName' => 'Global Industries', 'status' => 'Pending', 'priority' => 'Medium', 'type' => 'Feature', 'description' => 'Request for custom reporting', 'assignedTo' => 'Product Team', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-5 days'))],
+        ['id' => '3', 'name' => 'Billing Question', 'accountId' => '3', 'accountName' => 'Tech Innovators', 'status' => 'Closed', 'priority' => 'Low', 'type' => 'Billing', 'description' => 'Question about invoice', 'assignedTo' => 'Finance Team', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-10 days'))]
     ],
-    'notes' => [
-        ['id' => '1', 'name' => 'Meeting notes - Acme', 'description' => 'Discussed Q4 expansion plans. They are interested in adding 50 more licenses.', 'relatedTo' => 'Acme Corporation', 'createdBy' => 'Admin User', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-3 days'))],
-        ['id' => '2', 'name' => 'Call notes - Global Industries', 'description' => 'Confirmed budget approval for ERP project. Moving to contract negotiation.', 'relatedTo' => 'Global Industries', 'createdBy' => 'Admin User', 'dateEntered' => date('Y-m-d H:i:s', strtotime('-1 day'))],
+    'activities' => [
+        ['id' => '1', 'type' => 'Call', 'subject' => 'Follow-up call', 'status' => 'Completed', 'priority' => 'High', 'dateStart' => date('Y-m-d H:i:s', strtotime('-1 day')), 'duration' => 30, 'contactId' => '1', 'contactName' => 'John Smith', 'assignedTo' => 'Admin User'],
+        ['id' => '2', 'type' => 'Meeting', 'subject' => 'Product Demo', 'status' => 'Scheduled', 'priority' => 'High', 'dateStart' => date('Y-m-d H:i:s', strtotime('+2 days')), 'duration' => 60, 'contactId' => '2', 'contactName' => 'Sarah Johnson', 'assignedTo' => 'Admin User'],
+        ['id' => '3', 'type' => 'Task', 'subject' => 'Send proposal', 'status' => 'In Progress', 'priority' => 'Medium', 'dateStart' => date('Y-m-d H:i:s'), 'dueDate' => date('Y-m-d H:i:s', strtotime('+3 days')), 'contactId' => '3', 'contactName' => 'Mike Wilson', 'assignedTo' => 'Admin User']
     ]
 ];
 
-// Handle all module endpoints
-$modules = ['accounts', 'contacts', 'opportunities', 'tasks', 'calls', 'meetings', 'cases', 'notes', 'leads'];
-foreach ($modules as $module) {
-    if ($path === '/' . $module || strpos($path, '/' . $module . '/') === 0) {
-        // Get module data - use persisted data if exists, otherwise use mock
-        $moduleData = $persistedData[$module] ?? $mockData[$module] ?? [];
+// Initialize data if empty
+foreach ($mockData as $module => $records) {
+    if (!isset($persistedData[$module]) || empty($persistedData[$module])) {
+        $persistedData[$module] = $records;
+    }
+}
+file_put_contents($dataFile, json_encode($persistedData));
+
+// Generic CRUD handler
+function handleCRUD($module, $method, $path, $data, &$persistedData, $dataFile) {
+    $records = $persistedData[$module] ?? [];
+    
+    // List with pagination
+    if ($method === 'GET' && $path === "/$module") {
+        $page = $_GET['page'] ?? 1;
+        $pageSize = $_GET['pageSize'] ?? 10;
+        $offset = ($page - 1) * $pageSize;
         
-        if ($method === 'GET' && $path === '/' . $module) {
+        $pagedRecords = array_slice($records, $offset, $pageSize);
+        
+        echo json_encode([
+            'data' => $pagedRecords,
+            'pagination' => [
+                'page' => (int)$page,
+                'pageSize' => (int)$pageSize,
+                'totalPages' => ceil(count($records) / $pageSize),
+                'totalItems' => count($records)
+            ]
+        ]);
+        return true;
+    }
+    
+    // Get single record
+    if ($method === 'GET' && preg_match("#^/$module/(\w+)$#", $path, $matches)) {
+        $id = $matches[1];
+        $record = null;
+        foreach ($records as $r) {
+            if ($r['id'] === $id) {
+                $record = $r;
+                break;
+            }
+        }
+        
+        if ($record) {
+            echo json_encode(['data' => $record]);
+        } else {
+            http_response_code(404);
+            echo json_encode(['error' => 'Record not found']);
+        }
+        return true;
+    }
+    
+    // Create
+    if ($method === 'POST' && $path === "/$module") {
+        $newRecord = array_merge(['id' => uniqid(), 'dateEntered' => date('Y-m-d H:i:s'), 'dateModified' => date('Y-m-d H:i:s')], $data);
+        $persistedData[$module][] = $newRecord;
+        file_put_contents($dataFile, json_encode($persistedData));
+        echo json_encode(['success' => true, 'data' => $newRecord]);
+        return true;
+    }
+    
+    // Update
+    if ($method === 'PUT' && preg_match("#^/$module/(\w+)$#", $path, $matches)) {
+        $id = $matches[1];
+        $updated = false;
+        foreach ($persistedData[$module] as &$record) {
+            if ($record['id'] === $id) {
+                $record = array_merge($record, $data, ['dateModified' => date('Y-m-d H:i:s')]);
+                $updated = true;
+                break;
+            }
+        }
+        
+        if ($updated) {
+            file_put_contents($dataFile, json_encode($persistedData));
+            echo json_encode(['success' => true, 'data' => $record]);
+        } else {
+            http_response_code(404);
+            echo json_encode(['error' => 'Record not found']);
+        }
+        return true;
+    }
+    
+    // Delete
+    if ($method === 'DELETE' && preg_match("#^/$module/(\w+)$#", $path, $matches)) {
+        $id = $matches[1];
+        $newRecords = [];
+        $deleted = false;
+        foreach ($persistedData[$module] as $record) {
+            if ($record['id'] !== $id) {
+                $newRecords[] = $record;
+            } else {
+                $deleted = true;
+            }
+        }
+        
+        if ($deleted) {
+            $persistedData[$module] = $newRecords;
+            file_put_contents($dataFile, json_encode($persistedData));
+            echo json_encode(['success' => true]);
+        } else {
+            http_response_code(404);
+            echo json_encode(['error' => 'Record not found']);
+        }
+        return true;
+    }
+    
+    return false;
+}
+
+// Health check
+if ($method === 'GET' && $path === '/health') {
+    echo json_encode(['status' => 'healthy', 'timestamp' => date('Y-m-d H:i:s')]);
+    exit;
+}
+
+// Auth endpoints
+if ($path === '/auth/login' && $method === 'POST') {
+    echo json_encode([
+        'success' => true,
+        'data' => [
+            'accessToken' => 'demo-token-' . time(),
+            'refreshToken' => 'demo-refresh-' . time(),
+            'user' => [
+                'id' => '1',
+                'username' => 'admin',
+                'email' => 'admin@example.com',
+                'firstName' => 'Admin',
+                'lastName' => 'User'
+            ]
+        ]
+    ]);
+    exit;
+}
+
+// Handle standard CRUD for all modules
+$modules = ['leads', 'accounts', 'contacts', 'opportunities', 'cases', 'activities'];
+foreach ($modules as $module) {
+    if (strpos($path, "/$module") === 0) {
+        if (handleCRUD($module, $method, $path, $data, $persistedData, $dataFile)) {
+            exit;
+        }
+    }
+}
+
+// AI Lead Scoring
+if ($method === 'POST' && preg_match('#^/leads/(\w+)/ai-score$#', $path, $matches)) {
+    $leadId = $matches[1];
+    echo json_encode([
+        'success' => true,
+        'data' => [
+            'lead_id' => $leadId,
+            'score' => rand(65, 95),
+            'confidence' => rand(70, 90) / 100,
+            'factors' => [
+                ['name' => 'Company Size', 'value' => 85, 'weight' => 0.25],
+                ['name' => 'Industry Match', 'value' => 90, 'weight' => 0.20],
+                ['name' => 'Engagement Level', 'value' => 75, 'weight' => 0.20],
+                ['name' => 'Budget Fit', 'value' => 80, 'weight' => 0.15],
+                ['name' => 'Timeline', 'value' => 70, 'weight' => 0.10],
+                ['name' => 'Decision Authority', 'value' => 85, 'weight' => 0.10]
+            ],
+            'recommendation' => 'High priority lead - schedule follow-up within 24 hours',
+            'timestamp' => date('Y-m-d H:i:s')
+        ]
+    ]);
+    exit;
+}
+
+// Dashboard endpoints
+if ($method === 'GET' && strpos($path, '/dashboard/') === 0) {
+    $endpoint = str_replace('/dashboard/', '', $path);
+    
+    switch ($endpoint) {
+        case 'stats':
             echo json_encode([
-                'data' => $moduleData,
-                'pagination' => [
-                    'page' => 1,
-                    'pageSize' => 10,
-                    'totalPages' => 1,
-                    'totalItems' => count($moduleData)
+                'data' => [
+                    'leads' => ['total' => count($persistedData['leads'] ?? []), 'new' => 5, 'converted' => 2],
+                    'opportunities' => ['total' => count($persistedData['opportunities'] ?? []), 'value' => 450000, 'won' => 1],
+                    'activities' => ['total' => count($persistedData['activities'] ?? []), 'completed' => 8, 'overdue' => 2],
+                    'revenue' => ['current' => 125000, 'target' => 500000, 'growth' => 0.15]
                 ]
             ]);
-            exit;
-        }
-        
-        // Get single item
-        if ($method === 'GET' && preg_match("#^/$module/(\w+)$#", $path, $matches)) {
-            $itemId = $matches[1];
-            $items = $mockData[$module] ?? [];
-            foreach ($items as $item) {
-                if ($item['id'] === $itemId) {
-                    echo json_encode(['data' => $item, 'success' => true]);
-                    exit;
-                }
-            }
-            // Return first item as fallback
-            echo json_encode(['data' => $items[0] ?? ['id' => $itemId, 'name' => 'Sample ' . ucfirst($module)], 'success' => true]);
-            exit;
-        }
-        
-        // Create new item
-        if ($method === 'POST' && $path === '/' . $module) {
-            $newItem = array_merge(['id' => uniqid(), 'dateEntered' => date('Y-m-d H:i:s'), 'dateModified' => date('Y-m-d H:i:s')], $data ?? []);
-            
-            // Add to persisted data
-            if (!isset($persistedData[$module])) {
-                $persistedData[$module] = $moduleData;
-            }
-            $persistedData[$module][] = $newItem;
-            
-            // Save to file
-            file_put_contents($dataFile, json_encode($persistedData));
-            
-            echo json_encode(['data' => $newItem, 'success' => true]);
-            exit;
-        }
-        
-        // Update item
-        if ($method === 'PUT' && preg_match("#^/$module/(\w+)$#", $path, $matches)) {
-            $itemId = $matches[1];
-            
-            // Update in persisted data
-            if (!isset($persistedData[$module])) {
-                $persistedData[$module] = $moduleData;
-            }
-            
-            $found = false;
-            foreach ($persistedData[$module] as &$item) {
-                if ($item['id'] === $itemId) {
-                    $item = array_merge($item, $data ?? [], ['id' => $itemId, 'dateModified' => date('Y-m-d H:i:s')]);
-                    $found = true;
-                    $updatedItem = $item;
-                    break;
-                }
-            }
-            
-            if (!$found) {
-                // Create new if not found
-                $updatedItem = array_merge(['id' => $itemId, 'dateModified' => date('Y-m-d H:i:s')], $data ?? []);
-                $persistedData[$module][] = $updatedItem;
-            }
-            
-            // Save to file
-            file_put_contents($dataFile, json_encode($persistedData));
-            
-            echo json_encode(['data' => $updatedItem, 'success' => true]);
-            exit;
-        }
-        
-        // Delete item
-        if ($method === 'DELETE' && preg_match("#^/$module/(\w+)$#", $path, $matches)) {
-            echo json_encode(['success' => true]);
-            exit;
-        }
+            break;
     }
-}
-
-// Activity tracking endpoints
-if ($path === '/track/pageview' || $path === '/track/event' || $path === '/track/page-exit' || $path === '/track/conversion') {
-    // For tracking endpoints, just return success
-    echo json_encode([
-        'success' => true,
-        'visitor_id' => $data['visitor_id'] ?? 'visitor-' . uniqid(),
-        'session_id' => $data['session_id'] ?? 'session-' . uniqid()
-    ]);
     exit;
 }
 
-// Activity tracking identify endpoint
-if ($method === 'POST' && $path === '/track/identify') {
-    echo json_encode([
-        'success' => true,
-        'message' => 'Visitor identified'
-    ]);
-    exit;
-}
-
-// Analytics endpoints (authenticated)
-if (strpos($path, '/analytics/') === 0) {
-    $endpoint = str_replace('/analytics/', '', $path);
-    
-    if ($endpoint === 'visitors' && $method === 'GET') {
-        echo json_encode([
-            'data' => [
-                [
-                    'id' => '1',
-                    'visitor_id' => 'visitor-123',
-                    'ip_address' => '192.168.1.1',
-                    'start_time' => date('Y-m-d H:i:s', strtotime('-30 minutes')),
-                    'last_activity' => date('Y-m-d H:i:s', strtotime('-5 minutes')),
-                    'page_views' => 12,
-                    'duration' => 1500,
-                    'is_active' => true,
-                    'location' => 'San Francisco, CA',
-                    'device' => 'Desktop',
-                    'browser' => 'Chrome',
-                    'current_page' => '/app/leads'
-                ],
-                [
-                    'id' => '2',
-                    'visitor_id' => 'visitor-456',
-                    'ip_address' => '10.0.0.1',
-                    'start_time' => date('Y-m-d H:i:s', strtotime('-2 hours')),
-                    'last_activity' => date('Y-m-d H:i:s', strtotime('-1 hour')),
-                    'page_views' => 5,
-                    'duration' => 600,
-                    'is_active' => false,
-                    'location' => 'New York, NY',
-                    'device' => 'Mobile',
-                    'browser' => 'Safari',
-                    'current_page' => '/pricing'
-                ]
-            ],
-            'total' => 2,
-            'page' => 1,
-            'limit' => 10
-        ]);
-        exit;
-    }
-    
-    if ($endpoint === 'visitors/live' && $method === 'GET') {
-        echo json_encode([
-            'data' => [
-                [
-                    'id' => '1',
-                    'visitor_id' => 'visitor-123',
-                    'current_page' => '/app/dashboard',
-                    'duration' => 120,
-                    'location' => 'San Francisco, CA'
-                ]
-            ]
-        ]);
-        exit;
-    }
-    
-    if ($endpoint === 'pages' && $method === 'GET') {
-        echo json_encode([
-            'data' => [
-                'total_views' => 1250,
-                'unique_visitors' => 342,
-                'average_time_on_page' => 145,
-                'bounce_rate' => 35.5,
-                'exit_rate' => 28.3,
-                'average_scroll_depth' => 67,
-                'top_referrers' => [
-                    ['source' => 'google.com', 'count' => 450],
-                    ['source' => 'direct', 'count' => 380],
-                    ['source' => 'linkedin.com', 'count' => 120]
-                ],
-                'device_breakdown' => [
-                    ['type' => 'Desktop', 'count' => 750, 'percentage' => 60],
-                    ['type' => 'Mobile', 'count' => 375, 'percentage' => 30],
-                    ['type' => 'Tablet', 'count' => 125, 'percentage' => 10]
-                ]
-            ]
-        ]);
-        exit;
-    }
-}
-
-// AI endpoints
+// AI Chat endpoint
 if ($path === '/ai/chat' && $method === 'POST') {
     $message = strtolower($data['message'] ?? '');
-    $context = $data['context'] ?? [];
     $visitorId = $data['visitor_id'] ?? null;
     $metadata = [];
     $intent = 'general';
     
     // Simple keyword-based responses
     $response = 'I can help you with our CRM features, pricing, and scheduling demos. What would you like to know?';
-    $suggestedActions = [
-        ['label' => 'Learn about features', 'action' => 'features'],
-        ['label' => 'View pricing', 'action' => 'pricing'],
-        ['label' => 'Schedule a demo', 'action' => 'demo']
-    ];
+    $suggestedActions = ['Learn about features', 'View pricing', 'Schedule a demo'];
     
-    if (strpos($message, 'lead') !== false || strpos($message, 'score') !== false) {
-        $response = 'Our AI Lead Scoring automatically analyzes leads based on multiple factors including company size, engagement, and behavior. Leads are scored from 0-100, with anything above 70 considered high priority. Would you like to see it in action?';
-        $suggestedActions = [
-            ['label' => 'See lead scoring demo', 'action' => 'demo'],
-            ['label' => 'Learn more about AI features', 'action' => 'ai-features'],
-            ['label' => 'View pricing', 'action' => 'pricing']
-        ];
-    } elseif (strpos($message, 'price') !== false || strpos($message, 'cost') !== false) {
-        $response = 'Our CRM is completely free and open-source! You can self-host it on your own servers with no licensing fees. The only costs are your hosting infrastructure. Would you like help getting started?';
-        $suggestedActions = [
-            ['label' => 'Get started guide', 'action' => 'get-started'],
-            ['label' => 'Technical requirements', 'action' => 'requirements'],
-            ['label' => 'Schedule demo', 'action' => 'demo']
-        ];
-    } elseif (strpos($message, 'demo') !== false || strpos($message, 'trial') !== false) {
-        $response = 'I\'d be happy to help you schedule a personalized demo! You can book a time that works for you, or I can answer any specific questions you have right now.';
-        $suggestedActions = [
-            ['label' => 'Book a demo', 'action' => 'demo'],
-            ['label' => 'Ask a question', 'action' => 'question'],
-            ['label' => 'View features', 'action' => 'features']
-        ];
-    } elseif (strpos($message, 'feature') !== false) {
-        $response = 'Our key features include:\n• AI-powered lead scoring\n• Real-time activity tracking\n• Drag-and-drop pipeline management\n• Custom form builder\n• Knowledge base\n• Customer health monitoring\n\nWhich feature interests you most?';
-        $suggestedActions = [
-            ['label' => 'AI Lead Scoring', 'action' => 'lead-scoring'],
-            ['label' => 'Activity Tracking', 'action' => 'tracking'],
-            ['label' => 'See all features', 'action' => 'features']
-        ];
-    } elseif (strpos($message, 'support') !== false || strpos($message, 'help') !== false || strpos($message, 'issue') !== false || strpos($message, 'problem') !== false || strpos($message, 'bug') !== false) {
-        // Check if the message is just mentioning support or actually describing an issue
-        if (strpos($message, 'create') !== false && strpos($message, 'ticket') !== false) {
-            // User explicitly wants to create a ticket
-            $response = 'I\'ll help you create a support ticket. Please describe your issue in detail and I\'ll create it for you right away.';
-            $intent = 'support_create';
-        } elseif (strlen($message) > 50 && (strpos($message, 'not working') !== false || strpos($message, 'error') !== false || strpos($message, 'broken') !== false || strpos($message, 'can\'t') !== false || strpos($message, 'cannot') !== false)) {
-            // User is describing a specific issue - auto-create ticket
+    // Handle different intents
+    if (strpos($message, 'hello') !== false || strpos($message, 'hi') !== false || strpos($message, 'hey') !== false) {
+        $response = 'Hello! I\'m here to help you learn about our AI-powered CRM. What would you like to know about?';
+        $suggestedActions = ['Tell me about AI features', 'How does lead scoring work?', 'Show me pricing'];
+    } elseif (strpos($message, 'price') !== false || strpos($message, 'cost') !== false || strpos($message, 'pricing') !== false) {
+        $response = 'Our CRM is completely free and open-source! You can self-host it on your own servers with no licensing fees. The only costs are your hosting infrastructure.';
+        $suggestedActions = ['How do I install it?', 'What are the requirements?', 'Schedule a demo'];
+    } elseif (strpos($message, 'demo') !== false) {
+        $response = 'I\'d be happy to help you schedule a personalized demo! You can see all our features in action including AI lead scoring, activity tracking, and more.';
+        $suggestedActions = ['Book a demo now', 'Tell me more about features', 'View documentation'];
+    } elseif (strpos($message, 'feature') !== false || strpos($message, 'can') !== false || strpos($message, 'what') !== false) {
+        $response = 'Our key features include:\n• AI-powered lead scoring\n• Real-time activity tracking\n• Drag-and-drop pipeline\n• Custom form builder\n• Knowledge base\n• Customer health monitoring';
+        $suggestedActions = ['Tell me about AI scoring', 'How does tracking work?', 'Book a demo'];
+    } elseif (strpos($message, 'lead') !== false || strpos($message, 'score') !== false || strpos($message, 'scoring') !== false) {
+        $response = 'Our AI Lead Scoring automatically analyzes leads based on company size, engagement, behavior, and more. Leads are scored 0-100, with anything above 70 considered high priority.';
+        $suggestedActions = ['See scoring in action', 'How is it calculated?', 'Book a demo'];
+    } elseif (strpos($message, 'support') !== false || strpos($message, 'issue') !== false || strpos($message, 'problem') !== false) {
+        if (strlen($message) > 50 && (strpos($message, 'not working') !== false || strpos($message, 'error') !== false)) {
+            // Auto-create ticket
             $newCase = [
                 'id' => uniqid(),
                 'name' => 'Support Request: ' . substr($message, 0, 50) . '...',
                 'description' => $message,
                 'status' => 'New',
                 'priority' => 'Medium',
-                'type' => 'technical',
-                'assignedTo' => 'Support Team',
-                'contactEmail' => $visitorId ? 'visitor-' . $visitorId . '@chat.example.com' : 'chat@example.com',
+                'type' => 'Technical',
                 'createdAt' => date('Y-m-d H:i:s')
             ];
-            
-            // Add to persisted cases
-            if (!isset($persistedData['cases'])) {
-                $persistedData['cases'] = [];
-            }
             $persistedData['cases'][] = $newCase;
             file_put_contents($dataFile, json_encode($persistedData));
             
-            $response = 'I\'ve created support ticket #' . $newCase['id'] . ' for your issue. Our support team will respond within 24 hours.\n\nTicket Summary:\n' . $newCase['name'] . '\n\nIn the meantime, you might find these resources helpful:';
+            $response = "I've created support ticket #{$newCase['id']} for you. Our team will respond within 24 hours.";
             $intent = 'support_created';
-            $suggestedActions = [
-                ['label' => 'View knowledge base', 'action' => 'kb'],
-                ['label' => 'Check ticket status', 'action' => 'ticket-status'],
-                ['label' => 'Chat with sales', 'action' => 'sales']
-            ];
             $metadata['ticket_created'] = true;
             $metadata['ticket_id'] = $newCase['id'];
         } else {
-            // General support inquiry
-            $response = 'I\'m sorry to hear you\'re experiencing an issue. I can help you create a support ticket right away. Would you like to:\n\n1. Create a support ticket through me\n2. Visit our support page\n3. Check our knowledge base first\n\nJust let me know what the issue is and I\'ll help you get it resolved!';
-            $suggestedActions = [
-                ['label' => 'Create support ticket', 'action' => 'create-ticket'],
-                ['label' => 'Visit support page', 'action' => 'support'],
-                ['label' => 'Search knowledge base', 'action' => 'kb']
-            ];
+            $response = "I can help you create a support ticket. Please describe your issue in detail.";
+            $intent = 'support';
         }
     }
     
-    // Check if this looks like a lead capture opportunity
-    $leadSignals = ['interested', 'contact', 'email', 'call', 'help', 'more info', 'information'];
-    $isLeadCapture = false;
-    foreach ($leadSignals as $signal) {
-        if (strpos($message, $signal) !== false) {
-            $isLeadCapture = true;
+    echo json_encode([
+        'success' => true,
+        'conversation_id' => $data['conversation_id'] ?? uniqid('conv_'),
+        'message' => $response,
+        'intent' => $intent,
+        'suggested_actions' => $suggestedActions,
+        'metadata' => $metadata,
+        'confidence' => 0.9
+    ]);
+    exit;
+}
+
+// Knowledge Base
+$kbArticles = [
+    [
+        'id' => '1',
+        'title' => 'Getting Started with AI CRM',
+        'slug' => 'getting-started',
+        'content' => "# Getting Started with AI CRM\n\nWelcome to our AI-powered CRM system! This guide will help you get up and running quickly.\n\n## Quick Start\n\n1. **Login** - Use your credentials to access the system\n2. **Dashboard** - View your key metrics and activities\n3. **Add Leads** - Start adding leads manually or through forms\n4. **AI Scoring** - Watch as AI automatically scores your leads\n\n## Key Features\n\n### Lead Management\n- Automatic lead capture from forms\n- AI-powered lead scoring\n- Lead assignment and routing\n- Conversion tracking\n\n### Contact Management\n- Complete contact profiles\n- Activity history\n- Communication tracking\n- Relationship mapping\n\n### Opportunity Pipeline\n- Visual pipeline management\n- Drag-and-drop stages\n- Probability tracking\n- Revenue forecasting\n\n## Next Steps\n\nExplore our other guides to learn about specific features in detail.",
+        'excerpt' => 'Learn how our AI-powered CRM can transform your sales process.',
+        'category' => 'Getting Started',
+        'category_id' => '1',
+        'views' => 234,
+        'helpful' => 45,
+        'status' => 'published'
+    ],
+    [
+        'id' => '2',
+        'title' => 'Understanding AI Lead Scoring',
+        'slug' => 'ai-lead-scoring',
+        'content' => "# Understanding AI Lead Scoring\n\nOur AI lead scoring system helps you prioritize leads based on their likelihood to convert.\n\n## How It Works\n\n### Data Collection\nThe AI analyzes multiple data points:\n- Company information\n- Engagement history\n- Website behavior\n- Email interactions\n- Form submissions\n\n### Scoring Factors\n\n1. **Company Size** (25% weight)\n   - Employee count\n   - Annual revenue\n   - Industry type\n\n2. **Engagement Level** (20% weight)\n   - Email opens/clicks\n   - Website visits\n   - Content downloads\n\n3. **Budget Fit** (15% weight)\n   - Stated budget\n   - Company revenue\n   - Previous purchases\n\n4. **Timeline** (10% weight)\n   - Urgency indicators\n   - Project timelines\n   - Decision timeframe\n\n## Score Interpretation\n\n- **90-100**: Hot lead - immediate follow-up required\n- **70-89**: Warm lead - high priority\n- **50-69**: Qualified lead - regular follow-up\n- **Below 50**: Needs nurturing\n\n## Best Practices\n\n1. Review scores daily\n2. Act on high scores immediately\n3. Update lead information regularly\n4. Use scores to prioritize outreach",
+        'excerpt' => 'How our AI analyzes and scores your leads automatically.',
+        'category' => 'AI Features',
+        'category_id' => '2',
+        'views' => 189,
+        'helpful' => 67,
+        'status' => 'published'
+    ],
+    [
+        'id' => '3',
+        'title' => 'Setting Up Activity Tracking',
+        'slug' => 'activity-tracking',
+        'content' => "# Setting Up Activity Tracking\n\nTrack all visitor and customer activities in real-time.\n\n## Installation\n\n### 1. Add Tracking Code\n```javascript\n<!-- Add before closing </head> tag -->\n<script src=\"https://crm.yoursite.com/tracking.js\"></script>\n```\n\n### 2. Initialize Tracking\n```javascript\nCRMTracking.init({\n  apiKey: 'your-api-key',\n  domain: 'yoursite.com'\n});\n```\n\n## What We Track\n\n### Page Views\n- URL visited\n- Time on page\n- Scroll depth\n- Exit pages\n\n### Events\n- Button clicks\n- Form submissions\n- Downloads\n- Video plays\n\n### Visitor Information\n- Location\n- Device type\n- Browser\n- Referral source\n\n## Using the Data\n\n1. **Lead Scoring** - Activity feeds into AI scoring\n2. **Segmentation** - Create segments based on behavior\n3. **Personalization** - Tailor outreach based on interests\n4. **Alerts** - Get notified of key activities",
+        'excerpt' => 'Track visitor behavior and engagement in real-time.',
+        'category' => 'Features',
+        'category_id' => '3',
+        'views' => 156,
+        'helpful' => 34,
+        'status' => 'published'
+    ],
+    [
+        'id' => '4',
+        'title' => 'Managing Your Sales Pipeline',
+        'slug' => 'sales-pipeline',
+        'content' => "# Managing Your Sales Pipeline\n\nVisualize and manage your opportunities through their lifecycle.\n\n## Pipeline Stages\n\n### Default Stages\n1. **Qualification** - Initial opportunity assessment\n2. **Needs Analysis** - Understanding requirements\n3. **Proposal** - Presenting solution\n4. **Negotiation** - Terms and pricing\n5. **Closed Won/Lost** - Final outcome\n\n## Using the Pipeline\n\n### Drag and Drop\n- Click and drag opportunities between stages\n- Changes are saved automatically\n- Updates trigger notifications\n\n### Opportunity Details\n- Amount and probability\n- Expected close date\n- Associated contacts\n- Activity history\n\n## Best Practices\n\n1. Update stages promptly\n2. Keep amounts current\n3. Add notes for each interaction\n4. Review pipeline weekly",
+        'excerpt' => 'Learn how to effectively manage your sales opportunities.',
+        'category' => 'Sales',
+        'category_id' => '4',
+        'views' => 198,
+        'helpful' => 56,
+        'status' => 'published'
+    ],
+    [
+        'id' => '5',
+        'title' => 'Form Builder Guide',
+        'slug' => 'form-builder',
+        'content' => "# Form Builder Guide\n\nCreate custom forms to capture leads from any source.\n\n## Creating a Form\n\n1. Navigate to Forms > Create New\n2. Choose a template or start blank\n3. Drag fields from the sidebar\n4. Configure field properties\n5. Set up actions and notifications\n\n## Field Types\n\n- **Text** - Single line input\n- **Email** - Validated email field\n- **Phone** - Phone number with formatting\n- **Select** - Dropdown options\n- **Radio** - Single choice\n- **Checkbox** - Multiple choices\n- **Textarea** - Multi-line text\n- **File** - File uploads\n\n## Form Actions\n\n### On Submission\n- Create lead automatically\n- Send email notifications\n- Trigger AI scoring\n- Add to campaigns\n- Webhook integration\n\n## Embedding Forms\n\n### iFrame Method\n```html\n<iframe src=\"https://crm.site.com/form/123\" \n        width=\"100%\" height=\"600\"></iframe>\n```\n\n### JavaScript Method\n```html\n<div id=\"crm-form\"></div>\n<script src=\"https://crm.site.com/form.js\"></script>\n<script>CRMForm.load('123', '#crm-form');</script>\n```",
+        'excerpt' => 'Build custom forms to capture and qualify leads.',
+        'category' => 'Features',
+        'category_id' => '3',
+        'views' => 143,
+        'helpful' => 38,
+        'status' => 'published'
+    ]
+];
+
+// Public KB endpoint - list articles
+if ($path === '/knowledge-base/public' && $method === 'GET') {
+    $category = $_GET['category'] ?? null;
+    $articles = $kbArticles;
+    
+    if ($category) {
+        $articles = array_filter($articles, function($article) use ($category) {
+            return $article['category_id'] === $category;
+        });
+    }
+    
+    echo json_encode(['data' => array_values($articles)]);
+    exit;
+}
+
+// Get single article by slug
+if (preg_match('#^/knowledge-base/public/(.+)$#', $path, $matches) && $method === 'GET') {
+    $slug = $matches[1];
+    $article = null;
+    
+    foreach ($kbArticles as $a) {
+        if ($a['slug'] === $slug) {
+            $article = $a;
             break;
         }
     }
     
-    // Build response
-    $responseData = [
-        'success' => true,
-        'conversation_id' => $data['conversation_id'] ?? uniqid('conv_'),
-        'message' => $response,
-        'intent' => $intent ?? 'general',
-        'suggested_actions' => array_map(function($action) {
-            return $action['label'];
-        }, $suggestedActions),
-        'sentiment' => 'positive',
-        'confidence' => 0.9,
-        'metadata' => array_merge([
-            'lead_captured' => $isLeadCapture
-        ], $metadata ?? [])
-    ];
-    
-    echo json_encode($responseData);
+    if ($article) {
+        // Add related articles
+        $related = array_filter($kbArticles, function($a) use ($article) {
+            return $a['category_id'] === $article['category_id'] && $a['id'] !== $article['id'];
+        });
+        $article['related'] = array_slice(array_values($related), 0, 3);
+        
+        echo json_encode(['data' => $article]);
+    } else {
+        http_response_code(404);
+        echo json_encode(['error' => 'Article not found']);
+    }
     exit;
 }
 
-if ($path === '/ai/score-lead' && $method === 'POST') {
+// KB Categories
+if ($path === '/knowledge-base/categories' && $method === 'GET') {
     echo json_encode([
-        'success' => true,
-        'score' => rand(60, 95),
-        'factors' => [
-            ['factor' => 'Company Size', 'weight' => 0.3, 'score' => 85],
-            ['factor' => 'Industry Match', 'weight' => 0.25, 'score' => 90],
-            ['factor' => 'Engagement', 'weight' => 0.25, 'score' => 70],
-            ['factor' => 'Budget', 'weight' => 0.2, 'score' => 80]
+        'data' => [
+            ['id' => '1', 'name' => 'Getting Started', 'slug' => 'getting-started', 'article_count' => 1],
+            ['id' => '2', 'name' => 'AI Features', 'slug' => 'ai-features', 'article_count' => 1],
+            ['id' => '3', 'name' => 'Features', 'slug' => 'features', 'article_count' => 2],
+            ['id' => '4', 'name' => 'Sales', 'slug' => 'sales', 'article_count' => 1]
         ]
     ]);
     exit;
 }
 
-// AI Create Support Ticket
-if ($path === '/ai/create-ticket' && $method === 'POST') {
-    $issue = $data['issue'] ?? '';
-    $userInfo = $data['userInfo'] ?? [];
-    
-    // Create a case in the system
-    $newCase = [
-        'id' => uniqid(),
-        'name' => 'Support Request: ' . substr($issue, 0, 50) . '...',
-        'description' => $issue,
-        'status' => 'New',
-        'priority' => 'Medium',
-        'type' => 'Technical',
-        'accountName' => $userInfo['name'] ?? 'Website Visitor',
-        'contactEmail' => $userInfo['email'] ?? '',
-        'dateEntered' => date('Y-m-d H:i:s'),
-        'source' => 'AI Chat'
-    ];
-    
-    // Add to persisted cases
-    if (!isset($persistedData['cases'])) {
-        $persistedData['cases'] = [];
-    }
-    $persistedData['cases'][] = $newCase;
-    file_put_contents($dataFile, json_encode($persistedData));
-    
+// KB Articles (admin)
+if ($path === '/knowledge-base/articles' && $method === 'GET') {
     echo json_encode([
-        'success' => true,
-        'ticketId' => $newCase['id'],
-        'message' => 'I\'ve created support ticket #' . $newCase['id'] . ' for you. Our team will respond within 24 hours.',
-        'ticket' => $newCase
+        'data' => $kbArticles,
+        'pagination' => [
+            'page' => 1,
+            'pageSize' => 10,
+            'totalPages' => 1,
+            'totalItems' => count($kbArticles)
+        ]
     ]);
     exit;
 }
 
-// Form builder endpoints
-if (strpos($path, '/forms') === 0) {
-    if ($method === 'GET' && $path === '/forms') {
-        echo json_encode([
-            'data' => [
-                [
-                    'id' => '1',
-                    'name' => 'Contact Form',
-                    'description' => 'General contact form for website visitors',
-                    'status' => 'active',
-                    'submissions' => 45,
-                    'fields' => [
-                        ['type' => 'text', 'name' => 'firstName', 'label' => 'First Name', 'required' => true],
-                        ['type' => 'text', 'name' => 'lastName', 'label' => 'Last Name', 'required' => true],
-                        ['type' => 'email', 'name' => 'email', 'label' => 'Email', 'required' => true],
-                        ['type' => 'textarea', 'name' => 'message', 'label' => 'Message', 'required' => false]
-                    ],
-                    'created_at' => date('Y-m-d H:i:s', strtotime('-7 days')),
-                    'updated_at' => date('Y-m-d H:i:s', strtotime('-2 days'))
-                ],
-                [
-                    'id' => '2',
-                    'name' => 'Demo Request',
-                    'description' => 'Request a product demo',
-                    'status' => 'active',
-                    'submissions' => 23,
-                    'fields' => [
-                        ['type' => 'text', 'name' => 'company', 'label' => 'Company', 'required' => true],
-                        ['type' => 'text', 'name' => 'name', 'label' => 'Full Name', 'required' => true],
-                        ['type' => 'email', 'name' => 'email', 'label' => 'Work Email', 'required' => true],
-                        ['type' => 'select', 'name' => 'employees', 'label' => 'Company Size', 'options' => ['1-10', '11-50', '51-200', '200+'], 'required' => true]
-                    ],
-                    'created_at' => date('Y-m-d H:i:s', strtotime('-14 days')),
-                    'updated_at' => date('Y-m-d H:i:s', strtotime('-5 days'))
-                ]
-            ],
-            'pagination' => [
-                'page' => 1,
-                'pageSize' => 10,
-                'totalPages' => 1,
-                'totalItems' => 2
-            ]
-        ]);
-        exit;
-    }
+// Popular articles
+if ($path === '/knowledge-base/articles/popular' && $method === 'GET') {
+    $popular = $kbArticles;
+    usort($popular, function($a, $b) {
+        return $b['views'] - $a['views'];
+    });
     
-    // Get single form
-    if ($method === 'GET' && preg_match('#^/forms/(\w+)$#', $path, $matches)) {
-        $formId = $matches[1];
-        echo json_encode([
-            'data' => [
-                'id' => $formId,
-                'name' => 'Sample Form',
-                'description' => 'A sample form for demo',
-                'status' => 'active',
-                'submissions' => 10,
-                'fields' => [
-                    ['type' => 'text', 'name' => 'name', 'label' => 'Name', 'required' => true],
-                    ['type' => 'email', 'name' => 'email', 'label' => 'Email', 'required' => true]
-                ],
-                'settings' => [
-                    'submitButtonText' => 'Submit',
-                    'successMessage' => 'Thank you for your submission!',
-                    'requireAuth' => false
-                ],
-                'created_at' => date('Y-m-d H:i:s', strtotime('-5 days')),
-                'updated_at' => date('Y-m-d H:i:s', strtotime('-1 day'))
-            ]
-        ]);
-        exit;
-    }
-    
-    // Create form
-    if ($method === 'POST' && $path === '/forms') {
-        $newForm = array_merge([
-            'id' => uniqid(),
-            'created_at' => date('Y-m-d H:i:s'),
-            'updated_at' => date('Y-m-d H:i:s'),
-            'submissions' => 0,
-            'status' => 'draft'
-        ], $data ?? []);
-        echo json_encode(['data' => $newForm, 'success' => true]);
-        exit;
-    }
-    
-    // Update form
-    if ($method === 'PUT' && preg_match('#^/forms/(\w+)$#', $path, $matches)) {
-        $formId = $matches[1];
-        $updatedForm = array_merge([
-            'id' => $formId,
-            'updated_at' => date('Y-m-d H:i:s')
-        ], $data ?? []);
-        echo json_encode(['data' => $updatedForm, 'success' => true]);
-        exit;
-    }
-    
-    // Delete form
-    if ($method === 'DELETE' && preg_match('#^/forms/(\w+)$#', $path, $matches)) {
-        echo json_encode(['success' => true]);
-        exit;
-    }
-    
-    // Form submissions
-    if ($method === 'GET' && preg_match('#^/forms/(\w+)/submissions$#', $path, $matches)) {
-        echo json_encode([
-            'data' => [
-                [
-                    'id' => '1',
-                    'form_id' => $matches[1],
-                    'data' => ['name' => 'John Doe', 'email' => 'john@example.com'],
-                    'submitted_at' => date('Y-m-d H:i:s', strtotime('-1 hour'))
-                ]
-            ],
-            'pagination' => ['page' => 1, 'pageSize' => 10, 'totalPages' => 1, 'totalItems' => 1]
-        ]);
-        exit;
-    }
-    
-    // Submit form (public endpoint)
-    if ($method === 'POST' && $path === '/forms/submit') {
-        echo json_encode([
-            'success' => true,
-            'message' => 'Form submitted successfully',
-            'submission_id' => uniqid()
-        ]);
-        exit;
-    }
+    echo json_encode(['data' => array_slice($popular, 0, 5)]);
+    exit;
 }
 
-// Knowledge base endpoints
-if (strpos($path, '/kb') === 0 || strpos($path, '/knowledge-base') === 0) {
-    // Categories endpoint
-    if ($path === '/knowledge-base/categories' || $path === '/kb/categories') {
-        echo json_encode([
-            'data' => [
-                ['id' => '1', 'name' => 'Getting Started', 'slug' => 'getting-started', 'description' => 'Basic guides for new users', 'article_count' => 5],
-                ['id' => '2', 'name' => 'Lead Management', 'slug' => 'lead-management', 'description' => 'Managing leads and conversions', 'article_count' => 8],
-                ['id' => '3', 'name' => 'Reporting', 'slug' => 'reporting', 'description' => 'Creating and managing reports', 'article_count' => 6],
-                ['id' => '4', 'name' => 'AI Features', 'slug' => 'ai-features', 'description' => 'Using AI-powered features', 'article_count' => 4]
-            ]
-        ]);
-        exit;
-    }
+// Featured articles
+if ($path === '/knowledge-base/articles/featured' && $method === 'GET') {
+    $limit = $_GET['limit'] ?? 6;
+    // Return the most helpful articles as featured
+    $featured = $kbArticles;
+    usort($featured, function($a, $b) {
+        return $b['helpful'] - $a['helpful'];
+    });
     
-    // Articles endpoint
-    if ($method === 'GET' && ($path === '/kb/articles' || $path === '/knowledge-base/articles')) {
-        echo json_encode([
-            'data' => [
-                [
-                    'id' => '1',
-                    'title' => 'Getting Started with CRM',
-                    'content' => '# Getting Started with CRM\n\nWelcome to our CRM system. This guide will help you get started...\n\n## Key Features\n- Lead Management\n- Contact Management\n- AI-Powered Insights\n- Activity Tracking',
-                    'category_id' => '1',
-                    'category' => 'Getting Started',
-                    'slug' => 'getting-started-with-crm',
-                    'views' => 234,
-                    'helpful' => 45,
-                    'not_helpful' => 2,
-                    'status' => 'published',
-                    'created_at' => date('Y-m-d H:i:s', strtotime('-30 days')),
-                    'updated_at' => date('Y-m-d H:i:s', strtotime('-5 days'))
-                ],
-                [
-                    'id' => '2',
-                    'title' => 'How to Score Leads with AI',
-                    'content' => '# AI Lead Scoring\n\nOur AI-powered lead scoring helps you prioritize...',
-                    'category_id' => '4',
-                    'category' => 'AI Features',
-                    'slug' => 'ai-lead-scoring',
-                    'views' => 189,
-                    'helpful' => 67,
-                    'not_helpful' => 1,
-                    'status' => 'published',
-                    'created_at' => date('Y-m-d H:i:s', strtotime('-20 days')),
-                    'updated_at' => date('Y-m-d H:i:s', strtotime('-3 days'))
-                ]
-            ]
-        ]);
-        exit;
-    }
+    echo json_encode(['data' => array_slice($featured, 0, $limit)]);
+    exit;
+}
+
+// Search KB
+if ($path === '/knowledge-base/search' && $method === 'GET') {
+    $query = strtolower($_GET['q'] ?? '');
+    $results = [];
     
-    // Single article
-    if ($method === 'GET' && preg_match('#^/(?:kb|knowledge-base)/articles/(\w+)$#', $path, $matches)) {
-        $articleId = $matches[1];
-        echo json_encode([
-            'data' => [
-                'id' => $articleId,
-                'title' => 'Sample Article',
-                'content' => '# Sample Article\n\nThis is a sample knowledge base article.',
-                'category_id' => '1',
-                'category' => 'Getting Started',
-                'slug' => 'sample-article',
-                'views' => 100,
-                'helpful' => 25,
-                'not_helpful' => 1,
-                'status' => 'published',
-                'created_at' => date('Y-m-d H:i:s', strtotime('-10 days')),
-                'updated_at' => date('Y-m-d H:i:s', strtotime('-2 days'))
-            ]
-        ]);
-        exit;
-    }
-    
-    // Create article
-    if ($method === 'POST' && ($path === '/kb/articles' || $path === '/knowledge-base/articles')) {
-        $newArticle = array_merge([
-            'id' => uniqid(),
-            'created_at' => date('Y-m-d H:i:s'),
-            'updated_at' => date('Y-m-d H:i:s'),
-            'views' => 0,
-            'helpful' => 0,
-            'not_helpful' => 0,
-            'status' => 'draft'
-        ], $data ?? []);
-        echo json_encode(['data' => $newArticle, 'success' => true]);
-        exit;
-    }
-    
-    // Update article
-    if ($method === 'PUT' && preg_match('#^/(?:kb|knowledge-base)/articles/(\w+)$#', $path, $matches)) {
-        $articleId = $matches[1];
-        $updatedArticle = array_merge([
-            'id' => $articleId,
-            'updated_at' => date('Y-m-d H:i:s')
-        ], $data ?? []);
-        echo json_encode(['data' => $updatedArticle, 'success' => true]);
-        exit;
-    }
-    
-    // Delete article
-    if ($method === 'DELETE' && preg_match('#^/(?:kb|knowledge-base)/articles/(\w+)$#', $path, $matches)) {
-        echo json_encode(['success' => true]);
-        exit;
-    }
-    
-    // Search endpoint
-    if ($method === 'GET' && ($path === '/kb/search' || $path === '/knowledge-base/search')) {
-        echo json_encode([
-            'data' => [
-                [
-                    'id' => '1',
-                    'title' => 'How to Create a Lead',
-                    'excerpt' => 'Learn how to create and manage leads in the CRM...',
-                    'category' => 'Leads',
+    if ($query) {
+        foreach ($kbArticles as $article) {
+            if (strpos(strtolower($article['title']), $query) !== false || 
+                strpos(strtolower($article['content']), $query) !== false) {
+                $results[] = [
+                    'article' => $article,
                     'relevance_score' => 0.95
-                ]
-            ]
-        ]);
-        exit;
+                ];
+            }
+        }
     }
     
-    // Public KB endpoint (for homepage)
-    if ($method === 'GET' && ($path === '/kb/public' || $path === '/knowledge-base/public')) {
+    echo json_encode(['data' => $results]);
+    exit;
+}
+
+// Forms
+if ($path === '/forms' && $method === 'GET') {
+    echo json_encode([
+        'data' => [
+            ['id' => '1', 'name' => 'Contact Form', 'status' => 'active', 'submissions' => 45],
+            ['id' => '2', 'name' => 'Demo Request', 'status' => 'active', 'submissions' => 23]
+        ]
+    ]);
+    exit;
+}
+
+// Activity Tracking
+if (strpos($path, '/analytics/') === 0) {
+    $endpoint = str_replace('/analytics/', '', $path);
+    
+    if ($endpoint === 'visitors' && $method === 'GET') {
         echo json_encode([
             'data' => [
-                [
-                    'id' => '1',
-                    'title' => 'Getting Started with AI CRM',
-                    'slug' => 'getting-started',
-                    'excerpt' => 'Learn how our AI-powered CRM can transform your sales process.',
-                    'category' => 'Getting Started',
-                    'content' => '# Getting Started\n\nOur AI CRM helps you...'
-                ],
-                [
-                    'id' => '2',
-                    'title' => 'Understanding AI Lead Scoring',
-                    'slug' => 'ai-lead-scoring',
-                    'excerpt' => 'How our AI analyzes and scores your leads automatically.',
-                    'category' => 'AI Features',
-                    'content' => '# AI Lead Scoring\n\nOur system uses advanced AI...'
-                ],
-                [
-                    'id' => '3',
-                    'title' => 'Setting Up Activity Tracking',
-                    'slug' => 'activity-tracking',
-                    'excerpt' => 'Track visitor behavior and engagement in real-time.',
-                    'category' => 'Features',
-                    'content' => '# Activity Tracking\n\nMonitor your visitors...'
-                ]
+                ['visitor_id' => 'v1', 'pages_viewed' => 5, 'duration' => 300, 'location' => 'San Francisco, CA'],
+                ['visitor_id' => 'v2', 'pages_viewed' => 3, 'duration' => 180, 'location' => 'New York, NY']
             ]
         ]);
         exit;
     }
 }
 
-// Customer health endpoints
-if (strpos($path, '/customer-health') === 0) {
-    if ($path === '/customer-health/metrics' && $method === 'GET') {
-        echo json_encode([
-            'data' => [
-                'overview' => [
-                    'total_accounts' => 156,
-                    'healthy' => 89,
-                    'at_risk' => 45,
-                    'critical' => 22
-                ],
-                'trend' => [
-                    ['date' => date('Y-m-d', strtotime('-6 days')), 'healthy' => 85, 'at_risk' => 48, 'critical' => 23],
-                    ['date' => date('Y-m-d', strtotime('-5 days')), 'healthy' => 86, 'at_risk' => 47, 'critical' => 23],
-                    ['date' => date('Y-m-d', strtotime('-4 days')), 'healthy' => 87, 'at_risk' => 46, 'critical' => 23],
-                    ['date' => date('Y-m-d', strtotime('-3 days')), 'healthy' => 88, 'at_risk' => 46, 'critical' => 22],
-                    ['date' => date('Y-m-d', strtotime('-2 days')), 'healthy' => 88, 'at_risk' => 45, 'critical' => 23],
-                    ['date' => date('Y-m-d', strtotime('-1 days')), 'healthy' => 89, 'at_risk' => 45, 'critical' => 22],
-                    ['date' => date('Y-m-d'), 'healthy' => 89, 'at_risk' => 45, 'critical' => 22]
-                ]
-            ]
-        ]);
-        exit;
-    }
-    
-    if ($path === '/customer-health/accounts' && $method === 'GET') {
-        echo json_encode([
-            'data' => [
-                [
-                    'id' => '1',
-                    'name' => 'Acme Corporation',
-                    'health_score' => 85,
-                    'health_status' => 'healthy',
-                    'last_contact' => date('Y-m-d', strtotime('-2 days')),
-                    'open_cases' => 0,
-                    'total_revenue' => 250000,
-                    'engagement_score' => 92,
-                    'churn_risk' => 'low',
-                    'assigned_to' => 'Admin User'
-                ],
-                [
-                    'id' => '2',
-                    'name' => 'Global Industries',
-                    'health_score' => 45,
-                    'health_status' => 'at_risk',
-                    'last_contact' => date('Y-m-d', strtotime('-15 days')),
-                    'open_cases' => 3,
-                    'total_revenue' => 500000,
-                    'engagement_score' => 35,
-                    'churn_risk' => 'high',
-                    'assigned_to' => 'Admin User'
-                ],
-                [
-                    'id' => '3',
-                    'name' => 'Tech Innovators',
-                    'health_score' => 25,
-                    'health_status' => 'critical',
-                    'last_contact' => date('Y-m-d', strtotime('-30 days')),
-                    'open_cases' => 5,
-                    'total_revenue' => 150000,
-                    'engagement_score' => 15,
-                    'churn_risk' => 'critical',
-                    'assigned_to' => 'Admin User'
-                ]
-            ],
-            'pagination' => [
-                'page' => 1,
-                'pageSize' => 10,
-                'totalPages' => 1,
-                'totalItems' => 3
-            ]
-        ]);
-        exit;
-    }
-    
-    if ($method === 'GET' && preg_match('#^/customer-health/accounts/(\w+)$#', $path, $matches)) {
-        $accountId = $matches[1];
-        echo json_encode([
-            'data' => [
-                'id' => $accountId,
-                'name' => 'Sample Account',
-                'health_score' => 75,
-                'health_status' => 'healthy',
-                'health_factors' => [
-                    ['factor' => 'Product Usage', 'score' => 85, 'weight' => 0.3],
-                    ['factor' => 'Support Tickets', 'score' => 60, 'weight' => 0.2],
-                    ['factor' => 'Payment History', 'score' => 95, 'weight' => 0.2],
-                    ['factor' => 'Engagement', 'score' => 70, 'weight' => 0.3]
-                ],
-                'recommendations' => [
-                    'Schedule quarterly business review',
-                    'Offer advanced training on new features',
-                    'Check in on open support tickets'
-                ]
-            ]
-        ]);
-        exit;
-    }
+// Customer Health
+if ($path === '/customer-health/accounts' && $method === 'GET') {
+    echo json_encode([
+        'data' => [
+            ['id' => '1', 'name' => 'Acme Corporation', 'health_score' => 85, 'health_status' => 'healthy'],
+            ['id' => '2', 'name' => 'Global Industries', 'health_score' => 45, 'health_status' => 'at_risk'],
+            ['id' => '3', 'name' => 'Tech Innovators', 'health_score' => 92, 'health_status' => 'healthy']
+        ]
+    ]);
+    exit;
 }
 
 // Default 404
 http_response_code(404);
-echo json_encode(['error' => 'Route not found: ' . $method . ' ' . $path]);
+echo json_encode(['error' => 'Endpoint not found: ' . $method . ' ' . $path]);

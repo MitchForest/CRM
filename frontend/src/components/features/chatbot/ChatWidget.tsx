@@ -171,7 +171,8 @@ export function ChatWidget({
         timestamp: new Date().toISOString(),
         visitor_id: activityTrackingService.getVisitorId() || 'anonymous'
       });
-    } catch {
+    } catch (error) {
+      console.error('Chat error:', error);
       const errorMessage: ChatMessage = {
         id: Date.now().toString(),
         role: 'assistant',

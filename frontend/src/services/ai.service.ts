@@ -63,7 +63,8 @@ class AIService {
     if (!response.success) {
       throw new Error(response.error || 'Failed to send chat message');
     }
-    return response.data;
+    // The API returns the data at the top level, not nested in .data
+    return response as any;
   }
 
   /**
