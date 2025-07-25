@@ -885,6 +885,38 @@ class ApiClient {
     }
   }
 
+  // Phase 3 Custom API methods
+  async customGet(url: string, config?: any): Promise<any> {
+    const response = await this.customClient.get(url, config)
+    return response.data
+  }
+
+  async customPost(url: string, data?: any, config?: any): Promise<any> {
+    const response = await this.customClient.post(url, data, config)
+    return response.data
+  }
+
+  async customPut(url: string, data?: any, config?: any): Promise<any> {
+    const response = await this.customClient.put(url, data, config)
+    return response.data
+  }
+
+  async customDelete(url: string, config?: any): Promise<any> {
+    const response = await this.customClient.delete(url, config)
+    return response.data
+  }
+
+  // Public endpoints (no auth required)
+  async publicGet(url: string, config?: any): Promise<any> {
+    const response = await axios.get(`/api${url}`, config)
+    return response.data
+  }
+
+  async publicPost(url: string, data?: any, config?: any): Promise<any> {
+    const response = await axios.post(`/api${url}`, data, config)
+    return response.data
+  }
+
   // Legacy method for backward compatibility
   async getDashboardStats(): Promise<ApiResponse<{
     totalLeads: number

@@ -7,7 +7,13 @@ import {
   Calendar,
   HeadphonesIcon,
   Settings,
-  LogOut
+  LogOut,
+  Brain,
+  FileText,
+  BookOpen,
+  Activity,
+  Heart,
+  MessageCircle
 } from "lucide-react"
 import {
   Sidebar,
@@ -71,6 +77,45 @@ const mainNavItems = [
   },
 ]
 
+const phase3NavItems = [
+  {
+    title: "AI Lead Scoring",
+    url: "/leads/scoring",
+    icon: Brain,
+    module: "Leads" as const,
+  },
+  {
+    title: "Forms",
+    url: "/forms",
+    icon: FileText,
+    module: null, // Forms might be accessible to all
+  },
+  {
+    title: "Knowledge Base",
+    url: "/kb",
+    icon: BookOpen,
+    module: null, // KB might be accessible to all
+  },
+  {
+    title: "Activity Tracking",
+    url: "/tracking",
+    icon: Activity,
+    module: null, // Tracking might be accessible to all
+  },
+  {
+    title: "Customer Health",
+    url: "/health",
+    icon: Heart,
+    module: "Accounts" as const,
+  },
+  {
+    title: "Chatbot",
+    url: "/chatbot",
+    icon: MessageCircle,
+    module: null, // Chatbot settings might be accessible to all
+  },
+]
+
 const bottomNavItems = [
   {
     title: "Settings",
@@ -110,6 +155,27 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {mainNavItems
+                .filter(item => !item.module || hasModuleAccess(item.module))
+                .map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton 
+                      onClick={() => navigate(item.url)}
+                      isActive={location.pathname === item.url || location.pathname.startsWith(item.url + '/')}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>AI Features</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {phase3NavItems
                 .filter(item => !item.module || hasModuleAccess(item.module))
                 .map((item) => (
                   <SidebarMenuItem key={item.url}>

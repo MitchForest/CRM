@@ -40,7 +40,9 @@ class Router {
     }
     
     private function convertPathToRegex($path) {
+        // Support both /:param and {param} syntax
         $pattern = preg_replace('/\/:([^\/]+)/', '/(?P<$1>[^/]+)', $path);
+        $pattern = preg_replace('/\{([^}]+)\}/', '(?P<$1>[^/]+)', $pattern);
         return '#^' . $pattern . '$#';
     }
     

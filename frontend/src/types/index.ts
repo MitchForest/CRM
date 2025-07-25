@@ -48,3 +48,6 @@ export type {
 
 // Export Phase 2 specific types
 export * from './phase2.types';
+
+// Export Phase 3 specific types
+export * from './phase3.types';

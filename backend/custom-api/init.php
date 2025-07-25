@@ -46,15 +46,19 @@ $GLOBALS['db'] = $db;
 require_once 'include/modules.php';
 
 // Load VardefManager
-require_once 'modules/Administration/QuickRepairAndRebuild.php';
+require_once 'include/VarDefHandler/VarDefHandler.php';
 require_once 'include/utils/file_utils.php';
 require_once 'include/utils/sugar_file_utils.php';
 
 // Initialize current user (system user for API)
 require_once 'data/BeanFactory.php';
 require_once 'data/SugarBean.php';
-require_once 'include/VarDefHandler/VarDefHandler.php';
 require_once 'modules/Users/User.php';
+
+// Load VardefManager class
+if (!class_exists('VardefManager')) {
+    require_once 'include/SugarObjects/VardefManager.php';
+}
 
 // Try a simpler approach - just set a minimal current user without full initialization
 $current_user = new stdClass();
