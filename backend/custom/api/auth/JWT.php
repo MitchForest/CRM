@@ -2,8 +2,15 @@
 namespace Api\Auth;
 
 class JWT {
-    private static $secret = 'your-secret-key-here-change-in-production';
+    private static $secret = null;
     private static $algorithm = 'HS256';
+    
+    private static function getSecret() {
+        if (self::$secret === null) {
+            self::$secret = $_ENV['JWT_SECRET'] ?? getenv('JWT_SECRET') ?? 'default-dev-secret-change-me';
+        }
+        return self::$secret;
+    }
     
     public static function setSecret($secret) {
         self::$secret = $secret;
@@ -16,7 +23,7 @@ class JWT {
         $base64Header = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($header));
         $base64Payload = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($payload));
         
-        $signature = hash_hmac('sha256', $base64Header . "." . $base64Payload, self::$secret, true);
+        $signature = hash_hmac('sha256', $base64Header . "." . $base64Payload, self::getSecret(), true);
         $base64Signature = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
         
         return $base64Header . "." . $base64Payload . "." . $base64Signature;
@@ -36,7 +43,7 @@ class JWT {
         $base64Header = $parts[0];
         $base64Payload = $parts[1];
         
-        $signature = hash_hmac('sha256', $base64Header . "." . $base64Payload, self::$secret, true);
+        $signature = hash_hmac('sha256', $base64Header . "." . $base64Payload, self::getSecret(), true);
         $base64Signature = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
         
         if ($base64Signature !== $signatureProvided) {

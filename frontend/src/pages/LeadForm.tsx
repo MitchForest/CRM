@@ -282,8 +282,6 @@ export function LeadFormPage() {
                           <SelectItem value="New">New</SelectItem>
                           <SelectItem value="Contacted">Contacted</SelectItem>
                           <SelectItem value="Qualified">Qualified</SelectItem>
-                          <SelectItem value="Converted">Converted</SelectItem>
-                          <SelectItem value="Dead">Dead</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

@@ -51,8 +51,10 @@ class AIService {
     conversation_id: string;
     message: string;
     intent?: string;
+    sentiment?: string;
+    confidence?: number;
     suggested_actions?: string[];
-    metadata?: Record<string, string | number | boolean>;
+    metadata?: Record<string, any>;
   }> {
     const response = await apiClient.customPost('/ai/chat', {
       conversation_id: conversationId,

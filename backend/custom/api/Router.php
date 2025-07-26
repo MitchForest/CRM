@@ -49,10 +49,23 @@ class Router {
     public function dispatch() {
         $method = $_SERVER['REQUEST_METHOD'];
         $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-        // Remove various API prefixes
-        $path = preg_replace('#^(/custom)?/api(/index\.php)?#', '', $path);
-        if (empty($path)) {
-            $path = '/';
+        
+        // Handle different access patterns
+        if (strpos($path, '/api/') !== false) {
+            // When accessed via /api/...
+            $path = preg_replace('#^(/custom)?/api(/index\.php)?#', '', $path);
+        } elseif (strpos($path, '/custom/api/') !== false) {
+            // When accessed directly via /custom/api/index.php
+            $path = preg_replace('#^/custom/api(/index\.php)?#', '', $path);
+        }
+        
+        // If we're at the API root but have no path, check for PATH_INFO
+        if (empty($path) || $path === '/index.php') {
+            if (isset($_SERVER['PATH_INFO'])) {
+                $path = $_SERVER['PATH_INFO'];
+            } else {
+                $path = '/';
+            }
         }
         
         // Handle CORS preflight
@@ -95,11 +108,14 @@ class Router {
         list($class, $method) = explode('::', $matchedRoute['handler']);
         $controller = new $class();
         
+        // Create response object
+        $responseObj = new Response();
+        
         // Check if route has parameters
         if (!empty($params)) {
-            $response = $controller->$method($request, $params);
+            $response = $controller->$method($request, $responseObj, $params);
         } else {
-            $response = $controller->$method($request);
+            $response = $controller->$method($request, $responseObj);
         }
         
         // Send response

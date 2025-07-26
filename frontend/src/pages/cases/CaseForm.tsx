@@ -53,9 +53,9 @@ export function CaseForm() {
   } = useForm<CaseFormData>({
     resolver: zodResolver(caseSchema),
     defaultValues: {
-      status: 'New',
+      status: 'Open',
       priority: 'Medium',
-      type: 'Problem',
+      type: 'Technical',
     },
   })
 
@@ -80,7 +80,7 @@ export function CaseForm() {
     try {
       const formattedData = {
         ...data,
-        status: data.status as 'New' | 'Assigned' | 'Closed' | 'Pending Input' | 'Rejected' | 'Duplicate'
+        status: data.status as 'Open' | 'In Progress' | 'Resolved' | 'Closed'
       }
       if (isEdit && id) {
         await updateCase.mutateAsync(formattedData)
@@ -139,10 +139,9 @@ export function CaseForm() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="New">New</SelectItem>
-                <SelectItem value="Assigned">Assigned</SelectItem>
+                <SelectItem value="Open">Open</SelectItem>
                 <SelectItem value="In Progress">In Progress</SelectItem>
-                <SelectItem value="Pending Input">Pending Input</SelectItem>
+                <SelectItem value="Resolved">Resolved</SelectItem>
                 <SelectItem value="Closed">Closed</SelectItem>
               </SelectContent>
             </Select>
@@ -175,10 +174,10 @@ export function CaseForm() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Problem">Problem</SelectItem>
+                <SelectItem value="Technical">Technical</SelectItem>
+                <SelectItem value="Billing">Billing</SelectItem>
                 <SelectItem value="Feature Request">Feature Request</SelectItem>
-                <SelectItem value="Question">Question</SelectItem>
-                <SelectItem value="Bug">Bug</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
               </SelectContent>
             </Select>
           </div>

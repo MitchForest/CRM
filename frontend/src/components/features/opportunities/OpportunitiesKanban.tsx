@@ -19,14 +19,11 @@ import type { Opportunity } from '@/types/api.generated'
 import type { OpportunityStage } from '@/types/phase2.types'
 
 const stages: OpportunityStage[] = [
-  'Qualification',
-  'Needs Analysis',
-  'Value Proposition',
-  'Decision Makers',
+  'Qualified',
   'Proposal',
   'Negotiation',
-  'Closed Won',
-  'Closed Lost',
+  'Won',
+  'Lost',
 ]
 
 interface OpportunitiesKanbanProps {

@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ChatWidgetProps {
-  onLeadCapture?: (leadInfo: { name: string; email: string; company?: string }) => void;
+  onLeadCapture?: (leadInfo: any) => void;
   position?: 'bottom-right' | 'bottom-left';
   theme?: 'light' | 'dark' | 'auto';
   primaryColor?: string;

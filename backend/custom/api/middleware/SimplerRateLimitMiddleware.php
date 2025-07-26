@@ -16,6 +16,12 @@ class SimplerRateLimitMiddleware
         'chat' => ['requests' => 20, 'window' => 60]
     ];
     
+    public function handle(Request $request)
+    {
+        // For now, just pass through - rate limiting can be added later
+        return true;
+    }
+    
     public function __invoke(Request $request, Response $response, callable $next)
     {
         session_start();

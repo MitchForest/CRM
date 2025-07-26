@@ -601,18 +601,11 @@ class FormBuilderController extends BaseController
         
         return <<<HTML
 <!-- CRM Form Embed -->
-<div id="crm-form-{$formId}"></div>
+<div data-form-id="{$formId}"></div>
 <script>
-(function(w,d,s,f,id){
-    w['CRMForm']=w['CRMForm']||function(){(w['CRMForm'].q=w['CRMForm'].q||[]).push(arguments)};
-    if(!d.getElementById(id)){
-        var js=d.createElement(s),fjs=d.getElementsByTagName(s)[0];
-        js.id=id;js.src=f;js.async=1;
-        fjs.parentNode.insertBefore(js,fjs);
-    }
-})(window,document,'script','{$siteUrl}/forms/embed.js','crm-forms-sdk');
-CRMForm('init', '{$formId}');
+window.SUITECRM_URL = '{$siteUrl}';
 </script>
+<script src="{$siteUrl}/custom/public/js/forms-embed.js"></script>
 <!-- End CRM Form Embed -->
 HTML;
     }
@@ -736,5 +729,251 @@ HTML;
     {
         // TODO: Get from JWT token
         return '1'; // Admin user for now
+    }
+    
+    /**
+     * Get active forms only
+     * GET /api/forms/active
+     */
+    public function getActiveForms(Request $request)
+    {
+        try {
+            global $db;
+            
+            $query = "SELECT * FROM form_builder_forms 
+                      WHERE status = 'active' AND deleted = 0 
+                      ORDER BY date_created DESC";
+            
+            $result = $db->query($query);
+            $forms = [];
+            
+            while ($row = $db->fetchByAssoc($result)) {
+                $forms[] = [
+                    'id' => $row['id'],
+                    'name' => $row['name'],
+                    'description' => $row['description'],
+                    'fields' => json_decode($row['fields'], true),
+                    'status' => $row['status'],
+                    'embedCode' => $this->generateEmbedCode($row['id']),
+                    'submissionCount' => $this->getSubmissionCount($row['id']),
+                    'dateCreated' => $row['date_created'],
+                    'dateModified' => $row['date_modified']
+                ];
+            }
+            
+            return $this->success([
+                'data' => $forms,
+                'total' => count($forms)
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->error('Failed to fetch active forms: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Get embed code for a form
+     * GET /api/forms/{id}/embed
+     */
+    public function getEmbedCode(Request $request)
+    {
+        try {
+            $formId = $request->getParam('id');
+            
+            if (!$formId) {
+                return $this->error('Form ID is required');
+            }
+            
+            // Verify form exists
+            global $db;
+            $query = "SELECT id, name FROM form_builder_forms WHERE id = ? AND deleted = 0";
+            $stmt = $db->prepare($query);
+            $stmt->execute([$formId]);
+            $form = $stmt->fetch(\PDO::FETCH_ASSOC);
+            
+            if (!$form) {
+                return $this->error('Form not found', 404);
+            }
+            
+            $embedCode = $this->generateEmbedCode($formId);
+            
+            return $this->success([
+                'formId' => $formId,
+                'formName' => $form['name'],
+                'embedCode' => $embedCode,
+                'iframeCode' => $this->generateIframeCode($formId),
+                'scriptCode' => $this->generateScriptCode($formId)
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->error('Failed to generate embed code: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Convert form submission to lead
+     * POST /api/forms/{id}/submissions/{submission_id}/convert
+     */
+    public function convertSubmissionToLead(Request $request)
+    {
+        try {
+            $formId = $request->getParam('id');
+            $submissionId = $request->getParam('submission_id');
+            
+            if (!$formId || !$submissionId) {
+                return $this->error('Form ID and submission ID are required');
+            }
+            
+            // Get submission data
+            global $db;
+            $query = "SELECT * FROM form_builder_submissions 
+                      WHERE id = ? AND form_id = ? AND deleted = 0";
+            $stmt = $db->prepare($query);
+            $stmt->execute([$submissionId, $formId]);
+            $submission = $stmt->fetch(\PDO::FETCH_ASSOC);
+            
+            if (!$submission) {
+                return $this->error('Submission not found', 404);
+            }
+            
+            $submissionData = json_decode($submission['data'], true);
+            
+            // Check if already converted
+            if (!empty($submission['lead_id'])) {
+                return $this->error('Submission already converted to lead', 400);
+            }
+            
+            // Create lead
+            $leadId = $this->generateUUID();
+            
+            // Map form fields to lead fields
+            $leadData = [
+                'id' => $leadId,
+                'first_name' => $submissionData['firstName'] ?? $submissionData['name'] ?? '',
+                'last_name' => $submissionData['lastName'] ?? '',
+                'email1' => $submissionData['email'] ?? '',
+                'phone_work' => $submissionData['phone'] ?? '',
+                'account_name' => $submissionData['company'] ?? '',
+                'title' => $submissionData['title'] ?? '',
+                'description' => $submissionData['message'] ?? $submissionData['comments'] ?? '',
+                'lead_source' => 'Web Form',
+                'status' => 'New',
+                'assigned_user_id' => $this->getCurrentUserId(),
+                'date_entered' => 'NOW()',
+                'date_modified' => 'NOW()',
+                'created_by' => $this->getCurrentUserId(),
+                'modified_user_id' => $this->getCurrentUserId(),
+                'deleted' => 0
+            ];
+            
+            // Build insert query
+            $fields = array_keys($leadData);
+            $values = array_values($leadData);
+            $placeholders = array_map(function($field) use ($leadData) {
+                return $leadData[$field] === 'NOW()' ? 'NOW()' : '?';
+            }, $fields);
+            
+            $query = "INSERT INTO leads (" . implode(', ', $fields) . ") 
+                      VALUES (" . implode(', ', $placeholders) . ")";
+            
+            // Remove NOW() values from values array
+            $values = array_filter($values, function($value) {
+                return $value !== 'NOW()';
+            });
+            
+            $stmt = $db->prepare($query);
+            $stmt->execute($values);
+            
+            // Update submission with lead ID
+            $query = "UPDATE form_builder_submissions 
+                      SET lead_id = ?, converted_at = NOW() 
+                      WHERE id = ?";
+            $stmt = $db->prepare($query);
+            $stmt->execute([$leadId, $submissionId]);
+            
+            // Create activity record
+            $this->createLeadActivity($leadId, 
+                "Lead created from form submission: " . ($submission['form_name'] ?? 'Unknown Form'));
+            
+            return $this->success([
+                'leadId' => $leadId,
+                'message' => 'Successfully converted submission to lead'
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->error('Failed to convert submission: ' . $e->getMessage());
+        }
+    }
+    
+    private function generateEmbedCode($formId)
+    {
+        $baseUrl = $this->getBaseUrl();
+        return sprintf(
+            '<div id="crm-form-%s"></div><script src="%s/api/forms/%s/embed.js"></script>',
+            $formId,
+            $baseUrl,
+            $formId
+        );
+    }
+    
+    private function generateIframeCode($formId)
+    {
+        $baseUrl = $this->getBaseUrl();
+        return sprintf(
+            '<iframe src="%s/forms/embed/%s" width="100%%" height="600" frameborder="0"></iframe>',
+            $baseUrl,
+            $formId
+        );
+    }
+    
+    private function generateScriptCode($formId)
+    {
+        $baseUrl = $this->getBaseUrl();
+        return sprintf(
+            "(function(){var s=document.createElement('script');s.src='%s/api/forms/%s/embed.js';s.async=true;document.body.appendChild(s);})();",
+            $baseUrl,
+            $formId
+        );
+    }
+    
+    private function getSubmissionCount($formId)
+    {
+        global $db;
+        $query = "SELECT COUNT(*) as count FROM form_builder_submissions 
+                  WHERE form_id = ? AND deleted = 0";
+        $stmt = $db->prepare($query);
+        $stmt->execute([$formId]);
+        $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return (int)($result['count'] ?? 0);
+    }
+    
+    private function getBaseUrl()
+    {
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        return $protocol . '://' . $host;
+    }
+    
+    private function createLeadActivity($leadId, $description)
+    {
+        global $db;
+        $activityId = $this->generateUUID();
+        
+        $query = "INSERT INTO notes 
+                  (id, name, description, parent_type, parent_id, 
+                   assigned_user_id, date_entered, date_modified, 
+                   created_by, modified_user_id, deleted)
+                  VALUES (?, 'Form Submission', ?, 'Leads', ?, ?, 
+                          NOW(), NOW(), ?, ?, 0)";
+        
+        $stmt = $db->prepare($query);
+        $stmt->execute([
+            $activityId,
+            $description,
+            $leadId,
+            $this->getCurrentUserId(),
+            $this->getCurrentUserId(),
+            $this->getCurrentUserId()
+        ]);
     }
 }

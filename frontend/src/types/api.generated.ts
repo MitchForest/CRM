@@ -144,7 +144,7 @@ export interface Case {
   name: string;
   caseNumber?: string;
   type?: string;
-  status: 'New' | 'Assigned' | 'Closed' | 'Pending Input' | 'Rejected' | 'Duplicate';
+  status: 'Open' | 'In Progress' | 'Resolved' | 'Closed';
   priority: 'High' | 'Medium' | 'Low';
   resolution?: string;
   description?: string;

@@ -954,4 +954,519 @@ Conversation:
         
         return $context;
     }
+    
+    /**
+     * Start a new AI chat conversation
+     * POST /api/ai/chat/start
+     */
+    public function startConversation(Request $request) {
+        try {
+            $data = $this->getRequestData();
+            $contactId = $data['contactId'] ?? null;
+            
+            // Create new conversation
+            $conversationId = $this->generateUUID();
+            
+            $query = "INSERT INTO ai_chat_conversations 
+                     (id, contact_id, status, started_at, created_by, date_entered, date_modified, deleted)
+                     VALUES (?, ?, 'active', NOW(), ?, NOW(), NOW(), 0)";
+            
+            global $db;
+            $stmt = $db->prepare($query);
+            $stmt->execute([
+                $conversationId,
+                $contactId,
+                $this->getCurrentUserId() ?: 'system'
+            ]);
+            
+            return $this->success([
+                'conversationId' => $conversationId,
+                'status' => 'active'
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->error('Failed to start conversation: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Send a message in an AI chat conversation
+     * POST /api/ai/chat/message
+     */
+    public function sendMessage(Request $request) {
+        try {
+            $data = $this->getRequestData();
+            $conversationId = $data['conversationId'] ?? null;
+            $message = $data['message'] ?? '';
+            
+            if (!$conversationId || !$message) {
+                return $this->error('Conversation ID and message are required');
+            }
+            
+            // Store user message
+            $userMessageId = $this->generateUUID();
+            $query = "INSERT INTO ai_chat_messages 
+                     (id, conversation_id, role, content, created_at, deleted)
+                     VALUES (?, ?, 'user', ?, NOW(), 0)";
+            
+            global $db;
+            $stmt = $db->prepare($query);
+            $stmt->execute([$userMessageId, $conversationId, $message]);
+            
+            // Get conversation context
+            $context = $this->getChatContext($conversationId);
+            
+            // Generate AI response
+            $aiResponse = $this->generateAIResponse($message, $context);
+            
+            // Store AI response
+            $aiMessageId = $this->generateUUID();
+            $query = "INSERT INTO ai_chat_messages 
+                     (id, conversation_id, role, content, metadata, created_at, deleted)
+                     VALUES (?, ?, 'assistant', ?, ?, NOW(), 0)";
+            
+            $metadata = json_encode([
+                'sentiment' => $aiResponse['sentiment'] ?? 'neutral',
+                'confidence' => $aiResponse['confidence'] ?? 0.95,
+                'intent' => $aiResponse['intent'] ?? 'general'
+            ]);
+            
+            $stmt = $db->prepare($query);
+            $stmt->execute([
+                $aiMessageId,
+                $conversationId,
+                $aiResponse['message'],
+                $metadata
+            ]);
+            
+            // Handle special intents
+            if (isset($aiResponse['intent'])) {
+                switch ($aiResponse['intent']) {
+                    case 'create_ticket':
+                        $this->handleTicketCreation($conversationId, $aiResponse);
+                        break;
+                    case 'schedule_demo':
+                        $this->handleDemoScheduling($conversationId, $aiResponse);
+                        break;
+                    case 'knowledge_query':
+                        $this->handleKnowledgeQuery($conversationId, $aiResponse);
+                        break;
+                }
+            }
+            
+            return $this->success([
+                'response' => $aiResponse['message'],
+                'metadata' => [
+                    'sentiment' => $aiResponse['sentiment'] ?? 'neutral',
+                    'confidence' => $aiResponse['confidence'] ?? 0.95,
+                    'intent' => $aiResponse['intent'] ?? 'general'
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->error('Failed to send message: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Get chat history for a contact
+     * GET /api/ai/chat/history/{contact_id}
+     */
+    public function getChatHistory(Request $request) {
+        try {
+            $contactId = $request->getParam('contact_id');
+            
+            if (!$contactId) {
+                return $this->error('Contact ID is required');
+            }
+            
+            global $db;
+            $query = "SELECT c.*, 
+                      (SELECT COUNT(*) FROM ai_chat_messages WHERE conversation_id = c.id) as message_count
+                      FROM ai_chat_conversations c
+                      WHERE c.contact_id = ? AND c.deleted = 0
+                      ORDER BY c.started_at DESC";
+            
+            $stmt = $db->prepare($query);
+            $stmt->execute([$contactId]);
+            $conversations = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            
+            $history = [];
+            foreach ($conversations as $conv) {
+                // Get messages for this conversation
+                $msgQuery = "SELECT * FROM ai_chat_messages 
+                            WHERE conversation_id = ? AND deleted = 0
+                            ORDER BY created_at ASC";
+                
+                $msgStmt = $db->prepare($msgQuery);
+                $msgStmt->execute([$conv['id']]);
+                $messages = $msgStmt->fetchAll(\PDO::FETCH_ASSOC);
+                
+                $history[] = [
+                    'conversationId' => $conv['id'],
+                    'status' => $conv['status'],
+                    'startedAt' => $conv['started_at'],
+                    'endedAt' => $conv['ended_at'],
+                    'messageCount' => $conv['message_count'],
+                    'messages' => array_map(function($msg) {
+                        return [
+                            'id' => $msg['id'],
+                            'role' => $msg['role'],
+                            'content' => $msg['content'],
+                            'metadata' => json_decode($msg['metadata'], true),
+                            'createdAt' => $msg['created_at']
+                        ];
+                    }, $messages)
+                ];
+            }
+            
+            return $this->success([
+                'contactId' => $contactId,
+                'conversations' => $history
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->error('Failed to get chat history: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Create a support ticket from chat
+     * POST /api/ai/chat/create-ticket
+     */
+    public function createTicketFromChat(Request $request) {
+        try {
+            $data = $this->getRequestData();
+            $conversationId = $data['conversationId'] ?? null;
+            $summary = $data['summary'] ?? '';
+            $priority = $data['priority'] ?? 'Medium';
+            
+            if (!$conversationId) {
+                return $this->error('Conversation ID is required');
+            }
+            
+            // Get conversation details
+            global $db;
+            $query = "SELECT * FROM ai_chat_conversations WHERE id = ? AND deleted = 0";
+            $stmt = $db->prepare($query);
+            $stmt->execute([$conversationId]);
+            $conversation = $stmt->fetch(\PDO::FETCH_ASSOC);
+            
+            if (!$conversation) {
+                return $this->error('Conversation not found');
+            }
+            
+            // Create case (support ticket)
+            $caseId = $this->generateUUID();
+            $caseNumber = $this->generateCaseNumber();
+            
+            $query = "INSERT INTO cases 
+                     (id, case_number, name, status, priority, type, description, assigned_user_id, 
+                      date_entered, date_modified, created_by, modified_user_id, deleted)
+                     VALUES (?, ?, ?, 'Open', ?, 'Technical', ?, ?, NOW(), NOW(), ?, ?, 0)";
+            
+            $stmt = $db->prepare($query);
+            $stmt->execute([
+                $caseId,
+                $caseNumber,
+                $summary ?: 'Support request from AI chat',
+                $priority,
+                $this->getConversationTranscript($conversationId),
+                $this->getCurrentUserId() ?: '1',
+                $this->getCurrentUserId() ?: '1',
+                $this->getCurrentUserId() ?: '1'
+            ]);
+            
+            // Link to contact if available
+            if ($conversation['contact_id']) {
+                $query = "INSERT INTO contacts_cases (id, contact_id, case_id, date_modified, deleted)
+                         VALUES (?, ?, ?, NOW(), 0)";
+                $stmt = $db->prepare($query);
+                $stmt->execute([
+                    $this->generateUUID(),
+                    $conversation['contact_id'],
+                    $caseId
+                ]);
+            }
+            
+            // Update conversation metadata
+            $query = "UPDATE ai_chat_conversations 
+                     SET metadata = JSON_SET(COALESCE(metadata, '{}'), '$.ticket_id', ?)
+                     WHERE id = ?";
+            $stmt = $db->prepare($query);
+            $stmt->execute([$caseId, $conversationId]);
+            
+            return $this->success([
+                'ticketId' => $caseId,
+                'ticketNumber' => $caseNumber,
+                'message' => 'Support ticket created successfully'
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->error('Failed to create ticket: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Schedule a demo from chat
+     * POST /api/ai/chat/schedule-demo
+     */
+    public function scheduleDemoFromChat(Request $request) {
+        try {
+            $data = $this->getRequestData();
+            $conversationId = $data['conversationId'] ?? null;
+            $requestedDate = $data['requestedDate'] ?? null;
+            $requestedTime = $data['requestedTime'] ?? null;
+            $notes = $data['notes'] ?? '';
+            
+            if (!$conversationId) {
+                return $this->error('Conversation ID is required');
+            }
+            
+            // Get conversation details
+            global $db;
+            $query = "SELECT * FROM ai_chat_conversations WHERE id = ? AND deleted = 0";
+            $stmt = $db->prepare($query);
+            $stmt->execute([$conversationId]);
+            $conversation = $stmt->fetch(\PDO::FETCH_ASSOC);
+            
+            if (!$conversation) {
+                return $this->error('Conversation not found');
+            }
+            
+            // Create meeting
+            $meetingId = $this->generateUUID();
+            $dateStart = $requestedDate && $requestedTime 
+                ? $requestedDate . ' ' . $requestedTime 
+                : date('Y-m-d H:i:s', strtotime('+2 days 10:00:00'));
+            
+            $query = "INSERT INTO meetings 
+                     (id, name, status, location, duration_hours, duration_minutes, 
+                      date_start, description, assigned_user_id, 
+                      date_entered, date_modified, created_by, modified_user_id, deleted)
+                     VALUES (?, ?, 'Planned', 'Online Demo', 1, 0, ?, ?, ?, 
+                             NOW(), NOW(), ?, ?, 0)";
+            
+            $description = "Demo requested via AI chat\n\n" . 
+                          "Notes: " . $notes . "\n\n" .
+                          "Chat transcript:\n" . $this->getConversationTranscript($conversationId);
+            
+            $stmt = $db->prepare($query);
+            $stmt->execute([
+                $meetingId,
+                'Product Demo - AI Chat Request',
+                $dateStart,
+                $description,
+                $this->getCurrentUserId() ?: '1',
+                $this->getCurrentUserId() ?: '1',
+                $this->getCurrentUserId() ?: '1'
+            ]);
+            
+            // Link to contact if available
+            if ($conversation['contact_id']) {
+                $query = "INSERT INTO meetings_contacts (id, meeting_id, contact_id, date_modified, deleted)
+                         VALUES (?, ?, ?, NOW(), 0)";
+                $stmt = $db->prepare($query);
+                $stmt->execute([
+                    $this->generateUUID(),
+                    $meetingId,
+                    $conversation['contact_id']
+                ]);
+            }
+            
+            // Update conversation metadata
+            $query = "UPDATE ai_chat_conversations 
+                     SET metadata = JSON_SET(COALESCE(metadata, '{}'), '$.demo_id', ?)
+                     WHERE id = ?";
+            $stmt = $db->prepare($query);
+            $stmt->execute([$meetingId, $conversationId]);
+            
+            // TODO: Send calendar invite
+            
+            return $this->success([
+                'demoId' => $meetingId,
+                'scheduledDate' => $dateStart,
+                'message' => 'Demo scheduled successfully'
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->error('Failed to schedule demo: ' . $e->getMessage());
+        }
+    }
+    
+    private function getChatContext($conversationId) {
+        global $db;
+        
+        // Get recent messages
+        $query = "SELECT role, content FROM ai_chat_messages 
+                  WHERE conversation_id = ? AND deleted = 0
+                  ORDER BY created_at DESC LIMIT 10";
+        
+        $stmt = $db->prepare($query);
+        $stmt->execute([$conversationId]);
+        $messages = array_reverse($stmt->fetchAll(\PDO::FETCH_ASSOC));
+        
+        // Get conversation metadata
+        $query = "SELECT c.*, 
+                  cont.first_name, cont.last_name, cont.account_name
+                  FROM ai_chat_conversations c
+                  LEFT JOIN contacts cont ON c.contact_id = cont.id
+                  WHERE c.id = ? AND c.deleted = 0";
+        
+        $stmt = $db->prepare($query);
+        $stmt->execute([$conversationId]);
+        $conversation = $stmt->fetch(\PDO::FETCH_ASSOC);
+        
+        return [
+            'messages' => $messages,
+            'contact' => [
+                'name' => trim(($conversation['first_name'] ?? '') . ' ' . ($conversation['last_name'] ?? '')),
+                'company' => $conversation['account_name'] ?? ''
+            ]
+        ];
+    }
+    
+    private function generateAIResponse($message, $context) {
+        // Simple intent detection
+        $intent = 'general';
+        $sentiment = 'neutral';
+        $confidence = 0.95;
+        
+        $messageLower = strtolower($message);
+        
+        // Detect intent
+        if (strpos($messageLower, 'help') !== false || strpos($messageLower, 'support') !== false || 
+            strpos($messageLower, 'issue') !== false || strpos($messageLower, 'problem') !== false) {
+            $intent = 'support';
+        } elseif (strpos($messageLower, 'demo') !== false || strpos($messageLower, 'trial') !== false ||
+                  strpos($messageLower, 'meeting') !== false || strpos($messageLower, 'schedule') !== false) {
+            $intent = 'schedule_demo';
+        } elseif (strpos($messageLower, 'price') !== false || strpos($messageLower, 'pricing') !== false ||
+                  strpos($messageLower, 'cost') !== false) {
+            $intent = 'pricing';
+        } elseif (strpos($messageLower, 'feature') !== false || strpos($messageLower, 'how') !== false ||
+                  strpos($messageLower, 'what') !== false) {
+            $intent = 'knowledge_query';
+        }
+        
+        // Generate response based on intent
+        switch ($intent) {
+            case 'support':
+                $response = "I understand you're experiencing an issue. I can help you create a support ticket. " .
+                           "Could you please describe the problem you're facing in more detail?";
+                break;
+                
+            case 'schedule_demo':
+                $response = "I'd be happy to help you schedule a demo! Our team can show you all the features " .
+                           "and answer any questions. When would be a good time for you?";
+                break;
+                
+            case 'pricing':
+                $response = "Our pricing is based on the number of users and features you need. " .
+                           "For detailed pricing information, I can have our sales team contact you. " .
+                           "Would you like me to schedule a call?";
+                break;
+                
+            case 'knowledge_query':
+                // Search knowledge base
+                $kbResults = $this->searchKnowledgeBase($message);
+                if (!empty($kbResults)) {
+                    $response = "I found some helpful information in our knowledge base:\n\n" .
+                               $kbResults[0]['title'] . "\n" . 
+                               substr($kbResults[0]['content'], 0, 200) . "...\n\n" .
+                               "Would you like me to send you the full article?";
+                } else {
+                    $response = "I'd be happy to help you learn more about our features. " .
+                               "Could you be more specific about what you'd like to know?";
+                }
+                break;
+                
+            default:
+                $response = "Thank you for your message. How can I assist you today? " .
+                           "I can help with product information, scheduling demos, or technical support.";
+        }
+        
+        return [
+            'message' => $response,
+            'intent' => $intent,
+            'sentiment' => $sentiment,
+            'confidence' => $confidence
+        ];
+    }
+    
+    private function handleTicketCreation($conversationId, $aiResponse) {
+        // Auto-create ticket if high confidence support intent
+        if ($aiResponse['intent'] === 'support' && $aiResponse['confidence'] > 0.8) {
+            // This would be called via the createTicketFromChat endpoint
+        }
+    }
+    
+    private function handleDemoScheduling($conversationId, $aiResponse) {
+        // Auto-schedule demo if high confidence demo intent
+        if ($aiResponse['intent'] === 'schedule_demo' && $aiResponse['confidence'] > 0.8) {
+            // This would be called via the scheduleDemoFromChat endpoint
+        }
+    }
+    
+    private function handleKnowledgeQuery($conversationId, $aiResponse) {
+        // Already handled in generateAIResponse
+    }
+    
+    private function searchKnowledgeBase($query) {
+        global $db;
+        
+        $searchTerm = '%' . $query . '%';
+        $query = "SELECT id, name as title, description as content 
+                  FROM aok_knowledgebase 
+                  WHERE (name LIKE ? OR description LIKE ?) 
+                  AND status = 'published' AND deleted = 0
+                  LIMIT 5";
+        
+        $stmt = $db->prepare($query);
+        $stmt->execute([$searchTerm, $searchTerm]);
+        
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+    
+    private function generateCaseNumber() {
+        global $db;
+        
+        // Get the last case number
+        $query = "SELECT case_number FROM cases 
+                  WHERE case_number LIKE 'CASE-%' 
+                  ORDER BY case_number DESC LIMIT 1";
+        
+        $result = $db->query($query);
+        $lastCase = $db->fetchByAssoc($result);
+        
+        if ($lastCase && preg_match('/CASE-(\d+)/', $lastCase['case_number'], $matches)) {
+            $nextNumber = intval($matches[1]) + 1;
+        } else {
+            $nextNumber = 1;
+        }
+        
+        return sprintf('CASE-%03d', $nextNumber);
+    }
+    
+    private function getConversationTranscript($conversationId) {
+        global $db;
+        
+        $query = "SELECT role, content, created_at 
+                  FROM ai_chat_messages 
+                  WHERE conversation_id = ? AND deleted = 0
+                  ORDER BY created_at ASC";
+        
+        $stmt = $db->prepare($query);
+        $stmt->execute([$conversationId]);
+        $messages = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        
+        $transcript = "";
+        foreach ($messages as $msg) {
+            $timestamp = date('Y-m-d H:i:s', strtotime($msg['created_at']));
+            $role = ucfirst($msg['role']);
+            $transcript .= "[$timestamp] $role: {$msg['content']}\n";
+        }
+        
+        return $transcript;
+    }
 }

@@ -18,6 +18,9 @@ class LeadsController extends BaseController
         global $db;
         
         try {
+            // Ensure SugarEmailAddress is loaded
+            require_once('include/SugarEmailAddress/SugarEmailAddress.php');
+            
             $bean = \BeanFactory::newBean($this->module);
             
             // Get pagination parameters
@@ -65,8 +68,7 @@ class LeadsController extends BaseController
             $pagination = new PaginationDTO();
             $pagination->setPage((int)$request->get('page', 1))
                       ->setLimit($limit)
-                      ->setTotal($total)
-                      ->setPages((int)ceil($total / $limit));
+                      ->setTotal($total);
             
             return $response->json([
                 'data' => $leads,

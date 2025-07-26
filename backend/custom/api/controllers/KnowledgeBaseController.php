@@ -738,4 +738,72 @@ class KnowledgeBaseController extends BaseController
         // TODO: Get from JWT token
         return '1'; // Admin user for now
     }
+    
+    /**
+     * Mark an article as helpful
+     * POST /api/kb/articles/{id}/helpful
+     */
+    public function markHelpful(Request $request, Response $response)
+    {
+        try {
+            $articleId = $request->getParam('id');
+            $data = $request->getData();
+            $helpful = $data['helpful'] ?? true;
+            $feedback = $data['feedback'] ?? '';
+            
+            if (!$articleId) {
+                return Response::error('Article ID is required');
+            }
+            
+            // Verify article exists
+            $query = "SELECT id FROM aok_knowledgebase WHERE id = ? AND deleted = 0";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$articleId]);
+            
+            if (!$stmt->fetchColumn()) {
+                return Response::error('Article not found', 404);
+            }
+            
+            // Store feedback
+            $feedbackId = $this->generateUUID();
+            $userId = $this->getCurrentUserId() ?: null;
+            $visitorId = $_COOKIE['visitor_id'] ?? $this->generateUUID();
+            
+            $query = "INSERT INTO knowledge_base_feedback 
+                     (id, article_id, helpful, feedback, user_id, visitor_id, date_created)
+                     VALUES (?, ?, ?, ?, ?, ?, NOW())";
+            
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([
+                $feedbackId,
+                $articleId,
+                $helpful ? 1 : 0,
+                $feedback,
+                $userId,
+                $visitorId
+            ]);
+            
+            // Update article statistics
+            if ($helpful) {
+                $query = "UPDATE aok_knowledgebase 
+                         SET helpful_count = COALESCE(helpful_count, 0) + 1
+                         WHERE id = ?";
+            } else {
+                $query = "UPDATE aok_knowledgebase 
+                         SET not_helpful_count = COALESCE(not_helpful_count, 0) + 1
+                         WHERE id = ?";
+            }
+            
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$articleId]);
+            
+            return Response::success([
+                'message' => 'Thank you for your feedback',
+                'feedbackId' => $feedbackId
+            ]);
+            
+        } catch (\Exception $e) {
+            return Response::error('Failed to submit feedback: ' . $e->getMessage());
+        }
+    }
 }

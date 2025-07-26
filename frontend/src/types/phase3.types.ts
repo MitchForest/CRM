@@ -143,6 +143,7 @@ export interface ChatMessage {
   timestamp: string;
   metadata?: {
     intent?: 'support' | 'sales' | 'general' | 'qualification';
+    sentiment?: string;
     confidence?: number;
     suggested_articles?: string[];
     suggested_actions?: string[];

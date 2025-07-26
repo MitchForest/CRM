@@ -37,4 +37,23 @@ class Response {
     public static function unauthorized($message = 'Unauthorized') {
         return new self(['success' => false, 'error' => $message], 401);
     }
+    
+    public function withJson($data, $statusCode = null) {
+        if ($statusCode !== null) {
+            $this->statusCode = $statusCode;
+        }
+        $this->data = $data;
+        return $this;
+    }
+    
+    public function json($data, $statusCode = null) {
+        return $this->withJson($data, $statusCode);
+    }
+    
+    public function send() {
+        http_response_code($this->statusCode);
+        header('Content-Type: application/json');
+        echo json_encode($this->data);
+        exit;
+    }
 }

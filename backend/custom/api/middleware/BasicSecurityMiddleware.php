@@ -11,6 +11,21 @@ use Api\Response;
 
 class BasicSecurityMiddleware
 {
+    public function handle(Request $request)
+    {
+        // Basic size check
+        $contentLength = $_SERVER['CONTENT_LENGTH'] ?? 0;
+        if ($contentLength && (int)$contentLength > 1048576) { // 1MB
+            http_response_code(413);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Request too large']);
+            return false;
+        }
+        
+        // Continue processing
+        return true;
+    }
+    
     public function __invoke(Request $request, Response $response, callable $next)
     {
         // Basic size check

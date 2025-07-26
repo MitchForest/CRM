@@ -42,7 +42,7 @@ function configureRoutes($router) {
     
     // Form Builder Routes (Phase 3)
     $router->get('/forms', 'Api\Controllers\FormBuilderController::getForms');
-    $router->get('/forms/{id}', 'Api\Controllers\FormBuilderController::getForm');
+    $router->get('/forms/{id}', 'Api\Controllers\FormBuilderController::getForm', ['skipAuth' => true]); // Public endpoint for embed
     $router->post('/forms', 'Api\Controllers\FormBuilderController::createForm');
     $router->put('/forms/{id}', 'Api\Controllers\FormBuilderController::updateForm');
     $router->delete('/forms/{id}', 'Api\Controllers\FormBuilderController::deleteForm');
@@ -78,4 +78,65 @@ function configureRoutes($router) {
     $router->get('/analytics/health-dashboard', 'Api\Controllers\CustomerHealthController::getHealthDashboard');
     $router->post('/admin/recalculate-health-scores', 'Api\Controllers\CustomerHealthController::recalculateAllScores');
     $router->post('/webhooks/health-check', 'Api\Controllers\CustomerHealthController::webhookHealthCheck', ['skipAuth' => true]);
+    
+    // Contacts Routes (Phase 5 - Unified)
+    $router->get('/contacts', 'Api\Controllers\ContactsController::index');
+    $router->get('/contacts/unified', 'Api\Controllers\ContactsController::getUnifiedList');
+    $router->get('/contacts/{id}', 'Api\Controllers\ContactsController::show');
+    $router->get('/contacts/{id}/unified', 'Api\Controllers\ContactsController::getUnifiedView');
+    $router->post('/contacts', 'Api\Controllers\ContactsController::create');
+    $router->put('/contacts/{id}', 'Api\Controllers\ContactsController::update');
+    $router->delete('/contacts/{id}', 'Api\Controllers\ContactsController::delete');
+    
+    // Opportunities Routes
+    $router->get('/opportunities', 'Api\Controllers\OpportunitiesController::index');
+    $router->get('/opportunities/{id}', 'Api\Controllers\OpportunitiesController::show');
+    $router->post('/opportunities', 'Api\Controllers\OpportunitiesController::create');
+    $router->put('/opportunities/{id}', 'Api\Controllers\OpportunitiesController::update');
+    $router->delete('/opportunities/{id}', 'Api\Controllers\OpportunitiesController::delete');
+    
+    // Cases (Support Tickets) Routes
+    $router->get('/cases', 'Api\Controllers\CasesController::index');
+    $router->get('/cases/{id}', 'Api\Controllers\CasesController::show');
+    $router->post('/cases', 'Api\Controllers\CasesController::create');
+    $router->put('/cases/{id}', 'Api\Controllers\CasesController::update');
+    $router->delete('/cases/{id}', 'Api\Controllers\CasesController::delete');
+    
+    // Activities Routes
+    $router->get('/activities', 'Api\Controllers\ActivitiesController::index');
+    $router->get('/activities/{id}', 'Api\Controllers\ActivitiesController::show');
+    $router->post('/activities', 'Api\Controllers\ActivitiesController::create');
+    $router->put('/activities/{id}', 'Api\Controllers\ActivitiesController::update');
+    $router->delete('/activities/{id}', 'Api\Controllers\ActivitiesController::delete');
+    
+    // User/Profile Routes
+    $router->get('/auth/me', 'Api\Controllers\AuthController::getCurrentUser');
+    $router->put('/auth/profile', 'Api\Controllers\AuthController::updateProfile');
+    
+    // AI Chat Routes (Phase 5 - Enhanced)
+    $router->post('/ai/chat/start', 'Api\Controllers\AIController::startConversation');
+    $router->post('/ai/chat/message', 'Api\Controllers\AIController::sendMessage');
+    $router->get('/ai/chat/history/{contact_id}', 'Api\Controllers\AIController::getChatHistory');
+    $router->post('/ai/chat/create-ticket', 'Api\Controllers\AIController::createTicketFromChat');
+    $router->post('/ai/chat/schedule-demo', 'Api\Controllers\AIController::scheduleDemoFromChat');
+    
+    // Form Builder Routes (Phase 5 - Enhanced)
+    $router->get('/forms/active', 'Api\Controllers\FormBuilderController::getActiveForms');
+    $router->get('/forms/{id}/embed', 'Api\Controllers\FormBuilderController::getEmbedCode');
+    $router->post('/forms/{id}/submissions/{submission_id}/convert', 'Api\Controllers\FormBuilderController::convertSubmissionToLead');
+    
+    // Knowledge Base Routes (Phase 5 - Enhanced) 
+    $router->get('/kb/categories', 'Api\Controllers\KnowledgeBaseController::getCategories');
+    $router->get('/kb/articles', 'Api\Controllers\KnowledgeBaseController::getArticles');
+    $router->get('/kb/articles/{id}', 'Api\Controllers\KnowledgeBaseController::getArticle');
+    $router->get('/kb/search', 'Api\Controllers\KnowledgeBaseController::searchArticles');
+    $router->post('/kb/articles/{id}/helpful', 'Api\Controllers\KnowledgeBaseController::markHelpful', ['skipAuth' => true]);
+    
+    // Public Lead Form Submission
+    $router->post('/public/lead-form', 'Api\Controllers\LeadsController::submitPublicForm', ['skipAuth' => true]);
+    
+    // Analytics Routes
+    $router->get('/analytics/overview', 'Api\Controllers\AnalyticsController::getOverview');
+    $router->get('/analytics/conversion-funnel', 'Api\Controllers\AnalyticsController::getConversionFunnel');
+    $router->get('/analytics/lead-sources', 'Api\Controllers\AnalyticsController::getLeadSources');
 }

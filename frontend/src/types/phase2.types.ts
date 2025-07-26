@@ -7,14 +7,11 @@ import type { Opportunity } from './api.generated';
 
 // Opportunity Pipeline Types
 export type OpportunityStage = 
-  | 'Qualification'
-  | 'Needs Analysis'
-  | 'Value Proposition'
-  | 'Decision Makers'
+  | 'Qualified'
   | 'Proposal'
   | 'Negotiation'
-  | 'Closed Won'
-  | 'Closed Lost';
+  | 'Won'
+  | 'Lost';
 
 export interface PipelineStageData {
   stage: OpportunityStage;
@@ -24,14 +21,11 @@ export interface PipelineStageData {
 }
 
 export const STAGE_PROBABILITIES: Record<OpportunityStage, number> = {
-  'Qualification': 10,
-  'Needs Analysis': 20,
-  'Value Proposition': 40,
-  'Decision Makers': 60,
-  'Proposal': 75,
-  'Negotiation': 90,
-  'Closed Won': 100,
-  'Closed Lost': 0,
+  'Qualified': 30,
+  'Proposal': 60,
+  'Negotiation': 80,
+  'Won': 100,
+  'Lost': 0,
 };
 
 // Activity Types
@@ -257,20 +251,16 @@ export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
 
 // Status Maps
 export const OPPORTUNITY_STATUS_COLORS: Record<OpportunityStage, string> = {
-  'Qualification': 'bg-blue-100 text-blue-800',
-  'Needs Analysis': 'bg-purple-100 text-purple-800',
-  'Value Proposition': 'bg-indigo-100 text-indigo-800',
-  'Decision Makers': 'bg-cyan-100 text-cyan-800',
+  'Qualified': 'bg-blue-100 text-blue-800',
   'Proposal': 'bg-orange-100 text-orange-800',
   'Negotiation': 'bg-yellow-100 text-yellow-800',
-  'Closed Won': 'bg-green-100 text-green-800',
-  'Closed Lost': 'bg-red-100 text-red-800',
+  'Won': 'bg-green-100 text-green-800',
+  'Lost': 'bg-red-100 text-red-800',
 };
 
 export const CASE_STATUS_COLORS: Record<string, string> = {
-  'New': 'bg-blue-100 text-blue-800',
-  'Assigned': 'bg-yellow-100 text-yellow-800',
-  'In Progress': 'bg-purple-100 text-purple-800',
-  'Pending Input': 'bg-orange-100 text-orange-800',
+  'Open': 'bg-blue-100 text-blue-800',
+  'In Progress': 'bg-yellow-100 text-yellow-800',
+  'Resolved': 'bg-green-100 text-green-800',
   'Closed': 'bg-gray-100 text-gray-800',
 };

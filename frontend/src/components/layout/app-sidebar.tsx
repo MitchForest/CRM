@@ -1,18 +1,14 @@
 import { 
   LayoutDashboard, 
   Users, 
-  Target, 
-  Building2,
+  Target,
   TrendingUp,
-  Calendar,
   HeadphonesIcon,
   Settings,
   LogOut,
-  Brain,
   FileText,
   BookOpen,
   Activity,
-  Heart,
   MessageCircle
 } from "lucide-react"
 import {
@@ -52,67 +48,43 @@ const mainNavItems = [
     module: "Contacts" as const,
   },
   {
-    title: "Accounts",
-    url: "/app/accounts",
-    icon: Building2,
-    module: "Accounts" as const,
-  },
-  {
     title: "Opportunities",
     url: "/app/opportunities",
     icon: TrendingUp,
     module: "Opportunities" as const,
   },
   {
-    title: "Activities",
-    url: "/app/activities",
-    icon: Calendar,
-    module: "Activities" as const,
-  },
-  {
-    title: "Cases",
+    title: "Support Tickets",
     url: "/app/cases",
     icon: HeadphonesIcon,
     module: "Cases" as const,
   },
 ]
 
-const phase3NavItems = [
+const adminNavItems = [
   {
-    title: "AI Lead Scoring",
-    url: "/app/leads/scoring",
-    icon: Brain,
-    module: "Leads" as const,
+    title: "Knowledge Base",
+    url: "/app/kb",
+    icon: BookOpen,
+    module: null,
   },
   {
     title: "Forms",
     url: "/app/forms",
     icon: FileText,
-    module: null, // Forms might be accessible to all
-  },
-  {
-    title: "Knowledge Base",
-    url: "/app/kb",
-    icon: BookOpen,
-    module: null, // KB might be accessible to all
-  },
-  {
-    title: "Activity Tracking",
-    url: "/app/tracking",
-    icon: Activity,
-    module: null, // Tracking might be accessible to all
-  },
-  {
-    title: "Customer Health",
-    url: "/app/health",
-    icon: Heart,
-    module: "Accounts" as const,
+    module: null,
   },
   {
     title: "Chatbot",
     url: "/app/chatbot",
     icon: MessageCircle,
-    module: null, // Chatbot settings might be accessible to all
+    module: null,
+  },
+  {
+    title: "Tracking Script",
+    url: "/app/tracking",
+    icon: Activity,
+    module: null,
   },
 ]
 
@@ -172,10 +144,10 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>AI Features</SidebarGroupLabel>
+          <SidebarGroupLabel>Admin</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {phase3NavItems
+              {adminNavItems
                 .filter(item => !item.module || hasModuleAccess(item.module))
                 .map((item) => (
                   <SidebarMenuItem key={item.url}>

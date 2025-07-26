@@ -32,24 +32,26 @@ import type {
   ActivityMetrics,
   CaseMetrics
 } from '@/types/phase2.types'
-import {
-  transformFromJsonApi,
-  transformManyFromJsonApi,
-  transformToJsonApiDocument,
-  extractPaginationMeta,
-  transformJsonApiErrors,
-  buildJsonApiFilters,
-  buildJsonApiSort,
-  buildJsonApiPagination,
-  type JsonApiError
-} from './api-transformers'
+// JSON:API utilities removed - using direct REST API
 import { getStoredAuth, setStoredAuth, clearStoredAuth } from '@/stores/auth-store'
 
 class ApiClient {
   private client: AxiosInstance
   private customClient: AxiosInstance // For Phase 2 custom API
-  private refreshingToken: Promise<string> | null = null
   private customApiToken: string | null = null
+
+  // Unused method - kept for potential future use
+  // private createPagination(page: number, pageSize: number, totalCount: number) {
+  //   const totalPages = Math.ceil(totalCount / pageSize)
+  //   return {
+  //     page,
+  //     pageSize,
+  //     totalPages,
+  //     totalCount,
+  //     hasNext: page < totalPages,
+  //     hasPrevious: page > 1
+  //   }
+  // }
 
   constructor() {
     // SuiteCRM V8 API client
@@ -148,132 +150,122 @@ class ApiClient {
         // This is a JWT token from custom API
         this.customApiToken = auth.accessToken
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to initialize auth from storage:', error)
     }
   }
 
-  private async refreshToken(): Promise<string> {
-    const auth = getStoredAuth()
-    if (!auth?.refreshToken) {
-      throw new Error('No refresh token')
-    }
-    
-    // Check if this is a JWT refresh token (custom API)
-    if (auth.refreshToken.includes('.')) {
-      // Refresh custom API token
-      try {
-        const response = await this.customClient.post('/auth/refresh', {
-          refreshToken: auth.refreshToken
-        })
-        
-        if (response.data?.accessToken) {
-          const newAccessToken = response.data.accessToken
-          this.customApiToken = newAccessToken
-          
-          // Update stored auth
-          setStoredAuth({
-            accessToken: newAccessToken,
-            refreshToken: auth.refreshToken,
-            user: auth.user
-          })
-          
-          return newAccessToken
-        }
-        throw new Error('No access token in refresh response')
-      } catch (error) {
-        console.error('Failed to refresh custom API token:', error)
-        throw error
-      }
-    } else {
-      // Fallback to OAuth refresh for legacy tokens
-      const params = new URLSearchParams()
-      params.append('grant_type', 'refresh_token')
-      params.append('client_id', 'suitecrm_client')
-      params.append('client_secret', 'secret123')
-      params.append('refresh_token', auth.refreshToken)
-      
-      const response = await axios.post(
-        '/Api/access_token', // Use relative URL to work with Vite proxy
-        params,
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-          }
-        }
-      )
-      
-      if (!response.data.access_token) {
-        throw new Error('Failed to refresh token')
-      }
+  // Unused method - kept for potential future use
+  // private async refreshAccessToken(): Promise<string> {
+  //   const auth = getStoredAuth()
+  //   if (!auth?.refreshToken) {
+  //     throw new Error('No refresh token')
+  //   }
+  //   
+  //   // Check if this is a JWT refresh token (custom API)
+  //   if (auth.refreshToken.includes('.')) {
+  //     // Refresh custom API token
+  //     try {
+  //       const response = await this.customClient.post('/auth/refresh', {
+  //         refreshToken: auth.refreshToken
+  //       })
+  //       
+  //       if (response.data?.accessToken) {
+  //         const newAccessToken = response.data.accessToken
+  //         this.customApiToken = newAccessToken
+  //         
+  //         // Update stored auth
+  //         setStoredAuth({
+  //           accessToken: newAccessToken,
+  //           refreshToken: auth.refreshToken,
+  //           user: auth.user
+  //         })
+  //         
+  //         return newAccessToken
+  //       }
+  //       throw new Error('No access token in refresh response')
+  //     } catch {
+  //       console.error('Failed to refresh custom API token:', error)
+  //       throw error
+  //     }
+  //   } else {
+  //     // Fallback to OAuth refresh for legacy tokens
+  //     const params = new URLSearchParams()
+  //     params.append('grant_type', 'refresh_token')
+  //     params.append('client_id', 'suitecrm_client')
+  //     params.append('client_secret', 'secret123')
+  //     params.append('refresh_token', auth.refreshToken)
+  //     
+  //     const response = await axios.post(
+  //       '/Api/access_token', // Use relative URL to work with Vite proxy
+  //       params,
+  //       {
+  //         headers: {
+  //           'Content-Type': 'application/x-www-form-urlencoded'
+  //         }
+  //       }
+  //     )
+  //     
+  //     if (!response.data.access_token) {
+  //       throw new Error('Failed to refresh token')
+  //     }
+  //
+  //     const accessToken = response.data.access_token
+  //     const refreshToken = response.data.refresh_token || auth.refreshToken
+  //     
+  //     // Update stored auth using the helper function
+  //     setStoredAuth({
+  //       accessToken,
+  //       refreshToken,
+  //       user: auth.user
+  //     })
+  //     
+  //     return accessToken
+  //   }
+  // }
 
-      const accessToken = response.data.access_token
-      const refreshToken = response.data.refresh_token || auth.refreshToken
-      
-      // Update stored auth using the helper function
-      setStoredAuth({
-        accessToken,
-        refreshToken,
-        user: auth.user
-      })
-      
-      return accessToken
-    }
-  }
-
-  // Initialize custom API authentication
-  private async initCustomApiAuth(username: string, password: string): Promise<{
-    accessToken: string;
-    refreshToken: string;
-    user: any;
-  }> {
-    try {
-      const response = await this.customClient.post('/auth/login', {
-        username,
-        password
-      })
-      
-      console.log('Login response:', response)
-      
-      // Check if the response is wrapped
-      const data = response.data?.data || response.data
-      
-      if (data?.accessToken) {
-        this.customApiToken = data.accessToken
-        return data
-      }
-      
-      console.error('Invalid response structure:', response.data)
-      throw new Error('No access token received from custom API')
-    } catch (error) {
-      console.error('Failed to authenticate with custom API:', error)
-      throw error
-    }
-  }
 
   // Auth methods
   async login(username: string, password: string): Promise<ApiResponse<LoginResponse>> {
-    // DEMO MODE - Always succeed
-    const demoToken = 'demo-token-' + Date.now()
-    const demoUser = {
-      id: '1',
-      username: username || 'admin',
-      email: 'admin@example.com',
-      firstName: 'Admin',
-      lastName: 'User'
-    }
-    
-    // Store the token
-    this.customApiToken = demoToken
-    
-    return {
-      success: true,
-      data: {
-        accessToken: demoToken,
-        refreshToken: 'demo-refresh-' + Date.now(),
-        expiresIn: 86400, // 24 hours
-        tokenType: 'Bearer',
-        user: demoUser
+    try {
+      const response = await this.customClient.post('/auth/login', {
+        email: username, // API expects email, not username
+        password
+      })
+      
+      const data = response.data?.data || response.data
+      
+      if (data?.access_token) {
+        // Store auth data
+        this.customApiToken = data.access_token
+        setStoredAuth({
+          accessToken: data.access_token,
+          refreshToken: data.refresh_token,
+          user: data.user
+        })
+        
+        return {
+          success: true,
+          data: {
+            accessToken: data.access_token,
+            refreshToken: data.refresh_token,
+            expiresIn: data.expires_in || 900, // 15 minutes default
+            tokenType: data.token_type || 'Bearer',
+            user: data.user
+          }
+        }
+      }
+      
+      throw new Error('Invalid response from login')
+    } catch (error: any) {
+      console.error('Login error:', error)
+      return {
+        success: false,
+        error: {
+          error: error.response?.data?.error || 'Login failed',
+          code: 'LOGIN_FAILED',
+          details: { message: error.response?.data?.message || error.message }
+        }
       }
     }
   }
@@ -281,7 +273,7 @@ class ApiClient {
   async logout(): Promise<void> {
     try {
       await this.customClient.post('/auth/logout')
-    } catch (error) {
+    } catch {
       console.error('Logout error:', error)
     } finally {
       // Always clear local auth state
@@ -308,10 +300,10 @@ class ApiClient {
           page: 1,
           pageSize: 10,
           totalPages: 1,
-          totalItems: response.data.data?.length || 0
+          totalCount: response.data.data?.length || 0
         }
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to fetch accounts:', error)
       return {
         data: [],
@@ -319,7 +311,9 @@ class ApiClient {
           page: 1,
           pageSize: 10,
           totalPages: 0,
-          totalItems: 0
+          totalCount: 0,
+          hasNext: false,
+          hasPrevious: false
         }
       }
     }
@@ -329,7 +323,7 @@ class ApiClient {
     try {
       const response = await this.customClient.get(`/accounts/${id}`)
       return { data: response.data.data, success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -338,7 +332,7 @@ class ApiClient {
     try {
       const response = await this.customClient.post('/accounts', data)
       return { data: response.data.data, success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -347,7 +341,7 @@ class ApiClient {
     try {
       const response = await this.customClient.put(`/accounts/${id}`, data)
       return { data: response.data.data, success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -356,7 +350,7 @@ class ApiClient {
     try {
       await this.customClient.delete(`/accounts/${id}`)
       return { success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -378,10 +372,10 @@ class ApiClient {
           page: 1,
           pageSize: 10,
           totalPages: 1,
-          totalItems: response.data.data?.length || 0
+          totalCount: response.data.data?.length || 0
         }
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to fetch contacts:', error)
       return {
         data: [],
@@ -389,7 +383,9 @@ class ApiClient {
           page: 1,
           pageSize: 10,
           totalPages: 0,
-          totalItems: 0
+          totalCount: 0,
+          hasNext: false,
+          hasPrevious: false
         }
       }
     }
@@ -399,7 +395,7 @@ class ApiClient {
     try {
       const response = await this.customClient.get(`/contacts/${id}`)
       return { data: response.data.data, success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -408,7 +404,7 @@ class ApiClient {
     try {
       const response = await this.customClient.post('/contacts', data)
       return { data: response.data.data, success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -417,7 +413,7 @@ class ApiClient {
     try {
       const response = await this.customClient.put(`/contacts/${id}`, data)
       return { data: response.data.data, success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -426,7 +422,7 @@ class ApiClient {
     try {
       await this.customClient.delete(`/contacts/${id}`)
       return { success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -449,10 +445,10 @@ class ApiClient {
           page: 1,
           pageSize: 10,
           totalPages: 1,
-          totalItems: response.data.data?.length || 0
+          totalCount: response.data.data?.length || 0
         }
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to fetch leads:', error)
       return {
         data: [],
@@ -460,7 +456,9 @@ class ApiClient {
           page: 1,
           pageSize: 10,
           totalPages: 0,
-          totalItems: 0
+          totalCount: 0,
+          hasNext: false,
+          hasPrevious: false
         }
       }
     }
@@ -473,7 +471,7 @@ class ApiClient {
         data: response.data.data,
         success: true
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to fetch lead:', error)
       return {
         success: false,
@@ -493,7 +491,7 @@ class ApiClient {
         data: response.data.data,
         success: true
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to create lead:', error)
       return {
         success: false,
@@ -513,7 +511,7 @@ class ApiClient {
         data: response.data.data,
         success: true
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to update lead:', error)
       return {
         success: false,
@@ -533,7 +531,7 @@ class ApiClient {
         data: { contactId: response.data.contactId || '' },
         success: true
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to convert lead:', error)
       return {
         success: false,
@@ -552,7 +550,7 @@ class ApiClient {
       return {
         success: true
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to delete lead:', error)
       return {
         success: false,
@@ -582,10 +580,10 @@ class ApiClient {
           page: 1,
           pageSize: 10,
           totalPages: 1,
-          totalItems: response.data.data?.length || 0
+          totalCount: response.data.data?.length || 0
         }
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to fetch tasks:', error)
       return {
         data: [],
@@ -593,7 +591,9 @@ class ApiClient {
           page: 1,
           pageSize: 10,
           totalPages: 0,
-          totalItems: 0
+          totalCount: 0,
+          hasNext: false,
+          hasPrevious: false
         }
       }
     }
@@ -603,7 +603,7 @@ class ApiClient {
     try {
       const response = await this.customClient.get(`/tasks/${id}`)
       return { data: response.data.data, success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -612,7 +612,7 @@ class ApiClient {
     try {
       const response = await this.customClient.post('/tasks', data)
       return { data: response.data.data, success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -621,7 +621,7 @@ class ApiClient {
     try {
       const response = await this.customClient.put(`/tasks/${id}`, data)
       return { data: response.data.data, success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -643,10 +643,10 @@ class ApiClient {
           page: 1,
           pageSize: 10,
           totalPages: 1,
-          totalItems: response.data.data?.length || 0
+          totalCount: response.data.data?.length || 0
         }
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to fetch opportunities:', error)
       return {
         data: [],
@@ -654,7 +654,9 @@ class ApiClient {
           page: 1,
           pageSize: 10,
           totalPages: 0,
-          totalItems: 0
+          totalCount: 0,
+          hasNext: false,
+          hasPrevious: false
         }
       }
     }
@@ -667,7 +669,7 @@ class ApiClient {
         data: response.data.data,
         success: true
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to fetch opportunity:', error)
       return {
         success: false,
@@ -687,7 +689,7 @@ class ApiClient {
         data: response.data.data,
         success: true
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to create opportunity:', error)
       return {
         success: false,
@@ -707,7 +709,7 @@ class ApiClient {
         data: response.data.data,
         success: true
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to update opportunity:', error)
       return {
         success: false,
@@ -726,7 +728,7 @@ class ApiClient {
       return {
         success: true
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to delete opportunity:', error)
       return {
         success: false,
@@ -760,10 +762,10 @@ class ApiClient {
           page: 1,
           pageSize: 10,
           totalPages: 1,
-          totalItems: response.data.data?.length || 0
+          totalCount: response.data.data?.length || 0
         }
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to fetch calls:', error)
       return {
         data: [],
@@ -771,7 +773,9 @@ class ApiClient {
           page: 1,
           pageSize: 10,
           totalPages: 0,
-          totalItems: 0
+          totalCount: 0,
+          hasNext: false,
+          hasPrevious: false
         }
       }
     }
@@ -781,7 +785,7 @@ class ApiClient {
     try {
       const response = await this.customClient.get(`/calls/${id}`)
       return { data: response.data.data, success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -790,7 +794,7 @@ class ApiClient {
     try {
       const response = await this.customClient.post('/calls', data)
       return { data: response.data.data, success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -799,7 +803,7 @@ class ApiClient {
     try {
       const response = await this.customClient.put(`/calls/${id}`, data)
       return { data: response.data.data, success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -808,7 +812,7 @@ class ApiClient {
     try {
       await this.customClient.delete(`/calls/${id}`)
       return { success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -830,10 +834,10 @@ class ApiClient {
           page: 1,
           pageSize: 10,
           totalPages: 1,
-          totalItems: response.data.data?.length || 0
+          totalCount: response.data.data?.length || 0
         }
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to fetch meetings:', error)
       return {
         data: [],
@@ -841,7 +845,9 @@ class ApiClient {
           page: 1,
           pageSize: 10,
           totalPages: 0,
-          totalItems: 0
+          totalCount: 0,
+          hasNext: false,
+          hasPrevious: false
         }
       }
     }
@@ -851,7 +857,7 @@ class ApiClient {
     try {
       const response = await this.customClient.get(`/meetings/${id}`)
       return { data: response.data.data, success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -860,7 +866,7 @@ class ApiClient {
     try {
       const response = await this.customClient.post('/meetings', data)
       return { data: response.data.data, success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -869,7 +875,7 @@ class ApiClient {
     try {
       const response = await this.customClient.put(`/meetings/${id}`, data)
       return { data: response.data.data, success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -878,7 +884,7 @@ class ApiClient {
     try {
       await this.customClient.delete(`/meetings/${id}`)
       return { success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -900,10 +906,10 @@ class ApiClient {
           page: 1,
           pageSize: 10,
           totalPages: 1,
-          totalItems: response.data.data?.length || 0
+          totalCount: response.data.data?.length || 0
         }
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to fetch notes:', error)
       return {
         data: [],
@@ -911,7 +917,9 @@ class ApiClient {
           page: 1,
           pageSize: 10,
           totalPages: 0,
-          totalItems: 0
+          totalCount: 0,
+          hasNext: false,
+          hasPrevious: false
         }
       }
     }
@@ -921,7 +929,7 @@ class ApiClient {
     try {
       const response = await this.customClient.get(`/notes/${id}`)
       return { data: response.data.data, success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -930,7 +938,7 @@ class ApiClient {
     try {
       const response = await this.customClient.post('/notes', data)
       return { data: response.data.data, success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -939,7 +947,7 @@ class ApiClient {
     try {
       const response = await this.customClient.put(`/notes/${id}`, data)
       return { data: response.data.data, success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -948,7 +956,7 @@ class ApiClient {
     try {
       await this.customClient.delete(`/notes/${id}`)
       return { success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -972,10 +980,10 @@ class ApiClient {
           page: 1,
           pageSize: 10,
           totalPages: 1,
-          totalItems: response.data.data?.length || 0
+          totalCount: response.data.data?.length || 0
         }
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to fetch cases:', error)
       return {
         data: [],
@@ -983,7 +991,9 @@ class ApiClient {
           page: 1,
           pageSize: 10,
           totalPages: 0,
-          totalItems: 0
+          totalCount: 0,
+          hasNext: false,
+          hasPrevious: false
         }
       }
     }
@@ -993,7 +1003,7 @@ class ApiClient {
     try {
       const response = await this.customClient.get(`/cases/${id}`)
       return { data: response.data.data, success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -1002,7 +1012,7 @@ class ApiClient {
     try {
       const response = await this.customClient.post('/cases', data)
       return { data: response.data.data, success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -1011,7 +1021,7 @@ class ApiClient {
     try {
       const response = await this.customClient.put(`/cases/${id}`, data)
       return { data: response.data.data, success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -1020,7 +1030,7 @@ class ApiClient {
     try {
       await this.customClient.delete(`/cases/${id}`)
       return { success: true }
-    } catch (error) {
+    } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
     }
   }
@@ -1033,7 +1043,7 @@ class ApiClient {
         success: true,
         data: response.data.data
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to fetch dashboard metrics:', error)
       return {
         success: false,
@@ -1053,7 +1063,7 @@ class ApiClient {
         success: true,
         data: response.data.data
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to fetch pipeline data:', error)
       return {
         success: false,
@@ -1073,7 +1083,7 @@ class ApiClient {
         success: true,
         data: response.data.data
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to fetch activity metrics:', error)
       return {
         success: false,
@@ -1093,7 +1103,7 @@ class ApiClient {
         success: true,
         data: response.data.data
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to fetch case metrics:', error)
       return {
         success: false,

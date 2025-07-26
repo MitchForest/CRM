@@ -1,10 +1,8 @@
 /**
- * SuiteCRM Forms Embed Script
+ * CRM Forms Embed Script
  * Allows embedding CRM forms on external websites
  * 
- * Usage:
- * <div id="suitecrm-form" data-form-id="YOUR_FORM_ID"></div>
- * <script src="https://your-crm.com/public/js/forms-embed.js"></script>
+ * Usage: The embed code is generated automatically by the form builder
  */
 
 (function() {
@@ -182,6 +180,18 @@
                 referrer: document.referrer,
                 timestamp: new Date().toISOString(),
             };
+            
+            // Capture UTM parameters if enabled
+            if (formData.settings?.capture_utm) {
+                const urlParams = new URLSearchParams(window.location.search);
+                data._utm = {
+                    source: urlParams.get('utm_source') || '',
+                    medium: urlParams.get('utm_medium') || '',
+                    campaign: urlParams.get('utm_campaign') || '',
+                    term: urlParams.get('utm_term') || '',
+                    content: urlParams.get('utm_content') || ''
+                };
+            }
             
             // Submit to API
             const response = await fetch(`${CRM_BASE_URL}${API_ENDPOINT}/${formData.id}/submit`, {

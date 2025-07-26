@@ -111,13 +111,13 @@ export function DashboardPage() {
 
   // Calculate pipeline metrics
   const totalPipelineValue = pipeline?.data?.reduce((sum, stage) => {
-    if (stage.stage !== 'Closed Lost') {
+    if (stage.stage !== 'Lost') {
       return sum + stage.value
     }
     return sum
   }, 0) || 0
 
-  const wonValue = pipeline?.data?.find(s => s.stage === 'Closed Won')?.value || 0
+  const wonValue = pipeline?.data?.find(s => s.stage === 'Won')?.value || 0
 
   return (
     <div className="space-y-6">
@@ -196,7 +196,7 @@ export function DashboardPage() {
           <CardContent>
             {pipeline?.data && pipeline.data.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={pipeline.data.filter(s => s.stage !== 'Closed Lost' && s.stage !== 'Closed Won')}>
+                <BarChart data={pipeline.data.filter(s => s.stage !== 'Lost' && s.stage !== 'Won')}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="stage" angle={-45} textAnchor="end" height={80} />
                   <YAxis tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} />

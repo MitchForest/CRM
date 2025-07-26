@@ -8,15 +8,9 @@ import { LoginPage } from '@/pages/Login'
 import { useAuthStore } from '@/stores/auth-store'
 import { DashboardPage } from '@/pages/Dashboard'
 import { ContactsPage } from '@/pages/Contacts'
-import { ContactDetailPage } from '@/pages/ContactDetail'
-import { ContactFormPage } from '@/pages/ContactForm'
 import { LeadsListPage } from '@/pages/LeadsList'
 import { LeadDetailPage } from '@/pages/LeadDetail'
 import { LeadFormPage } from '@/pages/LeadForm'
-import { AccountsListPage } from '@/pages/AccountsList'
-import { AccountFormPage } from '@/pages/AccountForm'
-import { AccountDetailPage } from '@/pages/AccountDetail'
-import { LeadDebugPage } from '@/pages/LeadDebug'
 import { SettingsPage } from '@/pages/Settings'
 
 // Opportunities
@@ -24,20 +18,16 @@ import { OpportunitiesPipeline } from '@/pages/opportunities/OpportunitiesPipeli
 import { OpportunityForm } from '@/pages/opportunities/OpportunityForm'
 import { OpportunityDetailPage } from '@/pages/opportunities/OpportunityDetail'
 
-// Activities
-import { ActivitiesList } from '@/pages/activities/ActivitiesList'
-import { CallForm } from '@/pages/activities/CallForm'
-import { MeetingForm } from '@/pages/activities/MeetingForm'
-import { TaskForm } from '@/pages/activities/TaskForm'
-import { NoteForm } from '@/pages/activities/NoteForm'
 
 // Cases
 import { CasesList } from '@/pages/cases/CasesList'
 import { CaseForm } from '@/pages/cases/CaseForm'
 import { CaseDetail } from '@/pages/cases/CaseDetail'
 
+// Phase 5 - Unified Contact View
+import { ContactUnifiedView } from '@/pages/contacts/ContactUnifiedView'
+
 // Phase 3 - Lazy load for better performance
-const LeadScoringDashboard = lazy(() => import('@/pages/leads/LeadScoringDashboard').then(m => ({ default: m.LeadScoringDashboard })))
 const FormBuilderPage = lazy(() => import('@/pages/forms/FormBuilderPage').then(m => ({ default: m.FormBuilderPage })))
 const FormsList = lazy(() => import('@/pages/forms/FormsList').then(m => ({ default: m.FormsList })))
 const KnowledgeBaseAdmin = lazy(() => import('@/pages/kb/KnowledgeBaseAdmin').then(m => ({ default: m.KnowledgeBaseAdmin })))
@@ -47,17 +37,8 @@ const KnowledgeBasePublic = lazy(() => import('@/pages/kb/KnowledgeBasePublic').
 const ActivityTrackingDashboard = lazy(() => import('@/pages/tracking/ActivityTrackingDashboard').then(m => ({ default: m.ActivityTrackingDashboard })))
 const SessionDetail = lazy(() => import('@/pages/tracking/SessionDetail').then(m => ({ default: m.SessionDetail })))
 const ChatbotSettings = lazy(() => import('@/pages/chatbot/ChatbotSettings').then(m => ({ default: m.ChatbotSettings })))
-const CustomerHealthDashboard = lazy(() => import('@/pages/health/CustomerHealthDashboard').then(m => ({ default: m.CustomerHealthDashboard })))
 
-// Phase 4 - Marketing Pages
-const Homepage = lazy(() => import('@/pages/marketing/Homepage').then(m => ({ default: m.Homepage })))
-const Pricing = lazy(() => import('@/pages/marketing/Pricing').then(m => ({ default: m.Pricing })))
-const DemoBooking = lazy(() => import('@/pages/marketing/DemoBooking').then(m => ({ default: m.DemoBooking })))
-const GetStarted = lazy(() => import('@/pages/marketing/GetStarted').then(m => ({ default: m.GetStarted })))
-const Support = lazy(() => import('@/pages/marketing/Support').then(m => ({ default: m.Support })))
 
-// Layouts
-import { PublicLayout } from '@/components/layout/PublicLayout'
 
 import { Toaster } from '@/components/ui/sonner'
 import { ChatWidget } from '@/components/features/chatbot/ChatWidget'
@@ -133,34 +114,8 @@ function AppContent() {
   return (
       <Router>
         <Routes>
-          {/* Public Marketing Routes */}
-          <Route element={<PublicLayout />}>
-            <Route path="/" element={
-              <Suspense fallback={<PageLoader />}>
-                <Homepage />
-              </Suspense>
-            } />
-            <Route path="/pricing" element={
-              <Suspense fallback={<PageLoader />}>
-                <Pricing />
-              </Suspense>
-            } />
-            <Route path="/demo" element={
-              <Suspense fallback={<PageLoader />}>
-                <DemoBooking />
-              </Suspense>
-            } />
-            <Route path="/get-started" element={
-              <Suspense fallback={<PageLoader />}>
-                <GetStarted />
-              </Suspense>
-            } />
-            <Route path="/support" element={
-              <Suspense fallback={<PageLoader />}>
-                <Support />
-              </Suspense>
-            } />
-          </Route>
+          {/* Redirect to login */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
           
           {/* Public KB Route */}
           <Route path="/kb/public/*" element={
@@ -182,9 +137,7 @@ function AppContent() {
             
             {/* Contacts Routes */}
             <Route path="contacts" element={<ContactsPage />} />
-            <Route path="contacts/new" element={<ContactFormPage />} />
-            <Route path="contacts/:id" element={<ContactDetailPage />} />
-            <Route path="contacts/:id/edit" element={<ContactFormPage />} />
+            <Route path="contacts/:id" element={<ContactUnifiedView />} />
             
             {/* Leads Routes */}
             <Route path="leads" element={<LeadsListPage />} />
@@ -192,11 +145,6 @@ function AppContent() {
             <Route path="leads/:id" element={<LeadDetailPage />} />
             <Route path="leads/:id/edit" element={<LeadFormPage />} />
             
-            {/* Accounts Routes */}
-            <Route path="accounts" element={<AccountsListPage />} />
-            <Route path="accounts/new" element={<AccountFormPage />} />
-            <Route path="accounts/:id" element={<AccountDetailPage />} />
-            <Route path="accounts/:id/edit" element={<AccountFormPage />} />
             
             {/* Opportunities Routes */}
             <Route path="opportunities" element={<OpportunitiesPipeline />} />
@@ -204,16 +152,6 @@ function AppContent() {
             <Route path="opportunities/:id" element={<OpportunityDetailPage />} />
             <Route path="opportunities/:id/edit" element={<OpportunityForm />} />
             
-            {/* Activities Routes */}
-            <Route path="activities" element={<ActivitiesList />} />
-            <Route path="activities/calls/new" element={<CallForm />} />
-            <Route path="activities/calls/:id" element={<CallForm />} />
-            <Route path="activities/meetings/new" element={<MeetingForm />} />
-            <Route path="activities/meetings/:id" element={<MeetingForm />} />
-            <Route path="activities/tasks/new" element={<TaskForm />} />
-            <Route path="activities/tasks/:id" element={<TaskForm />} />
-            <Route path="activities/notes/new" element={<NoteForm />} />
-            <Route path="activities/notes/:id" element={<NoteForm />} />
             
             {/* Cases Routes */}
             <Route path="cases" element={<CasesList />} />
@@ -222,12 +160,6 @@ function AppContent() {
             <Route path="cases/:id/edit" element={<CaseForm />} />
             
             {/* Phase 3 Routes */}
-            {/* AI Lead Scoring */}
-            <Route path="leads/scoring" element={
-              <Suspense fallback={<PageLoader />}>
-                <LeadScoringDashboard />
-              </Suspense>
-            } />
             
             {/* Form Builder */}
             <Route path="forms" element={
@@ -282,21 +214,12 @@ function AppContent() {
               </Suspense>
             } />
             
-            {/* Customer Health */}
-            <Route path="health" element={
-              <Suspense fallback={<PageLoader />}>
-                <CustomerHealthDashboard />
-              </Suspense>
-            } />
-            
-            <Route path="debug/leads" element={<LeadDebugPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
           
           {/* Redirect old routes to /app */}
           <Route path="/contacts" element={<Navigate to="/app/contacts" replace />} />
           <Route path="/leads" element={<Navigate to="/app/leads" replace />} />
-          <Route path="/accounts" element={<Navigate to="/app/accounts" replace />} />
           
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

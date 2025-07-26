@@ -40,14 +40,11 @@ const opportunitySchema = z.object({
 type OpportunityFormData = z.infer<typeof opportunitySchema>
 
 const stages: OpportunityStage[] = [
-  'Qualification',
-  'Needs Analysis',
-  'Value Proposition',
-  'Decision Makers',
+  'Qualified',
   'Proposal',
   'Negotiation',
-  'Closed Won',
-  'Closed Lost',
+  'Won',
+  'Lost',
 ]
 
 export function OpportunityForm() {
@@ -69,8 +66,8 @@ export function OpportunityForm() {
   } = useForm<OpportunityFormData>({
     resolver: zodResolver(opportunitySchema),
     defaultValues: {
-      salesStage: 'Qualification',
-      probability: 10,
+      salesStage: 'Qualified',
+      probability: 30,
       closeDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
     },
   })

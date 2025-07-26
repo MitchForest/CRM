@@ -251,4 +251,82 @@ abstract class BaseController {
         // Default fallback
         return 'date_entered DESC';
     }
+    
+    /**
+     * Generate UUID
+     */
+    protected function generateUUID()
+    {
+        return sprintf(
+            '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0x0fff) | 0x4000,
+            mt_rand(0, 0x3fff) | 0x8000,
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+        );
+    }
+    
+    /**
+     * Get current user ID from JWT token
+     */
+    protected function getCurrentUserId()
+    {
+        // Try multiple ways to get the Authorization header
+        $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+        
+        // If not found, try getallheaders()
+        if (!$authHeader && function_exists('getallheaders')) {
+            $headers = getallheaders();
+            $authHeader = $headers['Authorization'] ?? '';
+        }
+        
+        // Also check REDIRECT_HTTP_AUTHORIZATION (some Apache configs)
+        if (!$authHeader) {
+            $authHeader = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+        }
+        
+        if ($authHeader && strpos($authHeader, 'Bearer ') === 0) {
+            $token = substr($authHeader, 7);
+            try {
+                require_once __DIR__ . '/../Auth/JWT.php';
+                $payload = \Api\Auth\JWT::decode($token);
+                return $payload['user_id'] ?? null;
+            } catch (\Exception $e) {
+                return null;
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Legacy support methods for older controllers
+     */
+    protected function success($data, $statusCode = 200)
+    {
+        http_response_code($statusCode);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'data' => $data]);
+        exit;
+    }
+    
+    protected function error($message, $statusCode = 400)
+    {
+        http_response_code($statusCode);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => $message]);
+        exit;
+    }
+    
+    protected function getRequestData()
+    {
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+        
+        if (strpos($contentType, 'application/json') !== false) {
+            return json_decode(file_get_contents('php://input'), true) ?? [];
+        }
+        
+        return $_POST;
+    }
 }
