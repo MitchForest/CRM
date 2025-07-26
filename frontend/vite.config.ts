@@ -41,10 +41,7 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
-        rewrite: (path) => {
-          // Direct rewrite to standalone.php
-          return '/custom/api/standalone.php' + path;
-        },
+        rewrite: (path) => path.replace(/^\/api/, '/custom/api'),
       },
     },
   },

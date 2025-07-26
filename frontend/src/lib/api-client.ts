@@ -151,7 +151,7 @@ class ApiClient {
         this.customApiToken = auth.accessToken
       }
     } catch {
-      console.error('Failed to initialize auth from storage:', error)
+      console.error('Failed to initialize auth from storage')
     }
   }
 
@@ -229,28 +229,28 @@ class ApiClient {
   async login(username: string, password: string): Promise<ApiResponse<LoginResponse>> {
     try {
       const response = await this.customClient.post('/auth/login', {
-        email: username, // API expects email, not username
+        username: username, // API expects username
         password
       })
       
       const data = response.data?.data || response.data
       
-      if (data?.access_token) {
+      if (data?.accessToken) {
         // Store auth data
-        this.customApiToken = data.access_token
+        this.customApiToken = data.accessToken
         setStoredAuth({
-          accessToken: data.access_token,
-          refreshToken: data.refresh_token,
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
           user: data.user
         })
         
         return {
           success: true,
           data: {
-            accessToken: data.access_token,
-            refreshToken: data.refresh_token,
-            expiresIn: data.expires_in || 900, // 15 minutes default
-            tokenType: data.token_type || 'Bearer',
+            accessToken: data.accessToken,
+            refreshToken: data.refreshToken,
+            expiresIn: data.expiresIn || 900, // 15 minutes default
+            tokenType: data.tokenType || 'Bearer',
             user: data.user
           }
         }
@@ -274,7 +274,7 @@ class ApiClient {
     try {
       await this.customClient.post('/auth/logout')
     } catch {
-      console.error('Logout error:', error)
+      console.error('Logout error')
     } finally {
       // Always clear local auth state
       this.customApiToken = null
@@ -304,7 +304,7 @@ class ApiClient {
         }
       }
     } catch {
-      console.error('Failed to fetch accounts:', error)
+      console.error('Failed to fetch accounts')
       return {
         data: [],
         pagination: {
@@ -376,7 +376,7 @@ class ApiClient {
         }
       }
     } catch {
-      console.error('Failed to fetch contacts:', error)
+      console.error('Failed to fetch contacts')
       return {
         data: [],
         pagination: {
@@ -449,7 +449,7 @@ class ApiClient {
         }
       }
     } catch {
-      console.error('Failed to fetch leads:', error)
+      console.error('Failed to fetch leads')
       return {
         data: [],
         pagination: {
@@ -472,7 +472,7 @@ class ApiClient {
         success: true
       }
     } catch {
-      console.error('Failed to fetch lead:', error)
+      console.error('Failed to fetch lead')
       return {
         success: false,
         error: {
@@ -492,7 +492,7 @@ class ApiClient {
         success: true
       }
     } catch {
-      console.error('Failed to create lead:', error)
+      console.error('Failed to create lead')
       return {
         success: false,
         error: {
@@ -512,7 +512,7 @@ class ApiClient {
         success: true
       }
     } catch {
-      console.error('Failed to update lead:', error)
+      console.error('Failed to update lead')
       return {
         success: false,
         error: {
@@ -532,7 +532,7 @@ class ApiClient {
         success: true
       }
     } catch {
-      console.error('Failed to convert lead:', error)
+      console.error('Failed to convert lead')
       return {
         success: false,
         error: {
@@ -551,7 +551,7 @@ class ApiClient {
         success: true
       }
     } catch {
-      console.error('Failed to delete lead:', error)
+      console.error('Failed to delete lead')
       return {
         success: false,
         error: {
@@ -584,7 +584,7 @@ class ApiClient {
         }
       }
     } catch {
-      console.error('Failed to fetch tasks:', error)
+      console.error('Failed to fetch tasks')
       return {
         data: [],
         pagination: {
@@ -647,7 +647,7 @@ class ApiClient {
         }
       }
     } catch {
-      console.error('Failed to fetch opportunities:', error)
+      console.error('Failed to fetch opportunities')
       return {
         data: [],
         pagination: {
@@ -670,7 +670,7 @@ class ApiClient {
         success: true
       }
     } catch {
-      console.error('Failed to fetch opportunity:', error)
+      console.error('Failed to fetch opportunity')
       return {
         success: false,
         error: {
@@ -690,7 +690,7 @@ class ApiClient {
         success: true
       }
     } catch {
-      console.error('Failed to create opportunity:', error)
+      console.error('Failed to create opportunity')
       return {
         success: false,
         error: {
@@ -710,7 +710,7 @@ class ApiClient {
         success: true
       }
     } catch {
-      console.error('Failed to update opportunity:', error)
+      console.error('Failed to update opportunity')
       return {
         success: false,
         error: {
@@ -729,7 +729,7 @@ class ApiClient {
         success: true
       }
     } catch {
-      console.error('Failed to delete opportunity:', error)
+      console.error('Failed to delete opportunity')
       return {
         success: false,
         error: {
@@ -766,7 +766,7 @@ class ApiClient {
         }
       }
     } catch {
-      console.error('Failed to fetch calls:', error)
+      console.error('Failed to fetch calls')
       return {
         data: [],
         pagination: {
@@ -838,7 +838,7 @@ class ApiClient {
         }
       }
     } catch {
-      console.error('Failed to fetch meetings:', error)
+      console.error('Failed to fetch meetings')
       return {
         data: [],
         pagination: {
@@ -910,7 +910,7 @@ class ApiClient {
         }
       }
     } catch {
-      console.error('Failed to fetch notes:', error)
+      console.error('Failed to fetch notes')
       return {
         data: [],
         pagination: {
@@ -984,7 +984,7 @@ class ApiClient {
         }
       }
     } catch {
-      console.error('Failed to fetch cases:', error)
+      console.error('Failed to fetch cases')
       return {
         data: [],
         pagination: {
@@ -1044,7 +1044,7 @@ class ApiClient {
         data: response.data.data
       }
     } catch {
-      console.error('Failed to fetch dashboard metrics:', error)
+      console.error('Failed to fetch dashboard metrics')
       return {
         success: false,
         error: {
@@ -1064,7 +1064,7 @@ class ApiClient {
         data: response.data.data
       }
     } catch {
-      console.error('Failed to fetch pipeline data:', error)
+      console.error('Failed to fetch pipeline data')
       return {
         success: false,
         error: {
@@ -1084,7 +1084,7 @@ class ApiClient {
         data: response.data.data
       }
     } catch {
-      console.error('Failed to fetch activity metrics:', error)
+      console.error('Failed to fetch activity metrics')
       return {
         success: false,
         error: {
@@ -1104,7 +1104,7 @@ class ApiClient {
         data: response.data.data
       }
     } catch {
-      console.error('Failed to fetch case metrics:', error)
+      console.error('Failed to fetch case metrics')
       return {
         success: false,
         error: {

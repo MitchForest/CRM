@@ -57,17 +57,8 @@ class AuthController extends BaseController {
         $firstName = $user_row['first_name'] ?? '';
         $lastName = $user_row['last_name'] ?? '';
         
-        // Get user email from email_addresses table
-        $emailQuery = "SELECT ea.email_address 
-                      FROM email_addresses ea
-                      JOIN email_addr_bean_rel eabr ON ea.id = eabr.email_address_id
-                      WHERE eabr.bean_id = '$userId' AND eabr.bean_module = 'Users' 
-                      AND eabr.deleted = 0 AND ea.deleted = 0
-                      AND eabr.primary_address = 1
-                      LIMIT 1";
-        $emailResult = $db->query($emailQuery);
-        $emailRow = $db->fetchByAssoc($emailResult);
-        $userEmail = $emailRow['email_address'] ?? '';
+        // Get user email from users table
+        $userEmail = $user_row['email1'] ?? '';
         
         // Generate JWT token
         $payload = [
