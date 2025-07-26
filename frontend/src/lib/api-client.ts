@@ -38,6 +38,7 @@ import { getStoredAuth, setStoredAuth, clearStoredAuth } from '@/stores/auth-sto
 class ApiClient {
   private client: AxiosInstance
   private customClient: AxiosInstance // For Phase 2 custom API
+  // @ts-expect-error - Used in interceptors
   private customApiToken: string | null = null
 
   // Unused method - kept for potential future use
@@ -90,18 +91,12 @@ class ApiClient {
     // Request interceptor for Custom API
     this.customClient.interceptors.request.use(
       (config) => {
-        // Always use the custom API token, never fall back to OAuth token
-        if (this.customApiToken) {
-          config.headers.Authorization = `Bearer ${this.customApiToken}`
-        } else {
-          // Check if we have a stored custom API token
-          const auth = getStoredAuth()
-          if (auth?.accessToken && auth.accessToken.includes('.')) {
-            // JWT tokens have dots (header.payload.signature), OAuth tokens don't
-            // This is a custom API JWT token
-            this.customApiToken = auth.accessToken
-            config.headers.Authorization = `Bearer ${this.customApiToken}`
-          }
+        // Get auth from store
+        const auth = getStoredAuth()
+        if (auth?.accessToken) {
+          // Always set the token if we have one
+          this.customApiToken = auth.accessToken
+          config.headers.Authorization = `Bearer ${auth.accessToken}`
         }
         return config
       },

@@ -49,26 +49,49 @@ class DashboardController extends BaseController
         try {
             $pipelineData = [];
             
-            // Define our simplified stages
-            $stages = [
-                'Qualified' => 'Qualified',
-                'Proposal' => 'Proposal',
-                'Negotiation' => 'Negotiation'
+            // Map actual stages to simplified stages
+            $stageMapping = [
+                'Qualification' => 'Qualified',
+                'Needs Analysis' => 'Qualified',
+                'Value Proposition' => 'Qualified',
+                'Proposal/Price Quote' => 'Proposal',
+                'Negotiation/Review' => 'Negotiation',
+                'Closed Won' => 'Won',
+                'Closed Lost' => 'Lost'
             ];
             
-            foreach ($stages as $stage => $label) {
-                $query = "SELECT COUNT(*) as count, SUM(amount) as value 
-                         FROM opportunities 
-                         WHERE deleted = 0 
-                         AND sales_stage = '$stage'";
-                         
-                $result = $db->query($query);
-                $row = $db->fetchByAssoc($result);
-                
+            // Group by our simplified stages
+            $simplifiedData = [
+                'Qualified' => ['count' => 0, 'value' => 0],
+                'Proposal' => ['count' => 0, 'value' => 0],
+                'Negotiation' => ['count' => 0, 'value' => 0]
+            ];
+            
+            // Get all opportunities and group them
+            $query = "SELECT sales_stage, COUNT(*) as count, SUM(amount) as value 
+                     FROM opportunities 
+                     WHERE deleted = 0 
+                     AND sales_stage NOT IN ('Closed Won', 'Closed Lost')
+                     GROUP BY sales_stage";
+                     
+            $result = $db->query($query);
+            while ($row = $db->fetchByAssoc($result)) {
+                $stage = $row['sales_stage'];
+                if (isset($stageMapping[$stage])) {
+                    $mappedStage = $stageMapping[$stage];
+                    if (isset($simplifiedData[$mappedStage])) {
+                        $simplifiedData[$mappedStage]['count'] += (int)$row['count'];
+                        $simplifiedData[$mappedStage]['value'] += (float)$row['value'];
+                    }
+                }
+            }
+            
+            // Convert to array format
+            foreach ($simplifiedData as $stage => $data) {
                 $pipelineData[] = [
-                    'stage' => $label,
-                    'count' => (int)($row['count'] ?? 0),
-                    'value' => (float)($row['value'] ?? 0)
+                    'stage' => $stage,
+                    'count' => $data['count'],
+                    'value' => $data['value']
                 ];
             }
             
@@ -147,7 +170,7 @@ class DashboardController extends BaseController
         try {
             $leads = [];
             
-            $query = "SELECT id, first_name, last_name, email, phone_mobile, 
+            $query = "SELECT id, first_name, last_name, email1 as email, phone_work as phone, 
                      account_name as company, lead_source, status, date_entered
                      FROM leads
                      WHERE deleted = 0
@@ -160,7 +183,7 @@ class DashboardController extends BaseController
                     'id' => $row['id'],
                     'name' => trim($row['first_name'] . ' ' . $row['last_name']),
                     'email' => $row['email'],
-                    'phone' => $row['phone_mobile'],
+                    'phone' => $row['phone'],
                     'company' => $row['company'],
                     'leadSource' => $row['lead_source'],
                     'status' => $row['status'],
@@ -172,6 +195,42 @@ class DashboardController extends BaseController
         } catch (\Exception $e) {
             return Response::json([
                 'error' => 'Failed to retrieve recent leads: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    public function getCaseMetrics(Request $request)
+    {
+        global $db;
+        
+        try {
+            $metrics = [];
+            
+            // Get open cases count
+            $result = $db->query("SELECT COUNT(*) as total FROM cases WHERE deleted = 0 AND status LIKE 'Open_%'");
+            $row = $db->fetchByAssoc($result);
+            $metrics['openCases'] = (int)($row['total'] ?? 0);
+            
+            // Get closed cases this month
+            $monthStart = date('Y-m-01');
+            $result = $db->query("SELECT COUNT(*) as total FROM cases WHERE deleted = 0 AND status LIKE 'Closed_%' AND date_modified >= '$monthStart'");
+            $row = $db->fetchByAssoc($result);
+            $metrics['closedThisMonth'] = (int)($row['total'] ?? 0);
+            
+            // Get high priority cases
+            $result = $db->query("SELECT COUNT(*) as total FROM cases WHERE deleted = 0 AND priority = 'High' AND status LIKE 'Open_%'");
+            $row = $db->fetchByAssoc($result);
+            $metrics['highPriority'] = (int)($row['total'] ?? 0);
+            
+            // Get average resolution time (simplified - just counting days)
+            $result = $db->query("SELECT AVG(DATEDIFF(date_modified, date_entered)) as avg_days FROM cases WHERE deleted = 0 AND status LIKE 'Closed_%'");
+            $row = $db->fetchByAssoc($result);
+            $metrics['avgResolutionDays'] = round((float)($row['avg_days'] ?? 0), 1);
+            
+            return Response::json(['data' => $metrics]);
+        } catch (\Exception $e) {
+            return Response::json([
+                'error' => 'Failed to retrieve case metrics: ' . $e->getMessage()
             ], 500);
         }
     }

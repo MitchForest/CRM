@@ -6,7 +6,7 @@ use Api\Response;
 
 class ActivitiesController extends BaseController {
     
-    public function index(Request $request, Response $response) {
+    public function index(Request $request) {
         try {
             // Get query parameters
             $page = (int)($_GET['page'] ?? 1);
@@ -62,7 +62,7 @@ class ActivitiesController extends BaseController {
             $offset = ($page - 1) * $limit;
             $activities = array_slice($activities, $offset, $limit);
             
-            return $response->json([
+            return Response::json([
                 'data' => $activities,
                 'pagination' => [
                     'page' => $page,
@@ -75,14 +75,14 @@ class ActivitiesController extends BaseController {
             ]);
             
         } catch (\Exception $e) {
-            return $response->json([
+            return Response::json([
                 'success' => false,
                 'error' => 'Failed to fetch activities: ' . $e->getMessage()
             ], 500);
         }
     }
     
-    public function show(Request $request, Response $response, $id) {
+    public function show(Request $request, $id) {
         try {
             // Try to find the activity in different modules
             $modules = ['Calls', 'Meetings', 'Tasks', 'Notes', 'Emails'];
@@ -90,39 +90,39 @@ class ActivitiesController extends BaseController {
             foreach ($modules as $module) {
                 $bean = \BeanFactory::getBean($module, $id);
                 if (!empty($bean->id)) {
-                    return $response->json([
+                    return Response::json([
                         'data' => $this->formatActivity($bean, strtolower($module))
                     ]);
                 }
             }
             
-            return $response->json([
+            return Response::json([
                 'success' => false,
                 'error' => 'Activity not found'
             ], 404);
             
         } catch (\Exception $e) {
-            return $response->json([
+            return Response::json([
                 'success' => false,
                 'error' => 'Failed to fetch activity: ' . $e->getMessage()
             ], 500);
         }
     }
     
-    public function create(Request $request, Response $response) {
+    public function create(Request $request) {
         try {
             $data = $this->getRequestData();
             
             // Validate required fields
             if (empty($data['type'])) {
-                return $response->json([
+                return Response::json([
                     'success' => false,
                     'error' => 'Activity type is required'
                 ], 400);
             }
             
             if (empty($data['name'])) {
-                return $response->json([
+                return Response::json([
                     'success' => false,
                     'error' => 'Name is required'
                 ], 400);
@@ -166,7 +166,7 @@ class ActivitiesController extends BaseController {
                     break;
                     
                 default:
-                    return $response->json([
+                    return Response::json([
                         'success' => false,
                         'error' => 'Invalid activity type'
                     ], 400);
@@ -192,7 +192,7 @@ class ActivitiesController extends BaseController {
                 }
             }
             
-            return $response->json([
+            return Response::json([
                 'data' => [
                     'id' => $bean->id
                 ],
@@ -200,14 +200,14 @@ class ActivitiesController extends BaseController {
             ], 201);
             
         } catch (\Exception $e) {
-            return $response->json([
+            return Response::json([
                 'success' => false,
                 'error' => 'Failed to create activity: ' . $e->getMessage()
             ], 500);
         }
     }
     
-    public function update(Request $request, Response $response, $id) {
+    public function update(Request $request, $id) {
         try {
             $data = $this->getRequestData();
             
@@ -224,7 +224,7 @@ class ActivitiesController extends BaseController {
             }
             
             if (empty($bean)) {
-                return $response->json([
+                return Response::json([
                 'success' => false,
                 'error' => 'Activity not found'
             ], 404);
@@ -264,7 +264,7 @@ class ActivitiesController extends BaseController {
             
             $bean->save();
             
-            return $response->json([
+            return Response::json([
                 'data' => [
                     'id' => $bean->id
                 ],
@@ -272,14 +272,14 @@ class ActivitiesController extends BaseController {
             ]);
             
         } catch (\Exception $e) {
-            return $response->json([
+            return Response::json([
                 'success' => false,
                 'error' => 'Failed to update activity: ' . $e->getMessage()
             ], 500);
         }
     }
     
-    public function delete(Request $request, Response $response, $id) {
+    public function delete(Request $request, $id) {
         try {
             // Find the activity
             $modules = ['Calls', 'Meetings', 'Tasks', 'Notes'];
@@ -288,19 +288,19 @@ class ActivitiesController extends BaseController {
                 $bean = \BeanFactory::getBean($module, $id);
                 if (!empty($bean->id)) {
                     $bean->mark_deleted($id);
-                    return $response->json([
+                    return Response::json([
                         'message' => 'Activity deleted successfully'
                     ]);
                 }
             }
             
-            return $response->json([
+            return Response::json([
                 'success' => false,
                 'error' => 'Activity not found'
             ], 404);
             
         } catch (\Exception $e) {
-            return $response->json([
+            return Response::json([
                 'success' => false,
                 'error' => 'Failed to delete activity: ' . $e->getMessage()
             ], 500);

@@ -6,7 +6,7 @@ use Api\Response;
 
 class OpportunitiesController extends BaseController {
     
-    public function index(Request $request, Response $response) {
+    public function index(Request $request) {
         try {
             // Get query parameters
             $page = (int)($_GET['page'] ?? 1);
@@ -80,7 +80,7 @@ class OpportunitiesController extends BaseController {
                 ];
             }
             
-            return $response->json([
+            return Response::json([
                 'data' => $opportunities,
                 'pagination' => [
                     'page' => $page,
@@ -93,19 +93,19 @@ class OpportunitiesController extends BaseController {
             ]);
             
         } catch (\Exception $e) {
-            return $response->json([
+            return Response::json([
                 'success' => false,
                 'error' => 'Failed to fetch opportunities: ' . $e->getMessage()
             ], 500);
         }
     }
     
-    public function show(Request $request, Response $response, $id) {
+    public function show(Request $request, $id) {
         try {
             $opp = \BeanFactory::getBean('Opportunities', $id);
             
             if (empty($opp->id)) {
-                return $response->json([
+                return Response::json([
                     'success' => false,
                     'error' => 'Opportunity not found'
                 ], 404);
@@ -126,7 +126,7 @@ class OpportunitiesController extends BaseController {
                 ];
             }
             
-            return $response->json([
+            return Response::json([
                 'data' => [
                     'id' => $opp->id,
                     'name' => $opp->name,
@@ -152,27 +152,27 @@ class OpportunitiesController extends BaseController {
             ]);
             
         } catch (\Exception $e) {
-            return $response->json([
+            return Response::json([
                 'success' => false,
                 'error' => 'Failed to fetch opportunity: ' . $e->getMessage()
             ], 500);
         }
     }
     
-    public function create(Request $request, Response $response) {
+    public function create(Request $request) {
         try {
             $data = $this->getRequestData();
             
             // Validate required fields
             if (empty($data['name'])) {
-                return $response->json([
+                return Response::json([
                     'success' => false,
                     'error' => 'Name is required'
                 ], 400);
             }
             
             if (empty($data['closeDate'])) {
-                return $response->json([
+                return Response::json([
                     'success' => false,
                     'error' => 'Close date is required'
                 ], 400);
@@ -205,7 +205,7 @@ class OpportunitiesController extends BaseController {
                 }
             }
             
-            return $response->json([
+            return Response::json([
                 'data' => [
                     'id' => $opp->id
                 ],
@@ -213,21 +213,21 @@ class OpportunitiesController extends BaseController {
             ], 201);
             
         } catch (\Exception $e) {
-            return $response->json([
+            return Response::json([
                 'success' => false,
                 'error' => 'Failed to create opportunity: ' . $e->getMessage()
             ], 500);
         }
     }
     
-    public function update(Request $request, Response $response, $id) {
+    public function update(Request $request, $id) {
         try {
             $data = $this->getRequestData();
             
             $opp = \BeanFactory::getBean('Opportunities', $id);
             
             if (empty($opp->id)) {
-                return $response->json([
+                return Response::json([
                     'success' => false,
                     'error' => 'Opportunity not found'
                 ], 404);
@@ -261,7 +261,7 @@ class OpportunitiesController extends BaseController {
                 }
             }
             
-            return $response->json([
+            return Response::json([
                 'data' => [
                     'id' => $opp->id
                 ],
@@ -269,19 +269,19 @@ class OpportunitiesController extends BaseController {
             ]);
             
         } catch (\Exception $e) {
-            return $response->json([
+            return Response::json([
                 'success' => false,
                 'error' => 'Failed to update opportunity: ' . $e->getMessage()
             ], 500);
         }
     }
     
-    public function delete(Request $request, Response $response, $id) {
+    public function delete(Request $request, $id) {
         try {
             $opp = \BeanFactory::getBean('Opportunities', $id);
             
             if (empty($opp->id)) {
-                return $response->json([
+                return Response::json([
                     'success' => false,
                     'error' => 'Opportunity not found'
                 ], 404);
@@ -289,12 +289,12 @@ class OpportunitiesController extends BaseController {
             
             $opp->mark_deleted($id);
             
-            return $response->json([
+            return Response::json([
                 'message' => 'Opportunity deleted successfully'
             ]);
             
         } catch (\Exception $e) {
-            return $response->json([
+            return Response::json([
                 'success' => false,
                 'error' => 'Failed to delete opportunity: ' . $e->getMessage()
             ], 500);

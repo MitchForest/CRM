@@ -6,7 +6,7 @@ use Api\Response;
 
 class CasesController extends BaseController {
     
-    public function index(Request $request, Response $response) {
+    public function index(Request $request) {
         try {
             // Get query parameters
             $page = (int)($_GET['page'] ?? 1);
@@ -99,7 +99,7 @@ class CasesController extends BaseController {
                 ];
             }
             
-            return $response->json([
+            return Response::json([
                 'data' => $cases,
                 'pagination' => [
                     'page' => $page,
@@ -112,19 +112,19 @@ class CasesController extends BaseController {
             ]);
             
         } catch (\Exception $e) {
-            return $response->json([
+            return Response::json([
                 'success' => false,
                 'error' => 'Failed to fetch cases: ' . $e->getMessage()
             ], 500);
         }
     }
     
-    public function show(Request $request, Response $response, $id) {
+    public function show(Request $request, $id) {
         try {
             $case = \BeanFactory::getBean('Cases', $id);
             
             if (empty($case->id)) {
-                return $response->json([
+                return Response::json([
                     'success' => false,
                     'error' => 'Case not found'
                 ], 404);
@@ -148,7 +148,7 @@ class CasesController extends BaseController {
             // Get activities
             $activities = $this->getCaseActivities($id);
             
-            return $response->json([
+            return Response::json([
                 'data' => [
                     'id' => $case->id,
                     'caseNumber' => $case->case_number,
@@ -170,20 +170,20 @@ class CasesController extends BaseController {
             ]);
             
         } catch (\Exception $e) {
-            return $response->json([
+            return Response::json([
                 'success' => false,
                 'error' => 'Failed to fetch case: ' . $e->getMessage()
             ], 500);
         }
     }
     
-    public function create(Request $request, Response $response) {
+    public function create(Request $request) {
         try {
             $data = $this->getRequestData();
             
             // Validate required fields
             if (empty($data['name'])) {
-                return $response->json([
+                return Response::json([
                     'success' => false,
                     'error' => 'Name is required'
                 ], 400);
@@ -211,7 +211,7 @@ class CasesController extends BaseController {
                 $case->contacts->add($data['contactId']);
             }
             
-            return $response->json([
+            return Response::json([
                 'data' => [
                     'id' => $case->id,
                     'caseNumber' => $case->case_number
@@ -220,21 +220,21 @@ class CasesController extends BaseController {
             ], 201);
             
         } catch (\Exception $e) {
-            return $response->json([
+            return Response::json([
                 'success' => false,
                 'error' => 'Failed to create case: ' . $e->getMessage()
             ], 500);
         }
     }
     
-    public function update(Request $request, Response $response, $id) {
+    public function update(Request $request, $id) {
         try {
             $data = $this->getRequestData();
             
             $case = \BeanFactory::getBean('Cases', $id);
             
             if (empty($case->id)) {
-                return $response->json([
+                return Response::json([
                     'success' => false,
                     'error' => 'Case not found'
                 ], 404);
@@ -262,7 +262,7 @@ class CasesController extends BaseController {
                 }
             }
             
-            return $response->json([
+            return Response::json([
                 'data' => [
                     'id' => $case->id
                 ],
@@ -270,19 +270,19 @@ class CasesController extends BaseController {
             ]);
             
         } catch (\Exception $e) {
-            return $response->json([
+            return Response::json([
                 'success' => false,
                 'error' => 'Failed to update case: ' . $e->getMessage()
             ], 500);
         }
     }
     
-    public function delete(Request $request, Response $response, $id) {
+    public function delete(Request $request, $id) {
         try {
             $case = \BeanFactory::getBean('Cases', $id);
             
             if (empty($case->id)) {
-                return $response->json([
+                return Response::json([
                     'success' => false,
                     'error' => 'Case not found'
                 ], 404);
@@ -290,12 +290,12 @@ class CasesController extends BaseController {
             
             $case->mark_deleted($id);
             
-            return $response->json([
+            return Response::json([
                 'message' => 'Case deleted successfully'
             ]);
             
         } catch (\Exception $e) {
-            return $response->json([
+            return Response::json([
                 'success' => false,
                 'error' => 'Failed to delete case: ' . $e->getMessage()
             ], 500);
