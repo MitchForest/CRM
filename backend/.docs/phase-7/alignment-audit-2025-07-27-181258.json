@@ -1,0 +1,361 @@
+{
+    "timestamp": "2025-07-27 18:12:58",
+    "total_issues": 71,
+    "issues": [
+        {
+            "location": "App\\Models\\KnowledgeBaseFeedback",
+            "type": "base_model_mismatch",
+            "message": "Extends BaseModel but table has no 'deleted' column"
+        },
+        {
+            "location": "App\\Models\\Account",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'contacts' uses non-existent foreign key 'account_id'"
+        },
+        {
+            "location": "App\\Models\\Account",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'cases' uses non-existent foreign key 'account_id'"
+        },
+        {
+            "location": "App\\Models\\ActivityTrackingSession",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'lead' uses non-existent foreign key 'lead_id'"
+        },
+        {
+            "location": "App\\Models\\ActivityTrackingSession",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'contact' uses non-existent foreign key 'contact_id'"
+        },
+        {
+            "location": "App\\Models\\Call",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'contact' uses non-existent foreign key 'contact_id'"
+        },
+        {
+            "location": "App\\Models\\ChatConversation",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'messages' uses non-existent foreign key 'conversation_id'"
+        },
+        {
+            "location": "App\\Models\\Contact",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'account' uses non-existent foreign key 'account_id'"
+        },
+        {
+            "location": "App\\Models\\Contact",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'cases' uses non-existent foreign key 'contact_id'"
+        },
+        {
+            "location": "App\\Models\\Contact",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'activities' uses non-existent foreign key 'contact_id'"
+        },
+        {
+            "location": "App\\Models\\Contact",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'conversations' uses non-existent foreign key 'contact_id'"
+        },
+        {
+            "location": "App\\Models\\Contact",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'healthScores' uses non-existent foreign key 'contact_id'"
+        },
+        {
+            "location": "App\\Models\\CustomerHealthScore",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'contact' uses non-existent foreign key 'contact_id'"
+        },
+        {
+            "location": "App\\Models\\FormBuilderForm",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'submissions' uses non-existent foreign key 'form_id'"
+        },
+        {
+            "location": "App\\Models\\KnowledgeBaseArticle",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'feedback' uses non-existent foreign key 'article_id'"
+        },
+        {
+            "location": "App\\Models\\Lead",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'scores' uses non-existent foreign key 'lead_id'"
+        },
+        {
+            "location": "App\\Models\\Lead",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'sessions' uses non-existent foreign key 'lead_id'"
+        },
+        {
+            "location": "App\\Models\\Lead",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'conversations' uses non-existent foreign key 'lead_id'"
+        },
+        {
+            "location": "App\\Models\\Lead",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'formSubmissions' uses non-existent foreign key 'lead_id'"
+        },
+        {
+            "location": "App\\Models\\Lead",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'tasks' uses non-existent foreign key 'parent_id'"
+        },
+        {
+            "location": "App\\Models\\Lead",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'calls' uses non-existent foreign key 'parent_id'"
+        },
+        {
+            "location": "App\\Models\\Lead",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'meetings' uses non-existent foreign key 'parent_id'"
+        },
+        {
+            "location": "App\\Models\\Lead",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'notes' uses non-existent foreign key 'parent_id'"
+        },
+        {
+            "location": "App\\Models\\Meeting",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'contact' uses non-existent foreign key 'contact_id'"
+        },
+        {
+            "location": "App\\Models\\Opportunity",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'tasks' uses non-existent foreign key 'parent_id'"
+        },
+        {
+            "location": "App\\Models\\Opportunity",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'calls' uses non-existent foreign key 'parent_id'"
+        },
+        {
+            "location": "App\\Models\\Opportunity",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'meetings' uses non-existent foreign key 'parent_id'"
+        },
+        {
+            "location": "App\\Models\\Opportunity",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'notes' uses non-existent foreign key 'parent_id'"
+        },
+        {
+            "location": "App\\Models\\SupportCase",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'tasks' uses non-existent foreign key 'parent_id'"
+        },
+        {
+            "location": "App\\Models\\SupportCase",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'calls' uses non-existent foreign key 'parent_id'"
+        },
+        {
+            "location": "App\\Models\\SupportCase",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'meetings' uses non-existent foreign key 'parent_id'"
+        },
+        {
+            "location": "App\\Models\\SupportCase",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'notes' uses non-existent foreign key 'parent_id'"
+        },
+        {
+            "location": "App\\Models\\User",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'leads' uses non-existent foreign key 'assigned_user_id'"
+        },
+        {
+            "location": "App\\Models\\User",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'contacts' uses non-existent foreign key 'assigned_user_id'"
+        },
+        {
+            "location": "App\\Models\\User",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'opportunities' uses non-existent foreign key 'assigned_user_id'"
+        },
+        {
+            "location": "App\\Models\\User",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'cases' uses non-existent foreign key 'assigned_user_id'"
+        },
+        {
+            "location": "App\\Models\\User",
+            "type": "missing_foreign_key",
+            "message": "Relationship 'tasks' uses non-existent foreign key 'assigned_user_id'"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        },
+        {
+            "location": "AnalyticsController",
+            "type": "hardcoded_field",
+            "message": "References 'converted' field which doesn't exist in leads table"
+        }
+    ]
+}

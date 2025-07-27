@@ -57,7 +57,7 @@ export function Pricing() {
               Self-Hosted
             </div>
             <CardHeader className="text-center pb-8 pt-12">
-              <CardTitle className="text-3xl">AI CRM Platform</CardTitle>
+              <CardTitle className="text-3xl">Sassy CRM Platform</CardTitle>
               <CardDescription className="mt-2">Everything you need to transform your sales</CardDescription>
               <div className="mt-8">
                 <span className="text-5xl font-bold">$0</span>
@@ -140,7 +140,7 @@ export function Pricing() {
             
             <Card className="border-primary">
               <CardHeader>
-                <CardTitle className="text-xl text-primary">AI CRM (Self-Hosted)</CardTitle>
+                <CardTitle className="text-xl text-primary">Sassy CRM (Self-Hosted)</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-start gap-2">

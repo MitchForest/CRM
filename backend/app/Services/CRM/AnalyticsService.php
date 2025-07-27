@@ -245,7 +245,7 @@ class AnalyticsService
         // Feature usage
         $featureUsage = [
             'ai_scoring_usage' => Lead::whereHas('scores', function ($q) use ($startDate, $endDate) {
-                $q->whereBetween('scored_at', [$startDate, $endDate]);
+                $q->whereBetween('date_scored', [$startDate, $endDate]);
             })->count(),
             'chatbot_conversations' => ChatConversation::whereBetween('started_at', [$startDate, $endDate])->count(),
             'forms_created' => \App\Models\FormBuilderForm::whereBetween('created_at', [$startDate, $endDate])->count()
@@ -263,7 +263,7 @@ class AnalyticsService
      */
     private function getTrendAnalytics($startDate, $endDate): array
     {
-        $days = $startDate->diffInDays($endDate);
+        $days = \App\Helpers\DateHelper::diffInDays($startDate, $endDate);
         $interval = $days > 90 ? 'week' : 'day';
         
         return [
@@ -368,7 +368,7 @@ class AnalyticsService
         }
         
         $totalDays = $opportunities->sum(function ($opp) {
-            return $opp->date_entered->diffInDays($opp->date_closed);
+            return \App\Helpers\DateHelper::diffInDays($opp->date_entered, $opp->date_closed);
         });
         
         return round($totalDays / $opportunities->count(), 1);
@@ -411,7 +411,7 @@ class AnalyticsService
         }
         
         $totalHours = $cases->sum(function ($case) {
-            return $case->date_entered->diffInHours($case->date_modified);
+            return \App\Helpers\DateHelper::diffInHours($case->date_entered, $case->date_modified);
         });
         
         return round($totalHours / $cases->count(), 1);

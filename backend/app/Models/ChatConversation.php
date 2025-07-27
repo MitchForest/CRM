@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Ramsey\Uuid\Uuid;
 
-class ChatConversation extends BaseModel
+class ChatConversation extends Model
 {
     protected $table = 'ai_chat_conversations';
     
@@ -29,6 +31,19 @@ class ChatConversation extends BaseModel
     ];
     
     public $timestamps = false;
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->id)) {
+                $model->id = Uuid::uuid4()->toString();
+            }
+        });
+    }
     
     public function lead(): BelongsTo
     {
@@ -54,7 +69,10 @@ class ChatConversation extends BaseModel
     public function getDurationMinutesAttribute(): ?int
     {
         if ($this->started_at && $this->ended_at) {
-            return $this->started_at->diffInMinutes($this->ended_at);
+            $start = new \DateTime($this->started_at);
+            $end = new \DateTime($this->ended_at);
+            $diff = $end->getTimestamp() - $start->getTimestamp();
+            return intval($diff / 60);
         }
         return null;
     }

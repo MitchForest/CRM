@@ -39,7 +39,11 @@ class Lead extends BaseModel
         'ai_score',
         'ai_score_date',
         'ai_insights',
-        'ai_next_best_action'
+        'ai_next_best_action',
+        'converted',
+        'converted_contact_id',
+        'converted_account_id',
+        'converted_opportunity_id'
     ];
     
     protected $casts = [
@@ -48,7 +52,8 @@ class Lead extends BaseModel
         'ai_score_date' => 'datetime',
         'ai_insights' => 'json',
         'deleted' => 'integer',
-        'ai_score' => 'integer'
+        'ai_score' => 'integer',
+        'converted' => 'integer'
     ];
     
     
@@ -108,7 +113,7 @@ class Lead extends BaseModel
     {
         return $query->whereHas('scores', function ($q) use ($minScore) {
             $q->where('score', '>=', $minScore)
-              ->where('scored_at', '>=', (new \DateTime())->modify('-30 days')->format('Y-m-d H:i:s'));
+              ->where('date_scored', '>=', (new \DateTime())->modify('-30 days')->format('Y-m-d H:i:s'));
         });
     }
     

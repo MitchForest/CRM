@@ -186,7 +186,7 @@ class DashboardService
             ->orderByDesc(
                 LeadScore::select('score')
                     ->whereColumn('lead_id', 'leads.id')
-                    ->latest('scored_at')
+                    ->latest('date_scored')
                     ->limit(1)
             )
             ->limit(5)

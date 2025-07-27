@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Lead;
 use App\Models\LeadScore;
+use App\Models\Contact;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Illuminate\Database\Capsule\Manager as DB;
@@ -182,7 +183,7 @@ class LeadsController extends Controller
                     'lead_id' => $lead->id,
                     'score' => $parsedBody['ai_score'],
                     'factors' => $parsedBody['ai_insights'] ?? [],
-                    'scored_at' => new \DateTime()
+                    'date_scored' => new \DateTime()
                 ]);
             }
             
@@ -248,7 +249,7 @@ class LeadsController extends Controller
                     'lead_id' => $lead->id,
                     'score' => $parsedBody['ai_score'],
                     'factors' => $parsedBody['ai_insights'] ?? [],
-                    'scored_at' => new \DateTime()
+                    'date_scored' => new \DateTime()
                 ]);
             }
             
@@ -318,7 +319,7 @@ class LeadsController extends Controller
             return $this->error($response, 'Lead not found', 404);
         }
         
-        if ($lead->converted) {
+        if ($lead->status === 'converted') {
             return $this->error($response, 'Lead is already converted', 400);
         }
         
@@ -334,11 +335,25 @@ class LeadsController extends Controller
         
         try {
             // Mark lead as converted
-            $lead->converted = 1;
+            $lead->status = 'converted';
             $lead->save();
             
-            // TODO: Implement actual conversion logic
-            // For now, just return success
+            // Create contact from lead
+            $contact = Contact::create([
+                'first_name' => $lead->first_name,
+                'last_name' => $lead->last_name,
+                'email1' => $lead->email1,
+                'phone_work' => $lead->phone_work,
+                'phone_mobile' => $lead->phone_mobile,
+                'primary_address_street' => $lead->primary_address_street,
+                'primary_address_city' => $lead->primary_address_city,
+                'primary_address_state' => $lead->primary_address_state,
+                'primary_address_postalcode' => $lead->primary_address_postalcode,
+                'primary_address_country' => $lead->primary_address_country,
+                'description' => $lead->description,
+                'lead_source' => 'conversion',
+                'assigned_user_id' => $lead->assigned_user_id
+            ]);
             
             DB::commit();
             
@@ -346,7 +361,7 @@ class LeadsController extends Controller
                 'message' => 'Lead converted successfully',
                 'data' => [
                     'lead_id' => $id,
-                    'converted' => true
+                    'contact_id' => $contact->id
                 ]
             ]);
             
@@ -358,7 +373,7 @@ class LeadsController extends Controller
     
     private function formatLead(Lead $lead): array
     {
-        $latestScore = $lead->scores()->latest('scored_at')->first();
+        $latestScore = $lead->scores()->latest('date_scored')->first();
         
         return [
             'id' => $lead->id,
@@ -390,14 +405,10 @@ class LeadsController extends Controller
             'created_by' => $lead->created_by,
             // AI fields
             'ai_score' => $lead->ai_score ?? $latestScore?->score,
-            'ai_score_date' => $lead->ai_score_date?->toIso8601String() ?? $latestScore?->scored_at?->toIso8601String(),
+            'ai_score_date' => $lead->ai_score_date?->toIso8601String() ?? $latestScore?->date_scored?->toIso8601String(),
             'ai_insights' => $lead->ai_insights ?? $latestScore?->factors,
             'ai_next_best_action' => $lead->ai_next_best_action,
-            // Conversion fields
-            'converted' => $lead->converted,
-            'converted_contact_id' => $lead->converted_contact_id,
-            'converted_account_id' => $lead->converted_account_id,
-            'converted_opportunity_id' => $lead->converted_opportunity_id,
+            // Conversion status is tracked via status field
             // Computed fields
             'full_name' => $lead->full_name,
             'latest_score' => $lead->latest_score

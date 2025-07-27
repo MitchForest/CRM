@@ -35,7 +35,7 @@ export function GetStarted() {
   const steps = [
     {
       title: 'Clone the Repository',
-      description: 'Get the AI CRM codebase',
+      description: 'Get the Sassy CRM codebase',
       command: 'git clone https://github.com/yourusername/ai-crm.git\ncd ai-crm',
     },
     {
@@ -58,7 +58,7 @@ export function GetStarted() {
     },
     {
       title: 'Access Your CRM',
-      description: 'Open your browser and start using AI CRM',
+      description: 'Open your browser and start using Sassy CRM',
       command: 'http://your-server-ip',
       note: 'Default login: admin / password (change immediately!)',
     },
@@ -73,10 +73,10 @@ export function GetStarted() {
             Quick Start Guide
           </Badge>
           <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
-            Get AI CRM Running in 30 Minutes
+            Get Sassy CRM Running in 30 Minutes
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
-            Follow these simple steps to self-host your own AI-powered CRM
+            Follow these simple steps to self-host your own Sassy CRM
           </p>
         </div>
 
@@ -243,7 +243,7 @@ export function GetStarted() {
                 </ul>
               </div>
               <div>
-                <h3 className="font-semibold mb-2">🚀 Start Using AI CRM</h3>
+                <h3 className="font-semibold mb-2">🚀 Start Using Sassy CRM</h3>
                 <ul className="space-y-2 text-sm text-gray-600">
                   <li>• Import your existing leads</li>
                   <li>• Create your first form</li>
@@ -287,7 +287,7 @@ export function GetStarted() {
               <div>
                 <h3 className="font-semibold text-green-900">You're almost there!</h3>
                 <p className="text-sm text-green-800 mt-1">
-                  Most teams have their AI CRM up and running in under 30 minutes. 
+                  Most teams have their Sassy CRM up and running in under 30 minutes. 
                   The hardest part is choosing your admin password! 😊
                 </p>
               </div>

@@ -171,13 +171,13 @@ class CaseService
         
         return $cases->filter(function ($case) {
             // High priority open > 24 hours
-            if ($case->priority === 'high' && $case->date_entered->lt((new \DateTime())->modify('-1 day'))) {
+            if ($case->priority === 'high' && $case->date_entered < (new \DateTime())->modify('-1 day')) {
                 $case->attention_reason = 'High priority case open > 24 hours';
                 return true;
             }
             
             // Any case open > 3 days
-            if ($case->date_entered->lt((new \DateTime())->modify('-3 days'))) {
+            if ($case->date_entered < (new \DateTime())->modify('-3 days')) {
                 $case->attention_reason = 'Case open > 3 days';
                 return true;
             }
@@ -187,7 +187,7 @@ class CaseService
                           $case->calls()->latest()->first()?->date_entered ??
                           $case->date_modified;
             
-            if ($lastActivity->lt((new \DateTime())->modify('-2 days'))) {
+            if ($lastActivity < (new \DateTime())->modify('-2 days')) {
                 $case->attention_reason = 'No activity in 48 hours';
                 return true;
             }
@@ -236,7 +236,7 @@ class CaseService
         }
         
         $totalHours = $resolvedCases->sum(function ($case) {
-            return $case->date_entered->diffInHours($case->date_modified);
+            return \App\Helpers\DateHelper::diffInHours($case->date_entered, $case->date_modified);
         });
         
         return round($totalHours / $resolvedCases->count(), 1);
@@ -264,7 +264,7 @@ class CaseService
             }
             
             $withinSLA = $priorityCases->filter(function ($case) use ($targetHours) {
-                return $case->date_entered->diffInHours($case->date_modified) <= $targetHours;
+                return \App\Helpers\DateHelper::diffInHours($case->date_entered, $case->date_modified) <= $targetHours;
             })->count();
             
             $compliance[$priority] = round(($withinSLA / $priorityCases->count()) * 100, 1);

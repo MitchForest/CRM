@@ -29,21 +29,18 @@
     <coverage cacheDirectory=".phpunit.cache/code-coverage"
               processUncoveredFiles="true">
         <include>
-            <directory suffix=".php">custom/api</directory>
+            <directory suffix=".php">app</directory>
         </include>
         <exclude>
-            <directory>custom/api/vendor</directory>
-            <file>custom/api/index.php</file>
-            <file>custom/api/routes.php</file>
+            <directory>vendor</directory>
         </exclude>
     </coverage>
 
     <php>
         <env name="ENVIRONMENT" value="testing"/>
         <env name="DB_HOST" value="mysql"/>
-        <env name="DB_NAME" value="suitecrm_test"/>
+        <env name="DB_NAME" value="crm_test"/>
         <env name="DB_USER" value="root"/>
         <env name="DB_PASSWORD" value="root"/>
-        <env name="SUITECRM_PATH" value="/var/www/html"/>
     </php>
 </phpunit>

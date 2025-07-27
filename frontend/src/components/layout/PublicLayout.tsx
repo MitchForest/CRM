@@ -23,7 +23,7 @@ export function PublicLayout() {
             <div className="flex items-center">
               <Link to="/" className="flex items-center gap-2">
                 <Brain className="h-8 w-8 text-primary" />
-                <span className="text-xl font-bold">AI CRM</span>
+                <span className="text-xl font-bold">Sassy CRM</span>
               </Link>
             </div>
 
@@ -98,10 +98,10 @@ export function PublicLayout() {
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <Brain className="h-6 w-6 text-primary" />
-                <span className="font-bold">AI CRM</span>
+                <span className="font-bold">Sassy CRM</span>
               </div>
               <p className="text-sm text-gray-600">
-                Transform your sales with AI-powered CRM. Self-hosted and secure.
+                Transform your sales with Sassy CRM. AI-powered, self-hosted and secure.
               </p>
             </div>
             <div>
@@ -130,7 +130,7 @@ export function PublicLayout() {
             </div>
           </div>
           <div className="mt-8 pt-8 border-t text-center text-sm text-gray-600">
-            <p>© 2024 AI CRM. All rights reserved. | Self-hosted CRM with AI superpowers</p>
+            <p>© 2024 Sassy CRM. All rights reserved. | Self-hosted CRM with AI superpowers</p>
           </div>
         </div>
       </footer>

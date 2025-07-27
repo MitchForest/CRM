@@ -211,7 +211,7 @@ class ChatbotService
         
         if (!empty($qualificationSignals)) {
             $metadata['qualification_signals'] = $qualificationSignals;
-            $metadata['qualification_score'] = count($qualificationSignals) * 0.1; // Simple scoring
+            $metadata['qualification_score'] = count($qualificationSignals) * 10; // Simple scoring
             
             $conversation->update(['metadata' => $metadata]);
         }

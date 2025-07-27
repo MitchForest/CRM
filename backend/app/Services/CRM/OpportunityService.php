@@ -213,7 +213,7 @@ class OpportunityService
                 'value' => $won->sum('amount'),
                 'average_size' => $won->avg('amount'),
                 'average_days_to_close' => $won->avg(function ($opp) {
-                    return $opp->date_entered->diffInDays($opp->date_closed);
+                    return \App\Helpers\DateHelper::diffInDays($opp->date_entered, $opp->date_closed);
                 })
             ],
             'lost' => [

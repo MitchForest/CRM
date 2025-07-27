@@ -67,7 +67,7 @@ class ApiClient {
 
     // Custom API client for Phase 2 features
     this.customClient = axios.create({
-      baseURL: '/api/crm', // Updated to new backend structure
+      baseURL: '/api', // Correct backend API base URL
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -225,26 +225,26 @@ class ApiClient {
   async login(username: string, password: string): Promise<ApiResponse<LoginResponse>> {
     try {
       const response = await this.customClient.post('/auth/login', {
-        username: username, // API expects username
+        email: username, // API expects email field
         password
       })
       
       const data = response.data?.data || response.data
       
-      if (data?.accessToken) {
+      if (data?.access_token) {
         // Store auth data
-        this.customApiToken = data.accessToken
+        this.customApiToken = data.access_token
         setStoredAuth({
-          accessToken: data.accessToken,
-          refreshToken: data.refreshToken,
+          accessToken: data.access_token,
+          refreshToken: data.refresh_token,
           user: data.user
         })
         
         return {
           success: true,
           data: {
-            accessToken: data.accessToken,
-            refreshToken: data.refreshToken,
+            accessToken: data.access_token,
+            refreshToken: data.refresh_token,
             // expiresIn: data.expiresIn || 900, // Not included in LoginResponse type
             // tokenType: data.tokenType || 'Bearer',
             user: data.user
@@ -282,7 +282,7 @@ class ApiClient {
   // Account methods
   async getAccounts(params?: QueryParams): Promise<ListResponse<AccountDB>> {
     try {
-      const response = await this.customClient.get('/accounts', { 
+      const response = await this.customClient.get('/crm/accounts', { 
         params: {
           page: params?.page || 1,
           limit: params?.limit || 10,
@@ -315,7 +315,7 @@ class ApiClient {
 
   async getAccount(id: string): Promise<ApiResponse<AccountDB>> {
     try {
-      const response = await this.customClient.get(`/accounts/${id}`)
+      const response = await this.customClient.get(`/crm/accounts/${id}`)
       return { data: response.data.data, success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -324,7 +324,7 @@ class ApiClient {
 
   async createAccount(data: Partial<AccountDB>): Promise<ApiResponse<AccountDB>> {
     try {
-      const response = await this.customClient.post('/accounts', data)
+      const response = await this.customClient.post('/crm/accounts', data)
       return { data: response.data.data, success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -333,7 +333,7 @@ class ApiClient {
 
   async updateAccount(id: string, data: Partial<AccountDB>): Promise<ApiResponse<AccountDB>> {
     try {
-      const response = await this.customClient.put(`/accounts/${id}`, data)
+      const response = await this.customClient.put(`/crm/accounts/${id}`, data)
       return { data: response.data.data, success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -342,7 +342,7 @@ class ApiClient {
 
   async deleteAccount(id: string): Promise<ApiResponse<void>> {
     try {
-      await this.customClient.delete(`/accounts/${id}`)
+      await this.customClient.delete(`/crm/accounts/${id}`)
       return { success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -352,7 +352,7 @@ class ApiClient {
   // Contact methods
   async getContacts(params?: QueryParams): Promise<ListResponse<ContactDB>> {
     try {
-      const response = await this.customClient.get('/contacts', { 
+      const response = await this.customClient.get('/crm/contacts', { 
         params: {
           page: params?.page || 1,
           limit: params?.limit || 10,
@@ -385,7 +385,7 @@ class ApiClient {
 
   async getContact(id: string): Promise<ApiResponse<ContactDB>> {
     try {
-      const response = await this.customClient.get(`/contacts/${id}`)
+      const response = await this.customClient.get(`/crm/contacts/${id}`)
       return { data: response.data.data, success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -394,7 +394,7 @@ class ApiClient {
 
   async createContact(data: Partial<ContactDB>): Promise<ApiResponse<ContactDB>> {
     try {
-      const response = await this.customClient.post('/contacts', data)
+      const response = await this.customClient.post('/crm/contacts', data)
       return { data: response.data.data, success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -403,7 +403,7 @@ class ApiClient {
 
   async updateContact(id: string, data: Partial<ContactDB>): Promise<ApiResponse<ContactDB>> {
     try {
-      const response = await this.customClient.put(`/contacts/${id}`, data)
+      const response = await this.customClient.put(`/crm/contacts/${id}`, data)
       return { data: response.data.data, success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -412,7 +412,7 @@ class ApiClient {
 
   async deleteContact(id: string): Promise<ApiResponse<void>> {
     try {
-      await this.customClient.delete(`/contacts/${id}`)
+      await this.customClient.delete(`/crm/contacts/${id}`)
       return { success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -423,7 +423,7 @@ class ApiClient {
   // Lead methods
   async getLeads(params?: QueryParams): Promise<ListResponse<LeadDB>> {
     try {
-      const response = await this.customClient.get('/leads', { 
+      const response = await this.customClient.get('/crm/leads', { 
         params: {
           page: params?.page || 1,
           limit: params?.limit || 10,
@@ -456,7 +456,7 @@ class ApiClient {
 
   async getLead(id: string): Promise<ApiResponse<LeadDB>> {
     try {
-      const response = await this.customClient.get(`/leads/${id}`)
+      const response = await this.customClient.get(`/crm/leads/${id}`)
       return {
         data: response.data.data,
         success: true
@@ -476,7 +476,7 @@ class ApiClient {
 
   async createLead(data: Partial<LeadDB>): Promise<ApiResponse<LeadDB>> {
     try {
-      const response = await this.customClient.post('/leads', data)
+      const response = await this.customClient.post('/crm/leads', data)
       return {
         data: response.data.data,
         success: true
@@ -496,7 +496,7 @@ class ApiClient {
 
   async updateLead(id: string, data: Partial<LeadDB>): Promise<ApiResponse<LeadDB>> {
     try {
-      const response = await this.customClient.put(`/leads/${id}`, data)
+      const response = await this.customClient.put(`/crm/leads/${id}`, data)
       return {
         data: response.data.data,
         success: true
@@ -516,7 +516,7 @@ class ApiClient {
 
   async convertLead(id: string): Promise<ApiResponse<{ contactId: string }>> {
     try {
-      const response = await this.customClient.post(`/leads/${id}/convert`)
+      const response = await this.customClient.post(`/crm/leads/${id}/convert`)
       return {
         data: { contactId: response.data.contactId || '' },
         success: true
@@ -536,7 +536,7 @@ class ApiClient {
 
   async deleteLead(id: string): Promise<ApiResponse<void>> {
     try {
-      await this.customClient.delete(`/leads/${id}`)
+      await this.customClient.delete(`/crm/leads/${id}`)
       return {
         success: true
       }
@@ -1025,7 +1025,7 @@ class ApiClient {
   // Dashboard methods - Phase 2 Custom API
   async getDashboardMetrics(): Promise<ApiResponse<DashboardMetrics>> {
     try {
-      const response = await this.customClient.get('/dashboard/metrics')
+      const response = await this.customClient.get('/crm/dashboard/metrics')
       return {
         success: true,
         data: response.data.data
@@ -1045,7 +1045,7 @@ class ApiClient {
 
   async getPipelineData(): Promise<ApiResponse<PipelineData>> {
     try {
-      const response = await this.customClient.get('/dashboard/pipeline')
+      const response = await this.customClient.get('/crm/dashboard/pipeline')
       return {
         success: true,
         data: response.data.data
@@ -1065,7 +1065,7 @@ class ApiClient {
 
   async getActivityMetrics(): Promise<ApiResponse<ActivityMetrics>> {
     try {
-      const response = await this.customClient.get('/dashboard/activities')
+      const response = await this.customClient.get('/crm/dashboard/activities')
       return {
         success: true,
         data: response.data.data
@@ -1085,7 +1085,7 @@ class ApiClient {
 
   async getCaseMetrics(): Promise<ApiResponse<CaseMetrics>> {
     try {
-      const response = await this.customClient.get('/dashboard/cases')
+      const response = await this.customClient.get('/crm/dashboard/cases')
       return {
         success: true,
         data: response.data.data

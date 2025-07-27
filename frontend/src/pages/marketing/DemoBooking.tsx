@@ -135,7 +135,7 @@ export function DemoBooking() {
             Book Your Demo
           </Badge>
           <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
-            See AI CRM in Action
+            See Sassy CRM in Action
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-lg text-gray-600">
             Get a personalized demo and see how AI can transform your sales process

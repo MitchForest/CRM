@@ -1,0 +1,38 @@
+CRM Alignment Audit Report
+Generated: 2025-07-27 18:20:38
+
+STATISTICS:
+  Models checked: 22
+  Missing columns: 0
+  Extra columns: 0
+  Cast mismatches: 0
+  Relationship issues: 10
+  Controller issues: 11
+
+
+CRITICAL ISSUES:
+- Model ActivityTrackingSession: relationship 'lead' expects foreign key 'lead_id' which doesn't exist
+- Model ActivityTrackingSession: relationship 'contact' expects foreign key 'contact_id' which doesn't exist
+- Model Call: relationship 'contact' expects foreign key 'contact_id' which doesn't exist
+- Model Contact: relationship 'account' expects foreign key 'account_id' which doesn't exist
+- Model CustomerHealthScore: relationship 'contact' expects foreign key 'contact_id' which doesn't exist
+- Model KnowledgeBaseFeedback: extends BaseModel but has no 'deleted' column
+- Model Meeting: relationship 'contact' expects foreign key 'contact_id' which doesn't exist
+- Table activity_tracking_sessions missing expected foreign key: lead_id
+- Table meetings missing expected foreign key: contact_id
+
+
+WARNINGS:
+- Model Account: relationship 'contacts' expects 'account_id' in table 'contacts'
+- Model Contact: relationship 'activities' expects 'contact_id' in table 'activity_tracking_sessions'
+- Model Contact: relationship 'healthScores' expects 'contact_id' in table 'customer_health_scores'
+- Model Lead: relationship 'sessions' expects 'lead_id' in table 'activity_tracking_sessions'
+- Controller ActivitiesController: references field 'deleted (in non-SuiteCRM table)' 1 times on lines: 530
+- Controller AnalyticsController: references field 'converted' 2 times on lines: 640, 641
+- Controller CasesController: references field 'deleted (in non-SuiteCRM table)' 1 times on lines: 251
+- Controller ContactsController: references field 'deleted (in non-SuiteCRM table)' 2 times on lines: 478, 558
+- Controller DocumentController: references field 'deleted (in non-SuiteCRM table)' 1 times on lines: 199
+- Controller EmailController: references field 'deleted (in non-SuiteCRM table)' 1 times on lines: 230
+- Controller FormBuilderController: references field 'deleted (in non-SuiteCRM table)' 1 times on lines: 237
+- Controller LeadsController: references field 'deleted (in non-SuiteCRM table)' 1 times on lines: 286
+- Controller OpportunitiesController: references field 'deleted (in non-SuiteCRM table)' 1 times on lines: 254

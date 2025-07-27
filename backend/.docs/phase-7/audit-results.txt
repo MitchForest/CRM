@@ -1,0 +1,107 @@
+📋 ALIGNMENT AUDIT REPORT
+============================================================
+
+❌ App\Models\KnowledgeBaseFeedback
+   - [base_model_mismatch] Extends BaseModel but table has no 'deleted' column
+
+❌ App\Models\Account
+   - [missing_foreign_key] Relationship 'contacts' uses non-existent foreign key 'account_id'
+   - [missing_foreign_key] Relationship 'cases' uses non-existent foreign key 'account_id'
+
+❌ App\Models\ActivityTrackingSession
+   - [missing_foreign_key] Relationship 'lead' uses non-existent foreign key 'lead_id'
+   - [missing_foreign_key] Relationship 'contact' uses non-existent foreign key 'contact_id'
+
+❌ App\Models\Call
+   - [missing_foreign_key] Relationship 'contact' uses non-existent foreign key 'contact_id'
+
+❌ App\Models\ChatConversation
+   - [missing_foreign_key] Relationship 'messages' uses non-existent foreign key 'conversation_id'
+
+❌ App\Models\Contact
+   - [missing_foreign_key] Relationship 'account' uses non-existent foreign key 'account_id'
+   - [missing_foreign_key] Relationship 'cases' uses non-existent foreign key 'contact_id'
+   - [missing_foreign_key] Relationship 'activities' uses non-existent foreign key 'contact_id'
+   - [missing_foreign_key] Relationship 'conversations' uses non-existent foreign key 'contact_id'
+   - [missing_foreign_key] Relationship 'healthScores' uses non-existent foreign key 'contact_id'
+
+❌ App\Models\CustomerHealthScore
+   - [missing_foreign_key] Relationship 'contact' uses non-existent foreign key 'contact_id'
+
+❌ App\Models\FormBuilderForm
+   - [missing_foreign_key] Relationship 'submissions' uses non-existent foreign key 'form_id'
+
+❌ App\Models\KnowledgeBaseArticle
+   - [missing_foreign_key] Relationship 'feedback' uses non-existent foreign key 'article_id'
+
+❌ App\Models\Lead
+   - [missing_foreign_key] Relationship 'scores' uses non-existent foreign key 'lead_id'
+   - [missing_foreign_key] Relationship 'sessions' uses non-existent foreign key 'lead_id'
+   - [missing_foreign_key] Relationship 'conversations' uses non-existent foreign key 'lead_id'
+   - [missing_foreign_key] Relationship 'formSubmissions' uses non-existent foreign key 'lead_id'
+   - [missing_foreign_key] Relationship 'tasks' uses non-existent foreign key 'parent_id'
+   - [missing_foreign_key] Relationship 'calls' uses non-existent foreign key 'parent_id'
+   - [missing_foreign_key] Relationship 'meetings' uses non-existent foreign key 'parent_id'
+   - [missing_foreign_key] Relationship 'notes' uses non-existent foreign key 'parent_id'
+
+❌ App\Models\Meeting
+   - [missing_foreign_key] Relationship 'contact' uses non-existent foreign key 'contact_id'
+
+❌ App\Models\Opportunity
+   - [missing_foreign_key] Relationship 'tasks' uses non-existent foreign key 'parent_id'
+   - [missing_foreign_key] Relationship 'calls' uses non-existent foreign key 'parent_id'
+   - [missing_foreign_key] Relationship 'meetings' uses non-existent foreign key 'parent_id'
+   - [missing_foreign_key] Relationship 'notes' uses non-existent foreign key 'parent_id'
+
+❌ App\Models\SupportCase
+   - [missing_foreign_key] Relationship 'tasks' uses non-existent foreign key 'parent_id'
+   - [missing_foreign_key] Relationship 'calls' uses non-existent foreign key 'parent_id'
+   - [missing_foreign_key] Relationship 'meetings' uses non-existent foreign key 'parent_id'
+   - [missing_foreign_key] Relationship 'notes' uses non-existent foreign key 'parent_id'
+
+❌ App\Models\User
+   - [missing_foreign_key] Relationship 'leads' uses non-existent foreign key 'assigned_user_id'
+   - [missing_foreign_key] Relationship 'contacts' uses non-existent foreign key 'assigned_user_id'
+   - [missing_foreign_key] Relationship 'opportunities' uses non-existent foreign key 'assigned_user_id'
+   - [missing_foreign_key] Relationship 'cases' uses non-existent foreign key 'assigned_user_id'
+   - [missing_foreign_key] Relationship 'tasks' uses non-existent foreign key 'assigned_user_id'
+
+❌ AnalyticsController
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+   - [hardcoded_field] References 'converted' field which doesn't exist in leads table
+
+Total issues found: 71
+
+Detailed report saved to .docs/phase-7/

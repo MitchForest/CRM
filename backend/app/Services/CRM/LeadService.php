@@ -119,7 +119,7 @@ class LeadService
         foreach ($lead->scores as $score) {
             $timeline->push([
                 'type' => 'ai_score',
-                'timestamp' => $score->scored_at,
+                'timestamp' => $score->date_scored,
                 'title' => 'AI Score Updated',
                 'description' => "Score: " . ($score->score * 100) . "%",
                 'data' => $score
@@ -183,7 +183,7 @@ class LeadService
             'form_submissions' => $lead->formSubmissions->count(),
             'chat_conversations' => $lead->conversations->count(),
             'latest_score' => $lead->ai_score,
-            'days_since_created' => $lead->date_entered->diffInDays(new \DateTime()),
+            'days_since_created' => \App\Helpers\DateHelper::diffInDays($lead->date_entered, new \DateTime()),
             'total_activities' => $lead->tasks->count() + 
                                 $lead->calls->count() + 
                                 $lead->meetings->count() + 
@@ -297,7 +297,7 @@ class LeadService
             ->orderByDesc(Lead::select('score')
                 ->from('ai_lead_scoring_history')
                 ->whereColumn('ai_lead_scoring_history.lead_id', 'leads.id')
-                ->latest('scored_at')
+                ->latest('date_scored')
                 ->limit(1)
             )
             ->limit($limit)

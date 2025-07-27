@@ -117,7 +117,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b">
         <div className="px-2 py-4">
-          <h1 className="text-xl font-bold">AI CRM</h1>
+          <h1 className="text-xl font-bold">Sassy CRM</h1>
         </div>
       </SidebarHeader>
       

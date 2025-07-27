@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Ramsey\Uuid\Uuid;
 
-class LeadScore extends BaseModel
+class LeadScore extends Model
 {
     protected $table = 'ai_lead_scoring_history';
     
@@ -30,6 +32,19 @@ class LeadScore extends BaseModel
     ];
     
     public $timestamps = false;
+    public $incrementing = false;
+    protected $keyType = 'string';
+    
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($model) {
+            if (empty($model->id)) {
+                $model->id = Uuid::uuid4()->toString();
+            }
+        });
+    }
     
     public function lead(): BelongsTo
     {
@@ -38,12 +53,12 @@ class LeadScore extends BaseModel
     
     public function getScorePercentageAttribute(): int
     {
-        return (int) round($this->score * 100);
+        return (int) $this->score;
     }
     
     public function getScoreGradeAttribute(): string
     {
-        $score = $this->score * 100;
+        $score = $this->score;
         
         if ($score >= 80) return 'A';
         if ($score >= 60) return 'B';

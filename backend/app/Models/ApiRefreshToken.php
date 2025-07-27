@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Ramsey\Uuid\Uuid;
 
-class ApiRefreshToken extends BaseModel
+class ApiRefreshToken extends Model
 {
     protected $table = 'api_refresh_tokens';
     
@@ -21,6 +23,19 @@ class ApiRefreshToken extends BaseModel
     ];
     
     public $timestamps = false;
+    public $incrementing = false;
+    protected $keyType = 'string';
+    
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($model) {
+            if (empty($model->id)) {
+                $model->id = Uuid::uuid4()->toString();
+            }
+        });
+    }
     
     public function user(): BelongsTo
     {

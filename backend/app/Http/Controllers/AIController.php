@@ -66,7 +66,7 @@ class AIController extends Controller
                 'recommendations' => $scoreResult['recommendations'],
                 'confidence' => $scoreResult['confidence'],
                 'model_version' => 'gpt-4-turbo-preview',
-                'scored_at' => new \DateTime()
+                'date_scored' => new \DateTime()
             ]);
             
             // Trigger webhook if configured
@@ -86,7 +86,7 @@ class AIController extends Controller
                     'insights' => $scoreResult['insights'],
                     'recommendations' => $scoreResult['recommendations'],
                     'confidence' => $scoreResult['confidence'],
-                    'scored_at' => (new \DateTime())->format('c'),
+                    'date_scored' => (new \DateTime())->format('c'),
                 ]
             ]);
             
@@ -134,7 +134,7 @@ class AIController extends Controller
                     'recommendations' => $scoreResult['recommendations'],
                     'confidence' => $scoreResult['confidence'],
                     'model_version' => 'gpt-4-turbo-preview',
-                    'scored_at' => new \DateTime()
+                    'date_scored' => new \DateTime()
                 ]);
                 
                 $results[] = [
@@ -178,7 +178,7 @@ class AIController extends Controller
         }
         
         $history = LeadScore::where('lead_id', $id)
-            ->orderBy('scored_at', 'DESC')
+            ->orderBy('date_scored', 'DESC')
             ->limit(20)
             ->get()
             ->map(function ($score) {
@@ -192,7 +192,7 @@ class AIController extends Controller
                     'recommendations' => $score->recommendations,
                     'confidence' => $score->confidence,
                     'model_version' => $score->model_version,
-                    'scored_at' => $score->scored_at->toIso8601String()
+                    'date_scored' => $score->date_scored->toIso8601String()
                 ];
             });
         

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Lead;
+use App\Models\Contact;
 use App\Models\Account;
 use App\Models\Opportunity;
 use App\Models\SupportCase;
@@ -62,7 +63,10 @@ class DashboardController extends Controller
             $today = date('Y-m-d');
             $metrics = [
                 'total_leads' => Lead::where('deleted', 0)->count(),
+                'total_contacts' => Contact::where('deleted', 0)->count(),
                 'total_accounts' => Account::where('deleted', 0)->count(),
+                'total_opportunities' => Opportunity::where('deleted', 0)->count(),
+                'total_cases' => SupportCase::where('deleted', 0)->count(),
                 'new_leads_today' => Lead::where('deleted', 0)
                     ->whereDate('date_entered', $today)
                     ->count(),

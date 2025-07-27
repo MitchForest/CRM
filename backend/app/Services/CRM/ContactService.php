@@ -137,7 +137,7 @@ class ContactService
             'open_cases' => $contact->cases->where('status', '!=', 'closed')->count(),
             'total_opportunities' => $contact->opportunities->count(),
             'opportunity_value' => $contact->opportunities->sum('amount'),
-            'days_as_customer' => $contact->date_entered->diffInDays(new \DateTime()),
+            'days_as_customer' => \App\Helpers\DateHelper::diffInDays($contact->date_entered, new \DateTime()),
             'last_activity' => $contact->activities->max('started_at')
         ];
     }
@@ -199,14 +199,14 @@ class ContactService
         $lastScore = $contact->healthScores()->latest()->first();
         $trend = 'stable';
         if ($lastScore) {
-            if ($score > $lastScore->score + 0.1) $trend = 'improving';
-            elseif ($score < $lastScore->score - 0.1) $trend = 'declining';
+            if ($score > $lastScore->score + 10) $trend = 'improving';
+            elseif ($score < $lastScore->score - 10) $trend = 'declining';
         }
         
         // Determine risk level
         $riskLevel = 'low';
-        if ($score < 0.3) $riskLevel = 'high';
-        elseif ($score < 0.6) $riskLevel = 'medium';
+        if ($score < 30) $riskLevel = 'high';
+        elseif ($score < 60) $riskLevel = 'medium';
         
         return CustomerHealthScore::create([
             'contact_id' => $contact->id,

@@ -12,7 +12,7 @@ class LeadScoringService
         'company_size' => 0.20,
         'job_title' => 0.20,
         'engagement' => 0.25,
-        'fit_score' => 0.20,
+        'fit_score' => 20,
         'intent_signals' => 0.15
     ];
     
@@ -34,7 +34,7 @@ class LeadScoringService
             'score' => $score,
             'factors' => $factors,
             'model_version' => '1.0',
-            'scored_at' => (new \DateTime())->format('Y-m-d H:i:s')
+            'date_scored' => (new \DateTime())->format('Y-m-d H:i:s')
         ]);
         
         return $leadScore;
@@ -88,7 +88,7 @@ class LeadScoringService
     private function scoreCompanySize(Lead $lead): array
     {
         if (!$lead->email) {
-            return ['score' => 0.3, 'reason' => 'No email provided'];
+            return ['score' => 30, 'reason' => 'No email provided'];
         }
         
         $domain = substr(strrchr($lead->email, "@"), 1);
@@ -102,11 +102,11 @@ class LeadScoringService
         // Check for free email
         $freeEmails = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com'];
         if (in_array($domain, $freeEmails)) {
-            return ['score' => 0.2, 'reason' => 'Free email provider'];
+            return ['score' => 20, 'reason' => 'Free email provider'];
         }
         
         // Corporate email
-        return ['score' => 0.7, 'reason' => 'Corporate email domain'];
+        return ['score' => 70, 'reason' => 'Corporate email domain'];
     }
     
     /**
@@ -115,7 +115,7 @@ class LeadScoringService
     private function scoreJobTitle(Lead $lead): array
     {
         if (!$lead->title) {
-            return ['score' => 0.3, 'reason' => 'No title provided'];
+            return ['score' => 30, 'reason' => 'No title provided'];
         }
         
         $title = strtolower($lead->title);
@@ -127,15 +127,15 @@ class LeadScoringService
         
         // Influencers
         if (preg_match('/(manager|head|lead|senior|principal)/i', $title)) {
-            return ['score' => 0.7, 'reason' => 'Influencer'];
+            return ['score' => 70, 'reason' => 'Influencer'];
         }
         
         // Technical roles
         if (preg_match('/(engineer|developer|architect|analyst)/i', $title)) {
-            return ['score' => 0.5, 'reason' => 'Technical role'];
+            return ['score' => 50, 'reason' => 'Technical role'];
         }
         
-        return ['score' => 0.3, 'reason' => 'Other role'];
+        return ['score' => 30, 'reason' => 'Other role'];
     }
     
     /**
@@ -154,18 +154,18 @@ class LeadScoringService
         $score = 0;
         
         // Multiple sessions = high interest
-        if ($engagement['sessions'] >= 3) $score += 0.3;
-        elseif ($engagement['sessions'] >= 1) $score += 0.1;
+        if ($engagement['sessions'] >= 3) $score += 30;
+        elseif ($engagement['sessions'] >= 1) $score += 10;
         
         // Page views indicate research
-        if ($engagement['page_views'] >= 10) $score += 0.2;
-        elseif ($engagement['page_views'] >= 5) $score += 0.1;
+        if ($engagement['page_views'] >= 10) $score += 20;
+        elseif ($engagement['page_views'] >= 5) $score += 10;
         
         // Form submissions = strong intent
-        if ($engagement['forms'] > 0) $score += 0.3;
+        if ($engagement['forms'] > 0) $score += 30;
         
         // Chat engagement = immediate need
-        if ($engagement['chats'] > 0) $score += 0.2;
+        if ($engagement['chats'] > 0) $score += 20;
         
         return [
             'score' => min($score, 1.0),

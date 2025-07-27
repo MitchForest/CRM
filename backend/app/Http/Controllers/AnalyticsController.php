@@ -155,7 +155,7 @@ class AnalyticsController extends Controller
                 ->count();
                 
             $convertedLeads = Lead::where('deleted', 0)
-                ->where('converted', 1)
+                ->where('status', 'converted')
                 ->whereBetween('date_entered', [$dateFrom, $dateTo])
                 ->count();
                 
@@ -324,8 +324,7 @@ class AnalyticsController extends Controller
                 ->count();
                 
             $convertedToOpp = Lead::where('deleted', 0)
-                ->where('converted', 1)
-                ->whereNotNull('converted_opp_id')
+                ->where('status', 'converted')
                 ->whereBetween('date_entered', [$dateFrom, $dateTo])
                 ->count();
             
@@ -604,8 +603,7 @@ class AnalyticsController extends Controller
     {
         if ($type === 'lead_to_opp') {
             $avgDays = Lead::where('deleted', 0)
-                ->where('converted', 1)
-                ->whereNotNull('converted_opp_id')
+                ->where('status', 'converted')
                 ->whereBetween('date_modified', [$dateFrom, $dateTo])
                 ->selectRaw('AVG(DATEDIFF(date_modified, date_entered)) as avg_days')
                 ->first()
@@ -631,7 +629,7 @@ class AnalyticsController extends Controller
             ->whereBetween('date_entered', [$dateFrom, $dateTo])
             ->select('lead_source')
             ->selectRaw('COUNT(*) as total')
-            ->selectRaw('SUM(converted) as converted')
+            ->selectRaw('SUM(CASE WHEN status = "converted" THEN 1 ELSE 0 END) as converted')
             ->groupBy('lead_source')
             ->having('total', '>', 5) // Only sources with meaningful data
             ->get()

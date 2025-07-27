@@ -88,6 +88,23 @@ class SchemaService
      */
     public function getOpenAPISpec(): array
     {
+        // Load the comprehensive OpenAPI spec from file
+        $specPath = __DIR__ . '/../../openapi-complete.yaml';
+        if (file_exists($specPath)) {
+            // Check if we have symfony/yaml or can parse YAML
+            if (function_exists('yaml_parse_file')) {
+                return yaml_parse_file($specPath);
+            }
+            
+            // Try to use the JSON version if available
+            $jsonPath = __DIR__ . '/../../public/api-docs/openapi.json';
+            if (file_exists($jsonPath)) {
+                $json = file_get_contents($jsonPath);
+                return json_decode($json, true);
+            }
+        }
+        
+        // Fallback to generating basic spec
         $tables = $this->getCoreTables();
         $schemas = [];
         

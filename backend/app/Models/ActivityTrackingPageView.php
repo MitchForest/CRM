@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Ramsey\Uuid\Uuid;
 
-class ActivityTrackingPageView extends BaseModel
+class ActivityTrackingPageView extends Model
 {
     protected $table = 'activity_tracking_page_views';
     
@@ -26,6 +28,19 @@ class ActivityTrackingPageView extends BaseModel
     ];
     
     public $timestamps = false;
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->id)) {
+                $model->id = Uuid::uuid4()->toString();
+            }
+        });
+    }
     
     public function session(): BelongsTo
     {
