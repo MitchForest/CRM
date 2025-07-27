@@ -5,9 +5,12 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 use OpenApi\Generator;
 
+// Include all directories that might have OpenAPI annotations
 $openapi = Generator::scan([
     __DIR__ . '/app/Http/Controllers',
-    __DIR__ . '/app/Models'
+    __DIR__ . '/app/Models',
+    __DIR__ . '/app/Services',
+    __DIR__ . '/routes'
 ]);
 
 // Save as YAML

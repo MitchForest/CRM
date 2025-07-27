@@ -10,15 +10,16 @@ class KnowledgeBaseFeedback extends BaseModel
     
     protected $fillable = [
         'article_id',
-        'visitor_id',
-        'helpful',
-        'feedback_text',
-        'created_at'
+        'user_id',
+        'session_id',
+        'is_helpful',
+        'feedback',
+        'date_entered'
     ];
     
     protected $casts = [
-        'helpful' => 'boolean',
-        'created_at' => 'datetime'
+        'is_helpful' => 'integer',
+        'date_entered' => 'datetime'
     ];
     
     public $timestamps = false;

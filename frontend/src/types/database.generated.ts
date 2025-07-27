@@ -1,4 +1,4 @@
-// Generated from database schema on 2025-07-27 13:18:26
+// Generated from database schema on 2025-07-27 13:41:05
 
 export interface LeadDB {
   id: string;

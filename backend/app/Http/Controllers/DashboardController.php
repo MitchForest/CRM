@@ -27,7 +27,34 @@ class DashboardController extends Controller
     
     /**
      * Get dashboard metrics
-     * GET /api/crm/dashboard/metrics
+     * 
+     * @OA\Get(
+     *     path="/api/crm/dashboard/metrics",
+     *     tags={"Dashboard"},
+     *     summary="Get dashboard metrics",
+     *     description="Returns key metrics for the dashboard including leads, accounts, and pipeline value",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Dashboard metrics retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="total_leads", type="integer", example=150),
+     *                 @OA\Property(property="total_accounts", type="integer", example=45),
+     *                 @OA\Property(property="new_leads_today", type="integer", example=5),
+     *                 @OA\Property(property="pipeline_value", type="number", format="float", example=250000.00)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Internal server error"
+     *     )
+     * )
      */
     public function getMetrics(Request $request, Response $response, array $args): Response
     {
@@ -53,7 +80,35 @@ class DashboardController extends Controller
     
     /**
      * Get pipeline data
-     * GET /api/crm/dashboard/pipeline
+     * 
+     * @OA\Get(
+     *     path="/api/crm/dashboard/pipeline",
+     *     tags={"Dashboard"},
+     *     summary="Get sales pipeline data",
+     *     description="Returns opportunities grouped by sales stage with counts and values",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Pipeline data retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="data", type="array",
+     *                 @OA\Items(type="object",
+     *                     @OA\Property(property="stage", type="string", example="Qualified"),
+     *                     @OA\Property(property="count", type="integer", example=10),
+     *                     @OA\Property(property="value", type="number", format="float", example=50000.00)
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Internal server error"
+     *     )
+     * )
      */
     public function getPipelineData(Request $request, Response $response, array $args): Response
     {

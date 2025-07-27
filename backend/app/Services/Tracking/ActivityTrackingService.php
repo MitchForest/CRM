@@ -31,12 +31,12 @@ class ActivityTrackingService
             'time_on_page' => 0,
             'bounce' => false,
             'exit_page' => false,
-            'created_at' => now()
+            'created_at' => new \DateTime()
         ]);
         
         // Update session stats
         $session->increment('page_views');
-        $session->update(['ended_at' => now()]);
+        $session->update(['ended_at' => new \DateTime()]);
         
         return $pageView;
     }
@@ -56,7 +56,7 @@ class ActivityTrackingService
                 $totalDuration = $session->pageViews()->sum('time_on_page');
                 $session->update([
                     'duration' => $totalDuration,
-                    'ended_at' => now()
+                    'ended_at' => new \DateTime()
                 ]);
             }
         }
@@ -97,9 +97,11 @@ class ActivityTrackingService
             }
             
             // Update session
+            $now = new \DateTime();
+            $diff = $now->getTimestamp() - (new \DateTime($session->started_at))->getTimestamp();
             $session->update([
-                'ended_at' => now(),
-                'duration' => now()->diffInSeconds($session->started_at)
+                'ended_at' => $now,
+                'duration' => $diff
             ]);
         }
     }
@@ -185,7 +187,7 @@ class ActivityTrackingService
         
         // Check for existing active session (within 30 minutes)
         $existingSession = ActivityTrackingSession::where('visitor_id', $visitor->visitor_id)
-            ->where('ended_at', '>', now()->subMinutes(30))
+            ->where('ended_at', '>', (new \DateTime())->modify('-30 minutes'))
             ->orderBy('started_at', 'desc')
             ->first();
         
@@ -199,7 +201,7 @@ class ActivityTrackingService
             'visitor_id' => $visitor->visitor_id,
             'lead_id' => $data['lead_id'] ?? null,
             'contact_id' => $data['contact_id'] ?? null,
-            'started_at' => now(),
+            'started_at' => new \DateTime(),
             'page_views' => 0,
             'events_count' => 0,
             'form_submissions' => 0,

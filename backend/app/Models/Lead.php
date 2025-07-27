@@ -108,7 +108,7 @@ class Lead extends BaseModel
     {
         return $query->whereHas('scores', function ($q) use ($minScore) {
             $q->where('score', '>=', $minScore)
-              ->where('scored_at', '>=', now()->subDays(30));
+              ->where('scored_at', '>=', (new \DateTime())->modify('-30 days')->format('Y-m-d H:i:s'));
         });
     }
     

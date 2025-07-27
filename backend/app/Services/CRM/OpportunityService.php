@@ -245,7 +245,7 @@ class OpportunityService
         
         return $opportunities->filter(function ($opp) {
             // Overdue
-            if ($opp->date_closed->isPast()) {
+            if ($opp->date_closed < new \DateTime()) {
                 $opp->attention_reason = 'Overdue close date';
                 return true;
             }

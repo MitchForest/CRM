@@ -257,11 +257,7 @@ class AuthService
         
         // Store token (you'd need a password_resets table)
         // For now, just log it
-        \Log::info('Password reset requested', [
-            'user_id' => $user->id,
-            'email' => $email,
-            'token' => $resetToken
-        ]);
+        error_log("Password reset requested - user_id: {$user->id}, email: {$email}, token: {$resetToken}");
         
         // In production, send email with reset link
     }

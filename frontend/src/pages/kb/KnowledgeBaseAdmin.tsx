@@ -228,11 +228,13 @@ export function KnowledgeBaseAdmin() {
       }
     },
     {
-      accessorKey: 'date_modified',
+      accessorKey: 'updated_at',
       header: 'Last Updated',
       cell: ({ row }: { row: { original: KBArticle } }) => (
         <span className="text-sm text-muted-foreground">
-          {formatDistanceToNow(new Date(row.original.date_modified), { addSuffix: true })}
+          {row.original.updated_at || row.original.date_modified ? 
+            formatDistanceToNow(new Date(row.original.updated_at || row.original.date_modified || ''), { addSuffix: true }) : 
+            '-'}
         </span>
       )
     },

@@ -6,7 +6,7 @@ use App\Models\Lead;
 use App\Models\User;
 use App\Services\AI\LeadScoringService;
 use App\Services\Tracking\ActivityTrackingService;
-use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class LeadService
@@ -121,7 +121,7 @@ class LeadService
                 'type' => 'ai_score',
                 'timestamp' => $score->scored_at,
                 'title' => 'AI Score Updated',
-                'description' => "Score: {$score->score_percentage}%",
+                'description' => "Score: " . ($score->score * 100) . "%",
                 'data' => $score
             ]);
         }
@@ -142,7 +142,7 @@ class LeadService
                 'type' => 'call',
                 'timestamp' => $call->date_start,
                 'title' => $call->name,
-                'description' => "Call: {$call->duration_total_minutes} minutes",
+                'description' => "Call: {$call->duration} minutes",
                 'data' => $call
             ]);
         }
@@ -182,8 +182,8 @@ class LeadService
             'total_time_on_site' => $lead->sessions->sum('duration'),
             'form_submissions' => $lead->formSubmissions->count(),
             'chat_conversations' => $lead->conversations->count(),
-            'latest_score' => $lead->latest_score,
-            'days_since_created' => $lead->date_entered->diffInDays(now()),
+            'latest_score' => $lead->ai_score,
+            'days_since_created' => $lead->date_entered->diffInDays(new \DateTime()),
             'total_activities' => $lead->tasks->count() + 
                                 $lead->calls->count() + 
                                 $lead->meetings->count() + 
@@ -202,10 +202,10 @@ class LeadService
         $contact = new \App\Models\Contact([
             'first_name' => $lead->first_name,
             'last_name' => $lead->last_name,
-            'email' => $lead->email,
-            'phone_work' => $lead->phone,
+            'email1' => $lead->email1,
+            'phone_work' => $lead->phone_work,
             'title' => $lead->title,
-            'lead_source' => $lead->source,
+            'lead_source' => $lead->lead_source,
             'assigned_user_id' => $lead->assigned_user_id,
             'description' => $lead->description
         ]);
@@ -225,9 +225,9 @@ class LeadService
                 'amount' => $data['opportunity_amount'] ?? 0,
                 'sales_stage' => $data['opportunity_stage'] ?? 'Prospecting',
                 'probability' => 10,
-                'date_closed' => now()->addMonths(3),
+                'date_closed' => (new \DateTime())->modify('+3 months')->format('Y-m-d'),
                 'assigned_user_id' => $lead->assigned_user_id,
-                'lead_source' => $lead->source
+                'lead_source' => $lead->lead_source
             ]);
             
             if (!empty($data['account_id'])) {
@@ -282,7 +282,7 @@ class LeadService
         
         return Lead::whereIn('id', $leadIds)->update([
             'assigned_user_id' => $userId,
-            'date_modified' => now()
+            'date_modified' => (new \DateTime())->format('Y-m-d H:i:s')
         ]);
     }
     

@@ -148,14 +148,14 @@ export function CasesList() {
                   <TableCell>{caseItem.name}</TableCell>
                   <TableCell>-</TableCell>
                   <TableCell>
-                    <PriorityBadge priority={caseItem.priority} />
+                    <PriorityBadge priority={(caseItem.priority || 'Low') as 'High' | 'Medium' | 'Low'} />
                   </TableCell>
                   <TableCell>
                     <Badge className={getStatusColor(caseItem.status || '')}>
                       {caseItem.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{caseItem.assigned_user_name || '-'}</TableCell>
+                  <TableCell>{caseItem.assigned_user_id || '-'}</TableCell>
                   <TableCell>{formatDate(caseItem.date_entered || '')}</TableCell>
                   <TableCell>
                     <Button variant="ghost" size="sm" asChild>
@@ -187,7 +187,7 @@ export function CasesList() {
               variant="outline"
               size="sm"
               onClick={() => setPage(page + 1)}
-              disabled={!data.pagination.hasNext}
+              disabled={page >= data.pagination.totalPages}
             >
               Next
             </Button>

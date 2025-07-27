@@ -345,11 +345,20 @@ class CustomerHealthController extends Controller
         }
         
         try {
+            // Get total count
+            $totalCount = CustomerHealthScore::count();
+            
+            // Calculate offset
+            $offset = ($page - 1) * $limit;
+            
+            // Get paginated results
             $scores = CustomerHealthScore::with('account')
                 ->orderBy('calculated_at', 'desc')
-                ->paginate($limit, ['*'], 'page', $page);
+                ->offset($offset)
+                ->limit($limit)
+                ->get();
             
-            $data = $scores->items()->map(function ($score) {
+            $data = $scores->map(function ($score) {
                 return [
                     'id' => $score->id,
                     'account_id' => $score->account_id,
@@ -365,10 +374,10 @@ class CustomerHealthController extends Controller
             return $this->json($response, [
                 'data' => $data,
                 'pagination' => [
-                    'page' => $scores->currentPage(),
-                    'limit' => $scores->perPage(),
-                    'total' => $scores->total(),
-                    'total_pages' => $scores->lastPage()
+                    'page' => $page,
+                    'limit' => $limit,
+                    'total' => $totalCount,
+                    'total_pages' => ceil($totalCount / $limit)
                 ]
             ]);
             

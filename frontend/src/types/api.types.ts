@@ -158,7 +158,9 @@ export interface Form {
   };
   created_at: string;
   updated_at: string;
+  date_created?: string;
   submissions_count?: number;
+  embed_code?: string;
 }
 
 export interface FormField {
@@ -178,7 +180,7 @@ export interface ChatMessage {
   message?: string;
   content?: string;
   sender?: 'user' | 'bot';
-  role?: 'user' | 'assistant';
+  role?: 'user' | 'assistant' | 'system';
   timestamp: string;
   metadata?: Record<string, any>;
 }
@@ -309,4 +311,6 @@ export interface TrackingEvent {
   type: string;
   data: Record<string, any>;
   timestamp: string;
+  visitor_id?: string;
+  session_id?: string;
 }

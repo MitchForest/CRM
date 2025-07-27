@@ -11,15 +11,22 @@ class LeadScore extends BaseModel
     protected $fillable = [
         'lead_id',
         'score',
+        'previous_score',
+        'score_change',
         'factors',
-        'model_version',
-        'scored_at'
+        'insights',
+        'recommendations',
+        'date_scored'
     ];
     
     protected $casts = [
-        'score' => 'decimal:2',
-        'factors' => 'array',
-        'scored_at' => 'datetime'
+        'score' => 'integer',
+        'previous_score' => 'integer',
+        'score_change' => 'integer',
+        'factors' => 'json',
+        'insights' => 'json',
+        'recommendations' => 'json',
+        'date_scored' => 'datetime'
     ];
     
     public $timestamps = false;

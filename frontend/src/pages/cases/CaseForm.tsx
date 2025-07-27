@@ -86,6 +86,7 @@ export function CaseForm() {
           created_by: null,
           modified_user_id: null,
           assigned_user_id: null,
+          deleted: 0,
           case_number: Date.now(), // Temporary case number, backend should override
           name: data.name,
           account_id: data.account_id || null,

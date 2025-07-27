@@ -59,13 +59,13 @@ export function Homepage() {
     
     try {
       const response = await apiClient.createLead({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        company: formData.company,
-        phone: formData.phone,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        email1: formData.email,
+        account_name: formData.company,
+        phone_work: formData.phone,
         description: formData.message,
-        source: 'Contact Form',
+        lead_source: 'Contact Form',
         status: 'New'
       })
       

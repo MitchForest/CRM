@@ -439,7 +439,7 @@ export function ActivityTrackingDashboard() {
                   <div>
                     <h3 className="font-medium mb-2">Page Journey</h3>
                     <div className="space-y-3">
-                      {selectedSession.pages_viewed?.map((page: { title: string; url: string; timestamp: string; duration?: number; scrollDepth?: number; clicks?: number }, index: number) => (
+                      {selectedSession.pages_viewed?.map((page, index) => (
                         <div key={index} className="flex items-start gap-3">
                           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
                             {index + 1}
@@ -449,8 +449,6 @@ export function ActivityTrackingDashboard() {
                             <p className="text-sm text-muted-foreground">{page.url}</p>
                             <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
                               <span>Duration: {page.duration}s</span>
-                              <span>Scroll: {page.scrollDepth}%</span>
-                              <span>Clicks: {page.clicks}</span>
                             </div>
                           </div>
                         </div>

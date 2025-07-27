@@ -28,7 +28,7 @@ class ChatbotService
             'visitor_id' => $data['visitor_id'] ?? null,
             'lead_id' => $data['lead_id'] ?? null,
             'contact_id' => $data['contact_id'] ?? null,
-            'started_at' => now(),
+            'started_at' => new \DateTime(),
             'status' => 'active',
             'metadata' => [
                 'source' => $data['source'] ?? 'website',
@@ -92,7 +92,7 @@ class ChatbotService
             'message_type' => $type,
             'content' => $content,
             'metadata' => $metadata,
-            'created_at' => now()
+            'created_at' => new \DateTime()
         ]);
     }
     
@@ -203,7 +203,7 @@ class ChatbotService
                     $qualificationSignals[] = [
                         'category' => $category,
                         'keyword' => $keyword,
-                        'timestamp' => now()
+                        'timestamp' => new \DateTime()
                     ];
                 }
             }
@@ -225,7 +225,7 @@ class ChatbotService
         $conversation = ChatConversation::where('conversation_id', $conversationId)->firstOrFail();
         
         $updateData = [
-            'ended_at' => now(),
+            'ended_at' => new \DateTime(),
             'status' => 'ended'
         ];
         

@@ -271,7 +271,7 @@ class AuthController extends Controller
         ApiRefreshToken::create([
             'user_id' => $userId,
             'token' => $token,
-            'expires_at' => now()->addDays(30)
+            'expires_at' => (new \DateTime())->modify('+30 days')
         ]);
     }
     
@@ -279,7 +279,7 @@ class AuthController extends Controller
     {
         return ApiRefreshToken::where('user_id', $userId)
             ->where('token', $token)
-            ->where('expires_at', '>', now())
+            ->where('expires_at', '>', new \DateTime())
             ->exists();
     }
     

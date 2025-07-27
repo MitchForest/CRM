@@ -1,20 +1,19 @@
 /**
- * API Client Export
+ * API Client Wrapper
  * 
- * This exports the API client from lib/api-client.ts for backward compatibility
+ * This exports the manual API client until the generated one is available
  */
 
-export { apiClient } from '@/lib/api-client';
+import { apiClient } from '@/lib/api-client';
 
-// Re-export types from database types
-export type {
-  LeadDB,
-  ContactDB,
-  OpportunityDB,
-  CaseDB,
-  AccountDB,
-  TaskDB,
-  CallDB,
-  MeetingDB,
-  NoteDB
-} from '@/types/database.types';
+// Export the manual API client instance
+export default apiClient;
+
+// Export API methods as named exports for compatibility
+export const leadsApi = apiClient;
+export const contactsApi = apiClient;
+export const opportunitiesApi = apiClient;
+export const casesApi = apiClient;
+export const activitiesApi = apiClient;
+export const authApi = apiClient;
+export const dashboardApi = apiClient;

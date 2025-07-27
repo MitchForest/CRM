@@ -4,7 +4,7 @@ namespace App\Services\CRM;
 
 use App\Models\SupportCase;
 use App\Services\AI\OpenAIService;
-use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Collection;
 
 class CaseService
 {
@@ -66,7 +66,7 @@ class CaseService
     private function generateCaseNumber(): string
     {
         $prefix = 'CASE';
-        $year = now()->format('Y');
+        $year = (new \DateTime())->format('Y');
         $lastCase = SupportCase::whereYear('date_entered', $year)
             ->orderBy('case_number', 'desc')
             ->first();
@@ -109,7 +109,7 @@ class CaseService
     /**
      * Analyze case sentiment
      */
-    private function analyzeCaseSentiment(Case $case): void
+    private function analyzeCaseSentiment(SupportCase $case): void
     {
         try {
             $sentiment = $this->openAI->analyzeSentiment($case->description);
@@ -128,14 +128,14 @@ class CaseService
             }
         } catch (\Exception $e) {
             // Log but don't fail
-            \Log::warning('Case sentiment analysis failed', ['case_id' => $case->id, 'error' => $e->getMessage()]);
+            error_log("WARNING: Case sentiment analysis failed - case_id: {$case->id}, error: " . $e->getMessage());
         }
     }
     
     /**
      * Log status change
      */
-    private function logStatusChange(Case $case, string $oldStatus, string $newStatus): void
+    private function logStatusChange(SupportCase $case, string $oldStatus, string $newStatus): void
     {
         $case->notes()->create([
             'name' => 'Status Change',
@@ -149,13 +149,10 @@ class CaseService
     /**
      * Send case closed notification
      */
-    private function notifyCaseClosed(Case $case): void
+    private function notifyCaseClosed(SupportCase $case): void
     {
         // In production, send email to contact
-        \Log::info('Case closed notification', [
-            'case_id' => $case->id,
-            'contact_email' => $case->contact?->email
-        ]);
+        error_log("Case closed notification - case_id: {$case->id}, contact_email: " . ($case->contact?->email ?? 'N/A'));
     }
     
     /**
@@ -174,13 +171,13 @@ class CaseService
         
         return $cases->filter(function ($case) {
             // High priority open > 24 hours
-            if ($case->priority === 'high' && $case->date_entered->lt(now()->subDay())) {
+            if ($case->priority === 'high' && $case->date_entered->lt((new \DateTime())->modify('-1 day'))) {
                 $case->attention_reason = 'High priority case open > 24 hours';
                 return true;
             }
             
             // Any case open > 3 days
-            if ($case->date_entered->lt(now()->subDays(3))) {
+            if ($case->date_entered->lt((new \DateTime())->modify('-3 days'))) {
                 $case->attention_reason = 'Case open > 3 days';
                 return true;
             }
@@ -190,7 +187,7 @@ class CaseService
                           $case->calls()->latest()->first()?->date_entered ??
                           $case->date_modified;
             
-            if ($lastActivity->lt(now()->subDays(2))) {
+            if ($lastActivity->lt((new \DateTime())->modify('-2 days'))) {
                 $case->attention_reason = 'No activity in 48 hours';
                 return true;
             }
@@ -340,7 +337,7 @@ class CaseService
     /**
      * Escalate case
      */
-    public function escalateCase(string $id, array $data): Case
+    public function escalateCase(string $id, array $data): SupportCase
     {
         $case = SupportCase::findOrFail($id);
         

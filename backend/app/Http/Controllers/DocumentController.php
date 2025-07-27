@@ -48,16 +48,22 @@ class DocumentController extends Controller
         // Order by date
         $query->orderBy('date_entered', 'desc');
         
-        // Paginate
-        $documents = $query->paginate($limit, ['*'], 'page', $page);
+        // Get total count
+        $totalCount = $query->count();
+        
+        // Calculate offset
+        $offset = ($page - 1) * $limit;
+        
+        // Get paginated results
+        $documents = $query->offset($offset)->limit($limit)->get();
         
         return $this->json($response, [
-            'data' => $documents->items(),
+            'data' => $documents,
             'pagination' => [
-                'page' => $documents->currentPage(),
-                'limit' => $documents->perPage(),
-                'total' => $documents->total(),
-                'total_pages' => $documents->lastPage()
+                'page' => $page,
+                'limit' => $limit,
+                'total' => $totalCount,
+                'total_pages' => ceil($totalCount / $limit)
             ]
         ]);
     }

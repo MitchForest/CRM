@@ -124,7 +124,7 @@ const columns: ColumnDef<ContactDB>[] = [
 
 export function ContactsPage() {
   const [page] = useState(1)
-  const { data, isLoading } = useContacts({ page, pageSize: 20 })
+  const { data, isLoading } = useContacts({ page, limit: 20 })
 
   if (isLoading) {
     return (

@@ -12,29 +12,37 @@ class KnowledgeBaseArticle extends BaseModel
         'title',
         'slug',
         'content',
-        'excerpt',
+        'summary',
         'category',
         'tags',
-        'status',
-        'views',
+        'is_published',
+        'is_featured',
+        'view_count',
         'helpful_count',
         'not_helpful_count',
-        'ai_embeddings',
-        'created_by',
-        'updated_by'
+        'author_id',
+        'date_published',
+        'date_entered',
+        'date_modified',
+        'deleted',
+        'embedding'
     ];
     
     protected $casts = [
-        'tags' => 'array',
-        'ai_embeddings' => 'array',
-        'views' => 'integer',
+        'tags' => 'json',
+        'is_published' => 'integer',
+        'is_featured' => 'integer',
+        'view_count' => 'integer',
         'helpful_count' => 'integer',
         'not_helpful_count' => 'integer',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'date_published' => 'datetime',
+        'date_entered' => 'datetime',
+        'date_modified' => 'datetime',
+        'deleted' => 'integer',
+        'embedding' => 'json'
     ];
     
-    public $timestamps = true;
+    public $timestamps = false;
     
     public function feedback(): HasMany
     {
@@ -51,17 +59,17 @@ class KnowledgeBaseArticle extends BaseModel
     
     public function isPublished(): bool
     {
-        return $this->status === 'published';
+        return $this->is_published === 1;
     }
     
     public function incrementViews(): void
     {
-        $this->increment('views');
+        $this->increment('view_count');
     }
     
     public function scopePublished($query)
     {
-        return $query->where('status', 'published');
+        return $query->where('is_published', 1);
     }
     
     public function scopeByCategory($query, string $category)
@@ -74,7 +82,7 @@ class KnowledgeBaseArticle extends BaseModel
         return $query->where(function ($q) use ($search) {
             $q->where('title', 'like', "%{$search}%")
               ->orWhere('content', 'like', "%{$search}%")
-              ->orWhere('excerpt', 'like', "%{$search}%");
+              ->orWhere('summary', 'like', "%{$search}%");
         });
     }
 }

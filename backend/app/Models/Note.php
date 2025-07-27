@@ -17,14 +17,15 @@ class Note extends BaseModel
         'parent_id',
         'contact_id',
         'description',              // Note content
-        'file_mime_type',
-        'filename',
-        'portal_flag'
+        'date_entered',
+        'date_modified',
+        'deleted'
     ];
     
     protected $casts = [
         'date_entered' => 'datetime',
-        'date_modified' => 'datetime'
+        'date_modified' => 'datetime',
+        'deleted' => 'integer'
     ];
     
     public function assignedUser(): BelongsTo

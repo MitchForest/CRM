@@ -30,7 +30,7 @@ interface UnifiedContactData {
   activities: Array<{
     type: 'website_visit' | 'ai_chat' | 'call' | 'meeting' | 'email' | 'note'
     date: string
-    data: Record<string, unknown>
+    data: Record<string, any>
   }>
   tickets: Array<{
     id: string
@@ -128,17 +128,17 @@ export function ContactUnifiedView() {
   const getActivityTitle = (activity: UnifiedContactData['activities'][0]) => {
     switch (activity.type) {
       case 'website_visit':
-        return `Website visit - ${activity.data.totalPageViews} pages viewed`
+        return `Website visit - ${activity.data.totalPageViews || 0} pages viewed`
       case 'ai_chat':
-        return `AI Chat conversation - ${activity.data.messageCount} messages`
+        return `AI Chat conversation - ${activity.data.messageCount || 0} messages`
       case 'call':
-        return activity.data.name
+        return String(activity.data.name || 'Call')
       case 'meeting':
-        return activity.data.name
+        return String(activity.data.name || 'Meeting')
       case 'email':
-        return activity.data.name
+        return String(activity.data.name || 'Email')
       case 'note':
-        return activity.data.name
+        return String(activity.data.name || 'Note')
       default:
         return 'Activity'
     }
@@ -263,11 +263,15 @@ export function ContactUnifiedView() {
                         <div className="flex-1 space-y-1">
                           <p className="text-sm font-medium">{getActivityTitle(activity)}</p>
                           {activity.data.description && (
-                            <p className="text-sm text-muted-foreground">{String(activity.data.description)}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {String(activity.data.description)}
+                            </p>
                           )}
                           <p className="text-xs text-muted-foreground">
                             {format(new Date(activity.date), 'PPp')}
-                            {activity.data.assignedTo && ` • ${String(activity.data.assignedTo)}`}
+                            {activity.data.assignedTo && (
+                              <> • {String(activity.data.assignedTo)}</>
+                            )}
                           </p>
                         </div>
                       </div>

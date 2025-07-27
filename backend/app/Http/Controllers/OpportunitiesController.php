@@ -10,6 +10,66 @@ use Illuminate\Database\Capsule\Manager as DB;
 
 class OpportunitiesController extends Controller
 {
+    /**
+     * List opportunities
+     * 
+     * @OA\Get(
+     *     path="/api/crm/opportunities",
+     *     tags={"Opportunities"},
+     *     summary="List all opportunities",
+     *     description="Returns a paginated list of opportunities with optional filters",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Page number",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="limit",
+     *         in="query",
+     *         description="Items per page",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=20)
+     *     ),
+     *     @OA\Parameter(
+     *         name="search",
+     *         in="query",
+     *         description="Search term for filtering opportunities",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="stage",
+     *         in="query",
+     *         description="Filter by sales stage",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="assigned_user_id",
+     *         in="query",
+     *         description="Filter by assigned user",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Opportunities retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="data", type="array",
+     *                 @OA\Items(ref="#/components/schemas/Opportunity")
+     *             ),
+     *             @OA\Property(property="pagination", ref="#/components/schemas/Pagination")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     )
+     * )
+     */
     public function index(Request $request, Response $response, array $args): Response
     {
         $query = Opportunity::with(['assignedUser', 'account', 'contacts'])

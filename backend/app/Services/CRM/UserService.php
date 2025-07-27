@@ -3,7 +3,7 @@
 namespace App\Services\CRM;
 
 use App\Models\User;
-use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
 
 class UserService

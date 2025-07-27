@@ -17,6 +17,52 @@ use Illuminate\Database\Capsule\Manager as DB;
 
 class ContactsController extends Controller
 {
+    /**
+     * List contacts
+     * 
+     * @OA\Get(
+     *     path="/api/crm/contacts",
+     *     tags={"Contacts"},
+     *     summary="List all contacts",
+     *     description="Returns a paginated list of contacts with optional search",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Page number",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="limit",
+     *         in="query",
+     *         description="Items per page",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=20)
+     *     ),
+     *     @OA\Parameter(
+     *         name="search",
+     *         in="query",
+     *         description="Search term for filtering contacts",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Contacts retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="data", type="array",
+     *                 @OA\Items(ref="#/components/schemas/Contact")
+     *             ),
+     *             @OA\Property(property="pagination", ref="#/components/schemas/Pagination")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     )
+     * )
+     */
     public function index(Request $request, Response $response, array $args): Response
     {
         $params = $request->getQueryParams();

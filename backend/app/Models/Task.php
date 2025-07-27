@@ -14,22 +14,22 @@ class Task extends BaseModel
         'modified_user_id',
         'assigned_user_id',
         'status',
-        'date_due_flag',
         'date_due',
-        'date_start_flag',
-        'date_start',
         'parent_type',              // Module name
         'parent_id',                // Related record
         'contact_id',
         'priority',
-        'description'
+        'description',
+        'date_entered',
+        'date_modified',
+        'deleted'
     ];
     
     protected $casts = [
-        'date_due' => 'datetime',
-        'date_start' => 'datetime',
+        'date_due' => 'date',
         'date_entered' => 'datetime',
-        'date_modified' => 'datetime'
+        'date_modified' => 'datetime',
+        'deleted' => 'integer'
     ];
     
     public function assignedUser(): BelongsTo

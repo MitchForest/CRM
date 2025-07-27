@@ -143,7 +143,7 @@ export function OpportunityDetailPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Amount</p>
-                      <p className="text-2xl font-bold">{formatCurrency(opportunity.amount)}</p>
+                      <p className="text-2xl font-bold">{formatCurrency(opportunity.amount || 0)}</p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Expected Value</p>
@@ -158,13 +158,13 @@ export function OpportunityDetailPage() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Contact</p>
-                      {opportunity.account_id && opportunity.account_name ? (
+                      {opportunity.account_id ? (
                         <Link 
                           to={`/accounts/${opportunity.account_id}`}
                           className="flex items-center gap-2 text-primary hover:underline"
                         >
                           <User className="h-4 w-4" />
-                          {opportunity.account_name}
+                          Account {opportunity.account_id}
                         </Link>
                       ) : (
                         <p className="text-muted-foreground">Not specified</p>

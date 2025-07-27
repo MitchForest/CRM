@@ -87,7 +87,7 @@ class FormBuilderService
             'ip_address' => $context['ip_address'] ?? null,
             'user_agent' => $context['user_agent'] ?? null,
             'referrer' => $context['referrer'] ?? null,
-            'created_at' => now()
+            'created_at' => new \DateTime()
         ]);
         
         // Track event
@@ -228,20 +228,15 @@ class FormBuilderService
         if (!empty($settings['notification_email'])) {
             // In production, implement email sending
             // For now, just log
-            \Log::info('Form submission notification', [
-                'form' => $form->name,
-                'to' => $settings['notification_email'],
-                'submission_id' => $submission->id
-            ]);
+            error_log("Form submission notification - form: {$form->name}, to: {$settings['notification_email']}, submission_id: {$submission->id}");
         }
         
         // Auto-responder to submitter
         if (!empty($settings['auto_responder']) && $submission->getFieldValue('email')) {
             // In production, send auto-response email
-            \Log::info('Auto-responder email', [
-                'to' => $submission->getFieldValue('email'),
-                'subject' => $settings['auto_responder']['subject'] ?? 'Thank you for your submission'
-            ]);
+            $email = $submission->getFieldValue('email');
+            $subject = $settings['auto_responder']['subject'] ?? 'Thank you for your submission';
+            error_log("Auto-responder email - to: {$email}, subject: {$subject}");
         }
     }
     

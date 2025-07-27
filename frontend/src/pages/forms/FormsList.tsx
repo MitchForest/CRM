@@ -105,11 +105,11 @@ export function FormsList() {
       )
     },
     {
-      accessorKey: 'date_created',
+      accessorKey: 'created_at',
       header: 'Created',
       cell: ({ row }: { row: { original: Form } }) => (
         <span className="text-sm text-muted-foreground">
-          {formatDistanceToNow(new Date(row.original.date_created), { addSuffix: true })}
+          {row.original.created_at ? formatDistanceToNow(new Date(row.original.created_at), { addSuffix: true }) : '-'}
         </span>
       )
     },

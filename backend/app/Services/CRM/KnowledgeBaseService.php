@@ -5,7 +5,7 @@ namespace App\Services\CRM;
 use App\Models\KnowledgeBaseArticle;
 use App\Models\KnowledgeBaseFeedback;
 use App\Services\AI\OpenAIService;
-use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
 
 class KnowledgeBaseService
@@ -206,7 +206,7 @@ class KnowledgeBaseService
             'visitor_id' => $data['visitor_id'] ?? null,
             'helpful' => $data['helpful'],
             'feedback_text' => $data['feedback_text'] ?? null,
-            'created_at' => now()
+            'created_at' => new \DateTime()
         ]);
         
         // Update article counters
@@ -339,12 +339,10 @@ class KnowledgeBaseService
             return [
                 'embedding' => $embedding,
                 'model' => 'text-embedding-ada-002',
-                'generated_at' => now()
+                'generated_at' => new \DateTime()
             ];
         } catch (\Exception $e) {
-            \Log::warning('Failed to generate embeddings', [
-                'error' => $e->getMessage()
-            ]);
+            error_log("WARNING: Failed to generate embeddings - " . $e->getMessage());
             return [];
         }
     }
@@ -407,7 +405,7 @@ class KnowledgeBaseService
         $trend = [];
         for ($i = 6; $i >= 0; $i--) {
             $trend[] = [
-                'date' => now()->subDays($i)->format('Y-m-d'),
+                'date' => (new \DateTime())->modify("-$i days")->format('Y-m-d'),
                 'views' => rand(10, 100)
             ];
         }

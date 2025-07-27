@@ -29,7 +29,7 @@ class ApiRefreshToken extends BaseModel
     
     public function isExpired(): bool
     {
-        return $this->expires_at->isPast();
+        return $this->expires_at < new \DateTime();
     }
     
     public function isValid(): bool
@@ -40,7 +40,7 @@ class ApiRefreshToken extends BaseModel
     public function recordUsage(string $ipAddress = null, string $userAgent = null): void
     {
         $this->update([
-            'last_used_at' => now(),
+            'last_used_at' => new \DateTime(),
             'ip_address' => $ipAddress ?? $this->ip_address,
             'user_agent' => $userAgent ?? $this->user_agent
         ]);
@@ -48,11 +48,11 @@ class ApiRefreshToken extends BaseModel
     
     public function scopeValid($query)
     {
-        return $query->where('expires_at', '>', now());
+        return $query->where('expires_at', '>', new \DateTime());
     }
     
     public function scopeExpired($query)
     {
-        return $query->where('expires_at', '<=', now());
+        return $query->where('expires_at', '<=', new \DateTime());
     }
 }

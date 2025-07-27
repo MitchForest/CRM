@@ -71,13 +71,13 @@ export function DemoBooking() {
     try {
       // Create lead first
       const leadResponse = await apiClient.createLead({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
-        company: formData.company,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        email1: formData.email,
+        phone_work: formData.phone,
+        account_name: formData.company,
         description: `Demo request - Company size: ${formData.companySize}`,
-        source: 'Demo Request',
+        lead_source: 'Demo Request',
         status: 'New',
       })
 
@@ -91,15 +91,16 @@ export function DemoBooking() {
       
       const meetingResponse = await apiClient.createMeeting({
         name: `Demo with ${formData.firstName} ${formData.lastName} - ${formData.company}`,
-        startDate: format(meetingDate, "yyyy-MM-dd HH:mm:ss"),
-        endDate: format(new Date(meetingDate.getTime() + 30 * 60000), "yyyy-MM-dd HH:mm:ss"),
-        duration: 30,
+        date_start: format(meetingDate, "yyyy-MM-dd HH:mm:ss"),
+        date_end: format(new Date(meetingDate.getTime() + 30 * 60000), "yyyy-MM-dd HH:mm:ss"),
+        duration_hours: 0,
+        duration_minutes: 30,
         status: 'Planned',
-        type: 'Virtual',
+        location: 'Virtual',
         description: `Demo meeting\nCompany size: ${formData.companySize}\nContact: ${formData.email}`,
-        parentType: 'Leads',
-        parentId: leadResponse.data.id,
-        assignedUserId: '1' // Default to admin user
+        parent_type: 'Leads',
+        parent_id: leadResponse.data.id,
+        assigned_user_id: '1' // Default to admin user
       })
 
       if (!meetingResponse.success) {

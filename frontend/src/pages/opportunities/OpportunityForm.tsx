@@ -120,8 +120,8 @@ export function OpportunityForm() {
       amount: data.amount,
       probability: data.probability,
       date_closed: data.date_closed?.toISOString().split('T')[0] || '',
-      next_step: data.next_step,
-      description: data.description,
+      next_step: data.next_step || null,
+      description: data.description || null,
       account_id: data.account_id,
     }
 

@@ -4,7 +4,7 @@ namespace App\Services\CRM;
 
 use App\Models\Contact;
 use App\Models\CustomerHealthScore;
-use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Collection;
 
 class ContactService
 {
@@ -117,7 +117,7 @@ class ContactService
                 'type' => 'health_score',
                 'timestamp' => $score->calculated_at,
                 'title' => 'Health Score Update',
-                'description' => "Score: {$score->health_status} ({$score->score * 100}%)",
+                'description' => "Score: " . $this->getHealthStatusFromScore($score->score) . " (" . ($score->score * 100) . "%)",
                 'data' => $score
             ]);
         }
@@ -137,7 +137,7 @@ class ContactService
             'open_cases' => $contact->cases->where('status', '!=', 'closed')->count(),
             'total_opportunities' => $contact->opportunities->count(),
             'opportunity_value' => $contact->opportunities->sum('amount'),
-            'days_as_customer' => $contact->date_entered->diffInDays(now()),
+            'days_as_customer' => $contact->date_entered->diffInDays(new \DateTime()),
             'last_activity' => $contact->activities->max('started_at')
         ];
     }
@@ -152,7 +152,7 @@ class ContactService
         
         // Activity engagement (30%)
         $recentActivity = $contact->activities()
-            ->where('started_at', '>', now()->subDays(30))
+            ->where('started_at', '>', (new \DateTime())->modify('-30 days'))
             ->count();
         $activityScore = min($recentActivity / 10, 1) * 0.3;
         $factors['activity'] = [
@@ -163,7 +163,7 @@ class ContactService
         
         // Support satisfaction (30%)
         $recentCases = $contact->cases()
-            ->where('date_entered', '>', now()->subMonths(3))
+            ->where('date_entered', '>', (new \DateTime())->modify('-3 months'))
             ->get();
         $resolvedCases = $recentCases->where('status', 'closed')->count();
         $totalCases = $recentCases->count();
@@ -177,7 +177,7 @@ class ContactService
         
         // Product usage (20%)
         $lastLogin = $contact->activities()
-            ->where('started_at', '>', now()->subDays(7))
+            ->where('started_at', '>', (new \DateTime())->modify('-7 days'))
             ->exists();
         $usageScore = $lastLogin ? 0.2 : 0;
         $factors['usage'] = [
@@ -215,7 +215,7 @@ class ContactService
             'factors' => $factors,
             'trend' => $trend,
             'risk_level' => $riskLevel,
-            'calculated_at' => now()
+            'calculated_at' => new \DateTime()
         ]);
     }
     
@@ -237,13 +237,41 @@ class ContactService
         
         return [
             'score' => $latestScore->score,
-            'status' => $latestScore->health_status,
-            'color' => $latestScore->health_color,
+            'status' => $this->getHealthStatusFromScore($latestScore->score),
+            'color' => $this->getHealthColorFromScore($latestScore->score),
             'trend' => $latestScore->trend,
             'risk_level' => $latestScore->risk_level,
             'factors' => $latestScore->factors,
             'last_calculated' => $latestScore->calculated_at
         ];
+    }
+    
+    /**
+     * Get health status from score
+     */
+    private function getHealthStatusFromScore(float $score): string
+    {
+        $scorePercent = $score * 100;
+        
+        if ($scorePercent >= 80) return 'Excellent';
+        if ($scorePercent >= 60) return 'Good';
+        if ($scorePercent >= 40) return 'Fair';
+        if ($scorePercent >= 20) return 'At Risk';
+        return 'Critical';
+    }
+    
+    /**
+     * Get health color from score
+     */
+    private function getHealthColorFromScore(float $score): string
+    {
+        $scorePercent = $score * 100;
+        
+        if ($scorePercent >= 80) return 'green';
+        if ($scorePercent >= 60) return 'blue';
+        if ($scorePercent >= 40) return 'yellow';
+        if ($scorePercent >= 20) return 'orange';
+        return 'red';
     }
     
     /**
