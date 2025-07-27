@@ -54,7 +54,7 @@ class AIService {
     sentiment?: string;
     confidence?: number;
     suggested_actions?: string[];
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }> {
     const response = await apiClient.customPost('/ai/chat', {
       conversation_id: conversationId,
@@ -66,7 +66,16 @@ class AIService {
       throw new Error(response.error || 'Failed to send chat message');
     }
     // The API returns the data at the top level, not nested in .data
-    return response as any;
+    return response as {
+      conversation_id: string;
+      message: string;
+      response?: string;
+      intent?: string;
+      sentiment?: string;
+      confidence?: number;
+      suggested_actions?: string[];
+      metadata?: Record<string, unknown>;
+    };
   }
 
   /**
@@ -139,7 +148,13 @@ class AIService {
   }): Promise<{
     ticketId: string;
     message: string;
-    ticket: any;
+    ticket: {
+      id: string;
+      case_number: string;
+      name: string;
+      status: string;
+      priority: string;
+    };
   }> {
     const response = await apiClient.customPost('/ai/create-ticket', {
       issue,

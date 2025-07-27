@@ -14,8 +14,27 @@ import type { ChatMessage } from '@/types/phase3.types';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
+interface LeadInfo {
+  name?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  message?: string;
+}
+
+interface ExtractedLeadInfo {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  account_name?: string;
+  title?: string;
+  extraction_confidence?: number;
+}
+
 interface ChatWidgetProps {
-  onLeadCapture?: (leadInfo: any) => void;
+  onLeadCapture?: (leadInfo: LeadInfo) => void;
   position?: 'bottom-right' | 'bottom-left';
   theme?: 'light' | 'dark' | 'auto';
   primaryColor?: string;
@@ -75,9 +94,9 @@ export function ChatWidget({
       }
     };
 
-    window.addEventListener('chat-open' as any, handleChatOpen);
+    window.addEventListener('chat-open', handleChatOpen as EventListener);
     return () => {
-      window.removeEventListener('chat-open' as any, handleChatOpen);
+      window.removeEventListener('chat-open', handleChatOpen as EventListener);
     };
   }, []);
 
@@ -123,7 +142,7 @@ export function ChatWidget({
 
       // Check if lead was captured
       if (response.metadata?.lead_captured && response.metadata?.lead_info) {
-        const leadInfo = response.metadata.lead_info;
+        const leadInfo = response.metadata.lead_info as ExtractedLeadInfo;
         
         // Prepare lead info for callback
         const callbackData = {

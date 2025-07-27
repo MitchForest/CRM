@@ -22,30 +22,46 @@ import {
   useUpdateOpportunity 
 } from '@/hooks/use-opportunities'
 import { useAccounts } from '@/hooks/use-accounts'
-import type { OpportunityStage } from '@/types/phase2.types'
-import { STAGE_PROBABILITIES } from '@/types/phase2.types'
 
 const opportunitySchema = z.object({
   name: z.string().min(1, 'Opportunity name is required'),
-  accountId: z.string().min(1, 'Account is required'),
-  salesStage: z.string(),
+  account_id: z.string().min(1, 'Account is required'),
+  sales_stage: z.string(),
   amount: z.number().min(0, 'Amount must be positive'),
   probability: z.number().min(0).max(100),
-  closeDate: z.date(),
-  leadSource: z.string().optional(),
-  nextStep: z.string().optional(),
+  date_closed: z.date(),
+  lead_source: z.string().optional(),
+  next_step: z.string().optional(),
   description: z.string().optional(),
 })
 
 type OpportunityFormData = z.infer<typeof opportunitySchema>
 
-const stages: OpportunityStage[] = [
-  'Qualified',
-  'Proposal',
-  'Negotiation',
-  'Won',
-  'Lost',
-]
+const stages = [
+  'prospecting',
+  'qualification',
+  'needs_analysis',
+  'value_proposition',
+  'decision_makers',
+  'perception_analysis',
+  'proposal',
+  'negotiation',
+  'closed_won',
+  'closed_lost',
+] as const
+
+const STAGE_PROBABILITIES = {
+  'prospecting': 10,
+  'qualification': 20,
+  'needs_analysis': 25,
+  'value_proposition': 30,
+  'decision_makers': 40,
+  'perception_analysis': 50,
+  'proposal': 65,
+  'negotiation': 80,
+  'closed_won': 100,
+  'closed_lost': 0,
+} as const
 
 export function OpportunityForm() {
   const { id } = useParams()
@@ -66,47 +82,47 @@ export function OpportunityForm() {
   } = useForm<OpportunityFormData>({
     resolver: zodResolver(opportunitySchema),
     defaultValues: {
-      salesStage: 'Qualified',
-      probability: 30,
-      closeDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      sales_stage: 'qualification',
+      probability: 20,
+      date_closed: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
     },
   })
 
-  const selectedStage = watch('salesStage')
+  const selectedStage = watch('sales_stage')
 
   // Update form when opportunity data loads
   useEffect(() => {
     if (opportunityData?.data && isEdit) {
       const opp = opportunityData.data
       setValue('name', opp.name)
-      setValue('salesStage', opp.salesStage)
-      setValue('amount', opp.amount)
+      setValue('sales_stage', opp.sales_stage || 'qualification')
+      setValue('amount', opp.amount || 0)
       setValue('probability', opp.probability || 0)
-      setValue('closeDate', new Date(opp.closeDate))
-      // leadSource not available in Opportunity type
-      setValue('nextStep', opp.nextStep || '')
+      setValue('date_closed', new Date(opp.date_closed || Date.now()))
+      // lead_source not available in Opportunity type
+      setValue('next_step', opp.next_step || '')
       setValue('description', opp.description || '')
-      // Note: accountId might need to be extracted from relationships
+      setValue('account_id', opp.account_id || '')
     }
   }, [opportunityData, isEdit, setValue])
 
   // Update probability when stage changes
   useEffect(() => {
-    if (selectedStage && STAGE_PROBABILITIES[selectedStage as OpportunityStage] !== undefined) {
-      setValue('probability', STAGE_PROBABILITIES[selectedStage as OpportunityStage])
+    if (selectedStage && STAGE_PROBABILITIES[selectedStage as keyof typeof STAGE_PROBABILITIES] !== undefined) {
+      setValue('probability', STAGE_PROBABILITIES[selectedStage as keyof typeof STAGE_PROBABILITIES])
     }
   }, [selectedStage, setValue])
 
   const onSubmit = async (data: OpportunityFormData) => {
     const formattedData = {
       name: data.name,
-      salesStage: data.salesStage,
+      sales_stage: data.sales_stage,
       amount: data.amount,
       probability: data.probability,
-      closeDate: data.closeDate?.toISOString().split('T')[0] || '',
-      nextStep: data.nextStep,
+      date_closed: data.date_closed?.toISOString().split('T')[0] || '',
+      next_step: data.next_step,
       description: data.description,
-      // Note: In a real app, you'd need to handle the account relationship properly
+      account_id: data.account_id,
     }
 
     try {
@@ -161,8 +177,8 @@ export function OpportunityForm() {
         <div className="space-y-2">
           <Label htmlFor="accountId">Account</Label>
           <Select
-            onValueChange={(value) => setValue('accountId', value)}
-            defaultValue={watch('accountId')}
+            onValueChange={(value) => setValue('account_id', value)}
+            defaultValue={watch('account_id')}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select an account" />
@@ -175,8 +191,8 @@ export function OpportunityForm() {
               ))}
             </SelectContent>
           </Select>
-          {errors.accountId && (
-            <p className="text-sm text-destructive">{errors.accountId.message}</p>
+          {errors.account_id && (
+            <p className="text-sm text-destructive">{errors.account_id.message}</p>
           )}
         </div>
 
@@ -184,8 +200,8 @@ export function OpportunityForm() {
           <div className="space-y-2">
             <Label htmlFor="salesStage">Sales Stage</Label>
             <Select
-              onValueChange={(value) => setValue('salesStage', value)}
-              defaultValue={watch('salesStage')}
+              onValueChange={(value) => setValue('sales_stage', value)}
+              defaultValue={watch('sales_stage')}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -232,8 +248,8 @@ export function OpportunityForm() {
           <div className="space-y-2">
             <Label htmlFor="closeDate">Expected Close Date</Label>
             <DatePicker
-              date={watch('closeDate')}
-              onDateChange={(date) => setValue('closeDate', date || new Date())}
+              date={watch('date_closed')}
+              onDateChange={(date) => setValue('date_closed', date || new Date())}
             />
           </div>
         </div>
@@ -241,8 +257,8 @@ export function OpportunityForm() {
         <div className="space-y-2">
           <Label htmlFor="leadSource">Lead Source</Label>
           <Select
-            onValueChange={(value) => setValue('leadSource', value)}
-            defaultValue={watch('leadSource')}
+            onValueChange={(value) => setValue('lead_source', value)}
+            defaultValue={watch('lead_source')}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select lead source" />
@@ -261,7 +277,7 @@ export function OpportunityForm() {
           <Label htmlFor="nextStep">Next Step</Label>
           <Input
             id="nextStep"
-            {...register('nextStep')}
+            {...register('next_step')}
             disabled={isSubmitting}
             placeholder="e.g., Schedule demo, Send proposal"
           />

@@ -1,0 +1,16 @@
+COLUMN_NAME	DATA_TYPE	CHARACTER_MAXIMUM_LENGTH	IS_NULLABLE	COLUMN_KEY	COLUMN_DEFAULT
+id	char	36	NO	PRI	NULL
+date_entered	datetime	NULL	YES		NULL
+date_modified	datetime	NULL	YES		NULL
+created_by	char	36	YES		NULL
+modified_user_id	char	36	YES		NULL
+assigned_user_id	char	36	YES	MUL	NULL
+deleted	tinyint	NULL	YES		0
+name	varchar	50	YES		NULL
+status	varchar	100	YES	MUL	Not Started
+priority	varchar	100	YES		NULL
+parent_type	varchar	100	YES		NULL
+parent_id	char	36	YES		NULL
+contact_id	char	36	YES		NULL
+date_due	date	NULL	YES		NULL
+description	text	65535	YES		NULL

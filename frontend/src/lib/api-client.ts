@@ -10,16 +10,19 @@ import type {
   LoginResponse, 
   ApiResponse,
   ListResponse,
-  QueryParams,
-  Account,
-  Contact,
+  QueryParams
+} from '@/types/api.generated'
+
+import type {
   Lead,
-  Task,
+  Contact,
   Opportunity,
+  Case,
+  Account,
+  Task,
   Call,
   Meeting,
-  Note,
-  Case
+  Note
 } from '@/types/api.generated'
 
 // Extended login response to handle dual authentication
@@ -66,7 +69,7 @@ class ApiClient {
 
     // Custom API client for Phase 2 features
     this.customClient = axios.create({
-      baseURL: '/api/v8', // Use relative URL to work with Vite proxy
+      baseURL: '/api/crm', // Updated to new backend structure
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -252,14 +255,14 @@ class ApiClient {
       }
       
       throw new Error('Invalid response from login')
-    } catch (error: any) {
+    } catch (error) {
       console.error('Login error:', error)
       return {
         success: false,
         error: {
-          error: error.response?.data?.error || 'Login failed',
+          error: error instanceof Error ? error.message : 'Login failed',
           code: 'LOGIN_FAILED',
-          details: { message: error.response?.data?.message || error.message }
+          details: { message: error instanceof Error ? error.message : 'Unknown error' }
         }
       }
     }
@@ -279,7 +282,7 @@ class ApiClient {
 
 
   // Account methods
-  async getAccounts(params?: QueryParams): Promise<ListResponse<Account>> {
+  async getAccounts(params?: QueryParams): Promise<ListResponse<AccountDB>> {
     try {
       const response = await this.customClient.get('/accounts', { 
         params: {
@@ -314,7 +317,7 @@ class ApiClient {
     }
   }
 
-  async getAccount(id: string): Promise<ApiResponse<Account>> {
+  async getAccount(id: string): Promise<ApiResponse<AccountDB>> {
     try {
       const response = await this.customClient.get(`/accounts/${id}`)
       return { data: response.data.data, success: true }
@@ -323,7 +326,7 @@ class ApiClient {
     }
   }
 
-  async createAccount(data: Partial<Account>): Promise<ApiResponse<Account>> {
+  async createAccount(data: Partial<AccountDB>): Promise<ApiResponse<AccountDB>> {
     try {
       const response = await this.customClient.post('/accounts', data)
       return { data: response.data.data, success: true }
@@ -332,7 +335,7 @@ class ApiClient {
     }
   }
 
-  async updateAccount(id: string, data: Partial<Account>): Promise<ApiResponse<Account>> {
+  async updateAccount(id: string, data: Partial<AccountDB>): Promise<ApiResponse<AccountDB>> {
     try {
       const response = await this.customClient.put(`/accounts/${id}`, data)
       return { data: response.data.data, success: true }
@@ -351,7 +354,7 @@ class ApiClient {
   }
 
   // Contact methods
-  async getContacts(params?: QueryParams): Promise<ListResponse<Contact>> {
+  async getContacts(params?: QueryParams): Promise<ListResponse<ContactDB>> {
     try {
       const response = await this.customClient.get('/contacts', { 
         params: {
@@ -386,7 +389,7 @@ class ApiClient {
     }
   }
 
-  async getContact(id: string): Promise<ApiResponse<Contact>> {
+  async getContact(id: string): Promise<ApiResponse<ContactDB>> {
     try {
       const response = await this.customClient.get(`/contacts/${id}`)
       return { data: response.data.data, success: true }
@@ -395,7 +398,7 @@ class ApiClient {
     }
   }
 
-  async createContact(data: Partial<Contact>): Promise<ApiResponse<Contact>> {
+  async createContact(data: Partial<ContactDB>): Promise<ApiResponse<ContactDB>> {
     try {
       const response = await this.customClient.post('/contacts', data)
       return { data: response.data.data, success: true }
@@ -404,7 +407,7 @@ class ApiClient {
     }
   }
 
-  async updateContact(id: string, data: Partial<Contact>): Promise<ApiResponse<Contact>> {
+  async updateContact(id: string, data: Partial<ContactDB>): Promise<ApiResponse<ContactDB>> {
     try {
       const response = await this.customClient.put(`/contacts/${id}`, data)
       return { data: response.data.data, success: true }
@@ -424,7 +427,7 @@ class ApiClient {
 
 
   // Lead methods
-  async getLeads(params?: QueryParams): Promise<ListResponse<Lead>> {
+  async getLeads(params?: QueryParams): Promise<ListResponse<LeadDB>> {
     try {
       const response = await this.customClient.get('/leads', { 
         params: {
@@ -459,7 +462,7 @@ class ApiClient {
     }
   }
 
-  async getLead(id: string): Promise<ApiResponse<Lead>> {
+  async getLead(id: string): Promise<ApiResponse<LeadDB>> {
     try {
       const response = await this.customClient.get(`/leads/${id}`)
       return {
@@ -479,7 +482,7 @@ class ApiClient {
     }
   }
 
-  async createLead(data: Partial<Lead>): Promise<ApiResponse<Lead>> {
+  async createLead(data: Partial<LeadDB>): Promise<ApiResponse<LeadDB>> {
     try {
       const response = await this.customClient.post('/leads', data)
       return {
@@ -499,7 +502,7 @@ class ApiClient {
     }
   }
 
-  async updateLead(id: string, data: Partial<Lead>): Promise<ApiResponse<Lead>> {
+  async updateLead(id: string, data: Partial<LeadDB>): Promise<ApiResponse<LeadDB>> {
     try {
       const response = await this.customClient.put(`/leads/${id}`, data)
       return {
@@ -559,7 +562,7 @@ class ApiClient {
   }
 
   // Task methods
-  async getTasks(params?: QueryParams): Promise<ListResponse<Task>> {
+  async getTasks(params?: QueryParams): Promise<ListResponse<TaskDB>> {
     try {
       const response = await this.customClient.get('/tasks', { 
         params: {
@@ -594,7 +597,7 @@ class ApiClient {
     }
   }
 
-  async getTask(id: string): Promise<ApiResponse<Task>> {
+  async getTask(id: string): Promise<ApiResponse<TaskDB>> {
     try {
       const response = await this.customClient.get(`/tasks/${id}`)
       return { data: response.data.data, success: true }
@@ -603,7 +606,7 @@ class ApiClient {
     }
   }
 
-  async createTask(data: Partial<Task>): Promise<ApiResponse<Task>> {
+  async createTask(data: Partial<TaskDB>): Promise<ApiResponse<TaskDB>> {
     try {
       const response = await this.customClient.post('/tasks', data)
       return { data: response.data.data, success: true }
@@ -612,7 +615,7 @@ class ApiClient {
     }
   }
 
-  async updateTask(id: string, data: Partial<Task>): Promise<ApiResponse<Task>> {
+  async updateTask(id: string, data: Partial<TaskDB>): Promise<ApiResponse<TaskDB>> {
     try {
       const response = await this.customClient.put(`/tasks/${id}`, data)
       return { data: response.data.data, success: true }
@@ -622,7 +625,7 @@ class ApiClient {
   }
 
   // Opportunity methods
-  async getOpportunities(params?: QueryParams): Promise<ListResponse<Opportunity>> {
+  async getOpportunities(params?: QueryParams): Promise<ListResponse<OpportunityDB>> {
     try {
       const response = await this.customClient.get('/opportunities', { 
         params: {
@@ -657,7 +660,7 @@ class ApiClient {
     }
   }
 
-  async getOpportunity(id: string): Promise<ApiResponse<Opportunity>> {
+  async getOpportunity(id: string): Promise<ApiResponse<OpportunityDB>> {
     try {
       const response = await this.customClient.get(`/opportunities/${id}`)
       return {
@@ -677,7 +680,7 @@ class ApiClient {
     }
   }
 
-  async createOpportunity(data: Partial<Opportunity>): Promise<ApiResponse<Opportunity>> {
+  async createOpportunity(data: Partial<OpportunityDB>): Promise<ApiResponse<OpportunityDB>> {
     try {
       const response = await this.customClient.post('/opportunities', data)
       return {
@@ -697,7 +700,7 @@ class ApiClient {
     }
   }
 
-  async updateOpportunity(id: string, data: Partial<Opportunity>): Promise<ApiResponse<Opportunity>> {
+  async updateOpportunity(id: string, data: Partial<OpportunityDB>): Promise<ApiResponse<OpportunityDB>> {
     try {
       const response = await this.customClient.put(`/opportunities/${id}`, data)
       return {
@@ -736,12 +739,12 @@ class ApiClient {
     }
   }
 
-  async updateOpportunityStage(id: string, stage: string): Promise<ApiResponse<Opportunity>> {
-    return this.updateOpportunity(id, { salesStage: stage })
+  async updateOpportunityStage(id: string, stage: string): Promise<ApiResponse<OpportunityDB>> {
+    return this.updateOpportunity(id, { sales_stage: stage as OpportunityDB['sales_stage'] })
   }
 
   // Call methods
-  async getCalls(params?: QueryParams): Promise<ListResponse<Call>> {
+  async getCalls(params?: QueryParams): Promise<ListResponse<CallDB>> {
     try {
       const response = await this.customClient.get('/calls', { 
         params: {
@@ -776,7 +779,7 @@ class ApiClient {
     }
   }
 
-  async getCall(id: string): Promise<ApiResponse<Call>> {
+  async getCall(id: string): Promise<ApiResponse<CallDB>> {
     try {
       const response = await this.customClient.get(`/calls/${id}`)
       return { data: response.data.data, success: true }
@@ -785,7 +788,7 @@ class ApiClient {
     }
   }
 
-  async createCall(data: Partial<Call>): Promise<ApiResponse<Call>> {
+  async createCall(data: Partial<CallDB>): Promise<ApiResponse<CallDB>> {
     try {
       const response = await this.customClient.post('/calls', data)
       return { data: response.data.data, success: true }
@@ -794,7 +797,7 @@ class ApiClient {
     }
   }
 
-  async updateCall(id: string, data: Partial<Call>): Promise<ApiResponse<Call>> {
+  async updateCall(id: string, data: Partial<CallDB>): Promise<ApiResponse<CallDB>> {
     try {
       const response = await this.customClient.put(`/calls/${id}`, data)
       return { data: response.data.data, success: true }
@@ -813,7 +816,7 @@ class ApiClient {
   }
 
   // Meeting methods
-  async getMeetings(params?: QueryParams): Promise<ListResponse<Meeting>> {
+  async getMeetings(params?: QueryParams): Promise<ListResponse<MeetingDB>> {
     try {
       const response = await this.customClient.get('/meetings', { 
         params: {
@@ -848,7 +851,7 @@ class ApiClient {
     }
   }
 
-  async getMeeting(id: string): Promise<ApiResponse<Meeting>> {
+  async getMeeting(id: string): Promise<ApiResponse<MeetingDB>> {
     try {
       const response = await this.customClient.get(`/meetings/${id}`)
       return { data: response.data.data, success: true }
@@ -857,7 +860,7 @@ class ApiClient {
     }
   }
 
-  async createMeeting(data: Partial<Meeting>): Promise<ApiResponse<Meeting>> {
+  async createMeeting(data: Partial<MeetingDB>): Promise<ApiResponse<MeetingDB>> {
     try {
       const response = await this.customClient.post('/meetings', data)
       return { data: response.data.data, success: true }
@@ -866,7 +869,7 @@ class ApiClient {
     }
   }
 
-  async updateMeeting(id: string, data: Partial<Meeting>): Promise<ApiResponse<Meeting>> {
+  async updateMeeting(id: string, data: Partial<MeetingDB>): Promise<ApiResponse<MeetingDB>> {
     try {
       const response = await this.customClient.put(`/meetings/${id}`, data)
       return { data: response.data.data, success: true }
@@ -885,7 +888,7 @@ class ApiClient {
   }
 
   // Note methods
-  async getNotes(params?: QueryParams): Promise<ListResponse<Note>> {
+  async getNotes(params?: QueryParams): Promise<ListResponse<NoteDB>> {
     try {
       const response = await this.customClient.get('/notes', { 
         params: {
@@ -920,7 +923,7 @@ class ApiClient {
     }
   }
 
-  async getNote(id: string): Promise<ApiResponse<Note>> {
+  async getNote(id: string): Promise<ApiResponse<NoteDB>> {
     try {
       const response = await this.customClient.get(`/notes/${id}`)
       return { data: response.data.data, success: true }
@@ -929,7 +932,7 @@ class ApiClient {
     }
   }
 
-  async createNote(data: Partial<Note>): Promise<ApiResponse<Note>> {
+  async createNote(data: Partial<NoteDB>): Promise<ApiResponse<NoteDB>> {
     try {
       const response = await this.customClient.post('/notes', data)
       return { data: response.data.data, success: true }
@@ -938,7 +941,7 @@ class ApiClient {
     }
   }
 
-  async updateNote(id: string, data: Partial<Note>): Promise<ApiResponse<Note>> {
+  async updateNote(id: string, data: Partial<NoteDB>): Promise<ApiResponse<NoteDB>> {
     try {
       const response = await this.customClient.put(`/notes/${id}`, data)
       return { data: response.data.data, success: true }
@@ -957,7 +960,7 @@ class ApiClient {
   }
 
   // Case methods
-  async getCases(params?: QueryParams & { status?: string; priority?: string }): Promise<ListResponse<Case>> {
+  async getCases(params?: QueryParams & { status?: string; priority?: string }): Promise<ListResponse<CaseDB>> {
     try {
       const response = await this.customClient.get('/cases', { 
         params: {
@@ -994,7 +997,7 @@ class ApiClient {
     }
   }
 
-  async getCase(id: string): Promise<ApiResponse<Case>> {
+  async getCase(id: string): Promise<ApiResponse<CaseDB>> {
     try {
       const response = await this.customClient.get(`/cases/${id}`)
       return { data: response.data.data, success: true }
@@ -1003,7 +1006,7 @@ class ApiClient {
     }
   }
 
-  async createCase(data: Partial<Case>): Promise<ApiResponse<Case>> {
+  async createCase(data: Partial<CaseDB>): Promise<ApiResponse<CaseDB>> {
     try {
       const response = await this.customClient.post('/cases', data)
       return { data: response.data.data, success: true }
@@ -1012,7 +1015,7 @@ class ApiClient {
     }
   }
 
-  async updateCase(id: string, data: Partial<Case>): Promise<ApiResponse<Case>> {
+  async updateCase(id: string, data: Partial<CaseDB>): Promise<ApiResponse<CaseDB>> {
     try {
       const response = await this.customClient.put(`/cases/${id}`, data)
       return { data: response.data.data, success: true }

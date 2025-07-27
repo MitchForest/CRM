@@ -10,11 +10,24 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { Opportunity } from '@/types/api.generated'
-import { OPPORTUNITY_STATUS_COLORS } from '@/types/phase2.types'
 import { cn } from '@/lib/utils'
 
+// Stage colors
+const OPPORTUNITY_STATUS_COLORS = {
+  'prospecting': 'bg-gray-100 text-gray-800',
+  'qualification': 'bg-blue-100 text-blue-800',
+  'needs_analysis': 'bg-indigo-100 text-indigo-800',
+  'value_proposition': 'bg-purple-100 text-purple-800',
+  'decision_makers': 'bg-pink-100 text-pink-800',
+  'perception_analysis': 'bg-orange-100 text-orange-800',
+  'proposal': 'bg-yellow-100 text-yellow-800',
+  'negotiation': 'bg-amber-100 text-amber-800',
+  'closed_won': 'bg-green-100 text-green-800',
+  'closed_lost': 'bg-red-100 text-red-800',
+} as const
+
 interface OpportunitiesTableProps {
-  opportunities: Opportunity[]
+  opportunities: OpportunityDB[]
 }
 
 export function OpportunitiesTable({ opportunities }: OpportunitiesTableProps) {
@@ -68,20 +81,20 @@ export function OpportunitiesTable({ opportunities }: OpportunitiesTableProps) {
                   {opportunity.name}
                 </Link>
               </TableCell>
-              <TableCell>{opportunity.contactName || '-'}</TableCell>
+              <TableCell>{opportunity.account_name || '-'}</TableCell>
               <TableCell>
                 <Badge 
                   variant="outline" 
                   className={cn(
-                    OPPORTUNITY_STATUS_COLORS[opportunity.salesStage as keyof typeof OPPORTUNITY_STATUS_COLORS] || 
+                    OPPORTUNITY_STATUS_COLORS[opportunity.sales_stage as keyof typeof OPPORTUNITY_STATUS_COLORS] || 
                     'bg-gray-100 text-gray-800'
                   )}
                 >
-                  {opportunity.salesStage}
+                  {opportunity.sales_stage?.replace(/_/g, ' ') || '-'}
                 </Badge>
               </TableCell>
               <TableCell className="text-right">
-                {formatCurrency(opportunity.amount, opportunity.currency)}
+                {formatCurrency(opportunity.amount || 0)}
               </TableCell>
               <TableCell>
                 <span className={cn(
@@ -91,8 +104,8 @@ export function OpportunitiesTable({ opportunities }: OpportunitiesTableProps) {
                   {opportunity.probability}%
                 </span>
               </TableCell>
-              <TableCell>{formatDate(opportunity.closeDate)}</TableCell>
-              <TableCell>{opportunity.assignedUserName || '-'}</TableCell>
+              <TableCell>{opportunity.date_closed ? formatDate(opportunity.date_closed) : '-'}</TableCell>
+              <TableCell>{opportunity.assigned_user_name || '-'}</TableCell>
               <TableCell className="text-right">
                 <Button variant="ghost" size="sm" asChild>
                   <Link to={`/opportunities/${opportunity.id}`}>

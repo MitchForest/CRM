@@ -115,7 +115,7 @@ export function ActivityTimeline({ parentType, parentId, className }: ActivityTi
                   "px-2 py-0.5 rounded-full text-xs",
                   activity.status === 'Completed' 
                     ? 'bg-green-100 text-green-700'
-                    : activity.type === 'task' && 'dueDate' in activity && activity.dueDate && new Date(activity.dueDate) < new Date()
+                    : activity.type === 'task' && 'date_due' in activity && activity.date_due && new Date(activity.date_due) < new Date()
                     ? 'bg-red-100 text-red-700'
                     : 'bg-gray-100 text-gray-700'
                 )}>
@@ -135,12 +135,12 @@ export function ActivityTimeline({ parentType, parentId, className }: ActivityTi
             )}
             
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <span>{formatDateTime(activity.dateCreated || '')}</span>
-              {activity.assignedUserName && (
-                <span>Assigned to {activity.assignedUserName}</span>
+              <span>{formatDateTime(activity.date_entered || '')}</span>
+              {activity.assigned_user_name && (
+                <span>Assigned to {activity.assigned_user_name}</span>
               )}
-              {activity.type === 'call' && activity.duration && (
-                <span>{activity.duration}</span>
+              {activity.type === 'call' && 'duration_minutes' in activity && activity.duration_minutes && (
+                <span>{activity.duration_minutes} min</span>
               )}
             </div>
             

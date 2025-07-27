@@ -1,9 +1,9 @@
 services:
-  # MySQL Database for SuiteCRM
+  # MySQL Database
   mysql:
     image: mysql:8.0
     platform: linux/amd64
-    container_name: suitecrm-mysql
+    container_name: sassycrm-mysql
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: suitecrm
@@ -13,89 +13,78 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     command: --default-authentication-plugin=mysql_native_password
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
       timeout: 20s
       retries: 10
     networks:
-      - suitecrm-network
+      - sassycrm-network
 
-  # SuiteCRM Backend (PHP + Apache)
-  suitecrm:
+  # Backend API (PHP + Apache)
+  backend:
     build:
-      context: ./docker/suitecrm
+      context: ./docker/backend
       dockerfile: Dockerfile
-    container_name: suitecrm-backend
+    container_name: sassycrm-backend
     ports:
       - "8080:80"
     volumes:
-      # Core SuiteCRM
-      - ./backend/suitecrm:/var/www/html:rw
-      
-      # Mount our custom code into SuiteCRM structure
-      - ./backend/custom/api:/var/www/html/custom/api:rw
-      - ./backend/custom/Extension:/var/www/html/custom/Extension:rw
-      - ./backend/custom/modules:/var/www/html/custom/modules:rw
-      - ./backend/custom/services:/var/www/html/custom/services:rw
-      - ./backend/custom/public:/var/www/html/public/custom:rw
-      
-      # Config override
-      - ./backend/custom/config/config_override.php:/var/www/html/config_override.php:rw
-      
-      # Tests and environment
-      - ./backend/tests:/var/www/html/tests:rw
-      - ./backend/.env:/var/www/html/.env:ro
+      # Mount entire backend directory
+      - ./backend:/var/www/html:rw
+      # Exclude vendor directory to avoid conflicts
+      - /var/www/html/vendor
     environment:
-      DATABASE_HOST: mysql
-      DATABASE_NAME: suitecrm
-      DATABASE_USER: suitecrm
-      DATABASE_PASSWORD: suitecrm
-      SUITECRM_URL: http://localhost:8080
-      SUITECRM_DATABASE_DRIVER: mysql
+      DB_HOST: mysql
+      DB_DATABASE: suitecrm
+      DB_USERNAME: suitecrm
+      DB_PASSWORD: suitecrm
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+      APP_DEBUG: "true"
+      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173"
     depends_on:
       mysql:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/index.php"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
+    working_dir: /var/www/html
+    command: >
+      bash -c "
+        composer install --no-interaction --optimize-autoloader &&
+        mkdir -p /var/www/html/storage/{logs,cache} &&
+        chown -R www-data:www-data /var/www/html/storage &&
+        chmod -R 775 /var/www/html/storage &&
+        apache2-foreground
+      "
     networks:
-      - suitecrm-network
+      - sassycrm-network
     restart: unless-stopped
 
-  # React Frontend  
+  # React Frontend (commented out for now)
   # frontend:
   #   build:
-  #     context: ./docker/frontend
+  #     context: ./frontend
   #     dockerfile: Dockerfile
-  #   container_name: suitecrm-frontend
+  #   container_name: sassycrm-frontend
   #   ports:
   #     - "3000:3000"
   #   volumes:
   #     - ./frontend:/app:rw
   #     - /app/node_modules
   #   environment:
-  #     VITE_SUITECRM_URL: http://localhost:8080
-  #     VITE_SUITECRM_CLIENT_ID: suitecrm_client
+  #     VITE_API_URL: http://localhost:8080/api
   #   depends_on:
-  #     suitecrm:
-  #       condition: service_healthy
+  #     - backend
   #   networks:
-  #     - suitecrm-network
+  #     - sassycrm-network
   #   restart: unless-stopped
 
   # Redis Cache
   redis:
     image: redis:alpine
-    container_name: redis
+    container_name: sassycrm-redis
     ports:
       - "6379:6379"
     networks:
-      - suitecrm-network
+      - sassycrm-network
     restart: unless-stopped
 
 volumes:
@@ -103,5 +92,5 @@ volumes:
     driver: local
 
 networks:
-  suitecrm-network:
+  sassycrm-network:
     driver: bridge

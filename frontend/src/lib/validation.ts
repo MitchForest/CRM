@@ -46,35 +46,32 @@ export const loginSchema = z.object({
 
 export type LoginFormData = z.infer<typeof loginSchema>
 
-// Lead form validation
+// Lead form validation - using exact database field names
 export const leadSchema = z.object({
-  firstName: z.string()
+  first_name: z.string()
     .min(1, messages.required('First name'))
-    .max(50, messages.max('First name', 50)),
-  lastName: z.string()
+    .max(100, messages.max('First name', 100)),
+  last_name: z.string()
     .min(1, messages.required('Last name'))
-    .max(50, messages.max('Last name', 50)),
-  email: z.string()
+    .max(100, messages.max('Last name', 100)),
+  email1: z.string()
     .min(1, messages.required('Email'))
     .email(messages.email)
     .max(100, messages.max('Email', 100)),
-  phone: optionalPhone(),
-  mobile: optionalPhone(),
+  phone_work: optionalPhone(),
+  phone_mobile: optionalPhone(),
   title: z.string()
     .max(100, messages.max('Title', 100))
     .optional(),
-  company: z.string()
-    .max(100, messages.max('Company', 100))
-    .optional(),
-  accountName: z.string()
-    .max(100, messages.max('Account name', 100))
+  account_name: z.string()
+    .max(255, messages.max('Company', 255))
     .optional(),
   website: optionalUrl(),
   description: z.string()
-    .max(5000, messages.max('Description', 5000))
+    .max(65535, messages.max('Description', 65535))
     .optional(),
-  status: z.enum(['New', 'Contacted', 'Qualified', 'Converted', 'Dead']),
-  source: z.enum(['Website', 'Referral', 'Campaign', 'Social Media', 'Other']).optional(),
+  status: z.enum(['new', 'contacted', 'qualified', 'converted', 'dead']),
+  lead_source: z.enum(['website', 'referral', 'cold_call', 'conference', 'advertisement']).optional(),
 })
 
 export type LeadFormData = z.infer<typeof leadSchema>
@@ -128,54 +125,85 @@ export const accountSchema = z.object({
 
 export type AccountFormData = z.infer<typeof accountSchema>
 
-// Contact form validation
+// Contact form validation - using exact database field names
 export const contactSchema = z.object({
-  firstName: z.string()
+  first_name: z.string()
     .min(1, messages.required('First name'))
-    .max(50, messages.max('First name', 50)),
-  lastName: z.string()
+    .max(100, messages.max('First name', 100)),
+  last_name: z.string()
     .min(1, messages.required('Last name'))
-    .max(50, messages.max('Last name', 50)),
-  email: z.string()
+    .max(100, messages.max('Last name', 100)),
+  email1: z.string()
     .min(1, messages.required('Email'))
     .email(messages.email)
     .max(100, messages.max('Email', 100)),
-  phone: optionalPhone(),
-  mobile: optionalPhone(),
+  phone_work: optionalPhone(),
+  phone_mobile: optionalPhone(),
   title: z.string()
     .max(100, messages.max('Title', 100))
     .optional(),
-  preferredContactMethod: z.enum(['email', 'phone', 'sms']).optional(),
-  customerNumber: z.string()
-    .max(50, messages.max('Customer number', 50))
+  department: z.string()
+    .max(255, messages.max('Department', 255))
     .optional(),
-  tags: z.string()
-    .max(500, messages.max('Tags', 500))
+  primary_address_street: z.string()
+    .max(150, messages.max('Street', 150))
+    .optional(),
+  primary_address_city: z.string()
+    .max(100, messages.max('City', 100))
+    .optional(),
+  primary_address_state: z.string()
+    .max(100, messages.max('State', 100))
+    .optional(),
+  primary_address_postalcode: z.string()
+    .max(20, messages.max('Postal Code', 20))
+    .optional(),
+  primary_address_country: z.string()
+    .max(255, messages.max('Country', 255))
+    .optional(),
+  lead_source: z.string()
+    .max(100, messages.max('Lead Source', 100))
+    .optional(),
+  description: z.string()
+    .max(65535, messages.max('Description', 65535))
     .optional(),
 })
 
 export type ContactFormData = z.infer<typeof contactSchema>
 
-// Opportunity form validation (for future use)
+// Opportunity form validation - using exact database field names
 export const opportunitySchema = z.object({
   name: z.string()
     .min(1, messages.required('Opportunity name'))
-    .max(100, messages.max('Opportunity name', 100)),
-  accountId: z.string()
-    .min(1, messages.required('Account')),
+    .max(50, messages.max('Opportunity name', 50)),
+  account_id: z.string()
+    .min(1, messages.required('Account'))
+    .optional(),
   amount: z.coerce.number()
     .positive(messages.positive('Amount'))
     .optional(),
-  closeDate: z.string()
+  amount_usdollar: z.coerce.number()
+    .positive(messages.positive('Amount USD'))
+    .optional(),
+  date_closed: z.string()
     .min(1, messages.required('Close date')),
-  stage: z.enum(['Prospecting', 'Qualification', 'Needs Analysis', 'Value Proposition', 'Decision Makers', 'Perception Analysis', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost']),
+  sales_stage: z.enum(['prospecting', 'qualification', 'needs_analysis', 'value_proposition', 'decision_makers', 'perception_analysis', 'proposal', 'negotiation', 'closed_won', 'closed_lost']),
   probability: z.coerce.number()
     .min(0, 'Probability must be between 0 and 100')
     .max(100, 'Probability must be between 0 and 100')
     .optional(),
-  description: z.string()
-    .max(5000, messages.max('Description', 5000))
+  next_step: z.string()
+    .max(100, messages.max('Next step', 100))
     .optional(),
+  opportunity_type: z.string()
+    .max(255, messages.max('Opportunity type', 255))
+    .optional(),
+  lead_source: z.string()
+    .max(50, messages.max('Lead source', 50))
+    .optional(),
+  description: z.string()
+    .max(65535, messages.max('Description', 65535))
+    .optional(),
+  assigned_user_id: z.string().optional(),
 })
 
 export type OpportunityFormData = z.infer<typeof opportunitySchema>

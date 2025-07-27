@@ -5,11 +5,18 @@ import { Phone, Calendar, CheckSquare, FileText, Clock } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import type { Call, Meeting, Task, Note } from '@/types/api.generated';
 
 interface EntityActivitiesProps {
   entityType: 'Lead' | 'Opportunity' | 'Case';
   limit?: number;
 }
+
+type ActivityWithType = 
+  | (Call & { type: 'call'; date: string })
+  | (Meeting & { type: 'meeting'; date: string })
+  | (Task & { type: 'task'; date: string })
+  | (Note & { type: 'note'; date: string });
 
 export function EntityActivities({ entityType, limit = 10 }: EntityActivitiesProps) {
   const { data: activities, isLoading } = useQuery({
@@ -27,12 +34,12 @@ export function EntityActivities({ entityType, limit = 10 }: EntityActivitiesPro
         apiClient.getNotes({ pageSize: limit, filters }),
       ]);
 
-      // Combine and sort
-      const combined = [
-        ...calls.data.map(c => ({ ...c, type: 'call' as const, date: c.startDate || c.createdAt })),
-        ...meetings.data.map(m => ({ ...m, type: 'meeting' as const, date: m.startDate || m.createdAt })),
-        ...tasks.data.map(t => ({ ...t, type: 'task' as const, date: t.dueDate || t.createdAt })),
-        ...notes.data.map(n => ({ ...n, type: 'note' as const, date: n.createdAt })),
+      // Combine and sort - using camelCase field names from generated types
+      const combined: ActivityWithType[] = [
+        ...calls.data.map(c => ({ ...c, type: 'call' as const, date: c.startDate || c.createdAt || '' })),
+        ...meetings.data.map(m => ({ ...m, type: 'meeting' as const, date: m.startDate || m.createdAt || '' })),
+        ...tasks.data.map(t => ({ ...t, type: 'task' as const, date: t.dueDate || t.createdAt || '' })),
+        ...notes.data.map(n => ({ ...n, type: 'note' as const, date: n.createdAt || '' })),
       ].sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
 
       return combined.slice(0, limit);
@@ -93,12 +100,12 @@ export function EntityActivities({ entityType, limit = 10 }: EntityActivitiesPro
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium truncate">{activity.name}</p>
-              {parentUrl && activity.parentName && (
+              {parentUrl && activity.parentType && (
                 <Link 
                   to={parentUrl}
                   className="text-sm text-primary hover:underline"
                 >
-                  {activity.parentName}
+                  {activity.parentType}
                 </Link>
               )}
               <p className="text-xs text-muted-foreground mt-1">

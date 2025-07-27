@@ -1,4 +1,4 @@
-# Implementation Plan: Clean Architecture Migration
+# Implementation Plan: Clean Architecture Migration - Sassy CRM
 
 ## Overview
 
@@ -13,6 +13,17 @@ Migrate from monolithic SuiteCRM to clean architecture while preserving all our 
 6. **Unified Timeline** - Complete customer history
 7. **Admin Tools** - KB editor, form builder, chatbot settings
 8. **AI Scoring** - Lead and opportunity scoring
+
+NEXT STEPS:
+☐ Backup custom code before deletion             
+     ☐ Delete backend/suitecrm and backend/scripts
+     ☐ Create new backend structure (models,
+       controllers, api)
+     ☐ Install Eloquent ORM and dependencies
+     ☐ Create Eloquent models for all tables
+     ☐ Port existing controllers to new structure
+     ☐ Set up API routing with Slim framework
+     ☐ Test all endpoints work with new structure
 
 ## Phase 1: Clean Slate (Day 1)
 

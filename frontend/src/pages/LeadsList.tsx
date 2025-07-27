@@ -17,44 +17,44 @@ import type { Lead } from '@/types/api.generated'
 import type { ColumnDef } from '@tanstack/react-table'
 
 const statusColors = {
-  New: 'bg-blue-100 text-blue-700',
-  Contacted: 'bg-yellow-100 text-yellow-700',
-  Qualified: 'bg-green-100 text-green-700',
-  Converted: 'bg-purple-100 text-purple-700',
-  Dead: 'bg-gray-100 text-gray-700',
+  new: 'bg-blue-100 text-blue-700',
+  contacted: 'bg-yellow-100 text-yellow-700',
+  qualified: 'bg-green-100 text-green-700',
+  converted: 'bg-purple-100 text-purple-700',
+  dead: 'bg-gray-100 text-gray-700',
 }
 
-const columns: ColumnDef<Lead>[] = [
+const columns: ColumnDef<LeadDB>[] = [
   {
     accessorKey: 'name',
     header: 'Name',
     cell: ({ row }) => {
       const lead = row.original
       return (
-        <Link to={`/leads/${lead.id}`} className="font-medium hover:underline">
-          {lead.firstName} {lead.lastName}
+        <Link to={`/app/leads/${lead.id}`} className="font-medium hover:underline">
+          {lead.first_name} {lead.last_name}
         </Link>
       )
     },
   },
   {
-    accessorKey: 'company',
+    accessorKey: 'account_name',
     header: 'Company',
   },
   {
-    accessorKey: 'email',
+    accessorKey: 'email1',
     header: 'Email',
     cell: ({ row }) => (
-      <a href={`mailto:${row.getValue('email')}`} className="hover:underline">
-        {row.getValue('email')}
+      <a href={`mailto:${row.getValue('email1')}`} className="hover:underline">
+        {row.getValue('email1')}
       </a>
     ),
   },
   {
-    accessorKey: 'phone',
+    accessorKey: 'phone_work',
     header: 'Phone',
     cell: ({ row }) => {
-      const phone = row.getValue('phone') as string
+      const phone = row.getValue('phone_work') as string
       return phone ? (
         <a href={`tel:${phone}`} className="hover:underline">
           {phone}
@@ -77,15 +77,15 @@ const columns: ColumnDef<Lead>[] = [
     },
   },
   {
-    accessorKey: 'source',
+    accessorKey: 'lead_source',
     header: 'Source',
-    cell: ({ row }) => row.getValue('source') || '-',
+    cell: ({ row }) => row.getValue('lead_source') || '-',
   },
   {
-    accessorKey: 'aiScore',
+    accessorKey: 'ai_score',
     header: 'AI Score',
     cell: ({ row }) => {
-      const aiScore = row.original.aiScore
+      const aiScore = row.original.ai_score
       if (!aiScore && aiScore !== 0) return '-'
       const score = typeof aiScore === 'number' ? aiScore : parseInt(aiScore)
       let color = 'text-gray-600'
@@ -97,15 +97,15 @@ const columns: ColumnDef<Lead>[] = [
     },
   },
   {
-    accessorKey: 'assignedUserName',
+    accessorKey: 'assigned_user_name',
     header: 'Assigned To',
-    cell: ({ row }) => row.getValue('assignedUserName') || '-',
+    cell: ({ row }) => row.getValue('assigned_user_name') || '-',
   },
   {
-    accessorKey: 'createdAt',
+    accessorKey: 'date_entered',
     header: 'Created',
     cell: ({ row }) => {
-      const date = row.getValue('createdAt') as string
+      const date = row.getValue('date_entered') as string
       return date ? formatDate(date) : '-'
     },
   },
@@ -193,11 +193,11 @@ export function LeadsListPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="New">New</SelectItem>
-                  <SelectItem value="Contacted">Contacted</SelectItem>
-                  <SelectItem value="Qualified">Qualified</SelectItem>
-                  <SelectItem value="Converted">Converted</SelectItem>
-                  <SelectItem value="Dead">Dead</SelectItem>
+                  <SelectItem value="new">New</SelectItem>
+                  <SelectItem value="contacted">Contacted</SelectItem>
+                  <SelectItem value="qualified">Qualified</SelectItem>
+                  <SelectItem value="converted">Converted</SelectItem>
+                  <SelectItem value="dead">Dead</SelectItem>
                 </SelectContent>
               </Select>
             }

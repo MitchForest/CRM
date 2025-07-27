@@ -48,7 +48,7 @@ export function useCreateLead() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (data: Omit<Lead, 'id'>) => {
+    mutationFn: async (data: Omit<LeadDB, 'id' | 'date_entered' | 'date_modified'>) => {
       return await apiClient.createLead(data)
     },
     onSuccess: async () => {
@@ -68,7 +68,7 @@ export function useUpdateLead(id: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (data: Partial<Lead>) => {
+    mutationFn: async (data: Partial<LeadDB>) => {
       return await apiClient.updateLead(id, data)
     },
     onSuccess: () => {

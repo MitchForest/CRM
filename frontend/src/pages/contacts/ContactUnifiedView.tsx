@@ -13,24 +13,24 @@ import { apiClient } from '@/lib/api-client'
 interface UnifiedContactData {
   contact: {
     id: string
-    firstName: string
-    lastName: string
-    email: string
-    phone?: string
-    mobile?: string
+    first_name: string
+    last_name: string
+    email1: string
+    phone_work?: string
+    phone_mobile?: string
     title?: string
     department?: string
-    accountId?: string
-    accountName?: string
-    isCompany: boolean
-    companyName?: string
-    assignedUserId?: string
+    account_id?: string
+    account_name?: string
+    is_company?: boolean
+    assigned_user_id?: string
+    assigned_user_name?: string
     description?: string
   }
   activities: Array<{
     type: 'website_visit' | 'ai_chat' | 'call' | 'meeting' | 'email' | 'note'
     date: string
-    data: any
+    data: Record<string, unknown>
   }>
   tickets: Array<{
     id: string
@@ -38,27 +38,27 @@ interface UnifiedContactData {
     status: string
     priority: string
     type: string
-    dateEntered: string
+    date_entered: string
   }>
   opportunities: Array<{
     id: string
     name: string
     amount: number
-    salesStage: string
+    sales_stage: string
     probability: number
-    closeDate: string
+    date_closed: string
   }>
   score?: {
     type: 'health' | 'lead'
     value: number
-    riskLevel?: string
-    factors?: any
-    calculatedAt: string
+    risk_level?: string
+    factors?: Array<{ name: string; impact: string; description: string }>
+    calculated_at: string
   }
   stats: {
-    totalActivities: number
-    openTickets: number
-    totalOpportunities: number
+    total_activities: number
+    open_tickets: number
+    total_opportunities: number
   }
 }
 
@@ -164,13 +164,13 @@ export function ContactUnifiedView() {
           <div className="flex items-start justify-between">
             <div>
               <CardTitle className="text-2xl">
-                {contact.isCompany ? contact.companyName : `${contact.firstName} ${contact.lastName}`}
+                {contact.is_company ? contact.account_name : `${contact.first_name} ${contact.last_name}`}
               </CardTitle>
               {contact.title && <CardDescription>{contact.title}</CardDescription>}
-              {contact.accountName && !contact.isCompany && (
+              {contact.account_name && !contact.is_company && (
                 <p className="text-sm text-muted-foreground mt-1">
                   <Building className="inline h-3 w-3 mr-1" />
-                  {contact.accountName}
+                  {contact.account_name}
                 </p>
               )}
             </div>
@@ -178,9 +178,9 @@ export function ContactUnifiedView() {
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">{score.type === 'health' ? 'Health Score' : 'Lead Score'}</p>
                 <p className="text-3xl font-bold">{score.value}</p>
-                {score.riskLevel && (
-                  <Badge variant={score.riskLevel === 'high' ? 'destructive' : score.riskLevel === 'medium' ? 'secondary' : 'default'}>
-                    {score.riskLevel} risk
+                {score.risk_level && (
+                  <Badge variant={score.risk_level === 'high' ? 'destructive' : score.risk_level === 'medium' ? 'secondary' : 'default'}>
+                    {score.risk_level} risk
                   </Badge>
                 )}
               </div>
@@ -189,27 +189,27 @@ export function ContactUnifiedView() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
-            {contact.email && (
+            {contact.email1 && (
               <div>
                 <p className="text-sm text-muted-foreground">Email</p>
-                <a href={`mailto:${contact.email}`} className="text-sm font-medium hover:underline">
-                  {contact.email}
+                <a href={`mailto:${contact.email1}`} className="text-sm font-medium hover:underline">
+                  {contact.email1}
                 </a>
               </div>
             )}
-            {contact.phone && (
+            {contact.phone_work && (
               <div>
-                <p className="text-sm text-muted-foreground">Phone</p>
-                <a href={`tel:${contact.phone}`} className="text-sm font-medium hover:underline">
-                  {contact.phone}
+                <p className="text-sm text-muted-foreground">Work Phone</p>
+                <a href={`tel:${contact.phone_work}`} className="text-sm font-medium hover:underline">
+                  {contact.phone_work}
                 </a>
               </div>
             )}
-            {contact.mobile && (
+            {contact.phone_mobile && (
               <div>
                 <p className="text-sm text-muted-foreground">Mobile</p>
-                <a href={`tel:${contact.mobile}`} className="text-sm font-medium hover:underline">
-                  {contact.mobile}
+                <a href={`tel:${contact.phone_mobile}`} className="text-sm font-medium hover:underline">
+                  {contact.phone_mobile}
                 </a>
               </div>
             )}
@@ -218,15 +218,15 @@ export function ContactUnifiedView() {
           {/* Quick Stats */}
           <div className="grid gap-4 md:grid-cols-3 mt-6 pt-6 border-t">
             <div className="text-center">
-              <p className="text-2xl font-semibold">{stats.totalActivities}</p>
+              <p className="text-2xl font-semibold">{stats.total_activities}</p>
               <p className="text-sm text-muted-foreground">Total Activities</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-semibold">{stats.openTickets}</p>
+              <p className="text-2xl font-semibold">{stats.open_tickets}</p>
               <p className="text-sm text-muted-foreground">Open Tickets</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-semibold">{stats.totalOpportunities}</p>
+              <p className="text-2xl font-semibold">{stats.total_opportunities}</p>
               <p className="text-sm text-muted-foreground">Opportunities</p>
             </div>
           </div>
@@ -263,11 +263,11 @@ export function ContactUnifiedView() {
                         <div className="flex-1 space-y-1">
                           <p className="text-sm font-medium">{getActivityTitle(activity)}</p>
                           {activity.data.description && (
-                            <p className="text-sm text-muted-foreground">{activity.data.description}</p>
+                            <p className="text-sm text-muted-foreground">{String(activity.data.description)}</p>
                           )}
                           <p className="text-xs text-muted-foreground">
                             {format(new Date(activity.date), 'PPp')}
-                            {activity.data.assignedTo && ` • ${activity.data.assignedTo}`}
+                            {activity.data.assignedTo && ` • ${String(activity.data.assignedTo)}`}
                           </p>
                         </div>
                       </div>
@@ -298,7 +298,7 @@ export function ContactUnifiedView() {
                           {opp.name}
                         </Link>
                         <p className="text-sm text-muted-foreground">
-                          {opp.salesStage} • {opp.probability}% • Closes {format(new Date(opp.closeDate), 'PP')}
+                          {opp.sales_stage} • {opp.probability}% • Closes {format(new Date(opp.date_closed), 'PP')}
                         </p>
                       </div>
                       <p className="font-semibold">${opp.amount.toLocaleString()}</p>
@@ -329,7 +329,7 @@ export function ContactUnifiedView() {
                           {ticket.name}
                         </Link>
                         <p className="text-sm text-muted-foreground">
-                          {ticket.type} • Created {format(new Date(ticket.dateEntered), 'PP')}
+                          {ticket.type} • Created {format(new Date(ticket.date_entered), 'PP')}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">

@@ -16,18 +16,19 @@ import { KanbanColumn } from './KanbanColumn'
 import { OpportunityCard } from './OpportunityCard'
 import { useUpdateOpportunityStage } from '@/hooks/use-opportunities'
 import type { Opportunity } from '@/types/api.generated'
-import type { OpportunityStage } from '@/types/phase2.types'
 
-const stages: OpportunityStage[] = [
-  'Qualified',
-  'Proposal',
-  'Negotiation',
-  'Won',
-  'Lost',
-]
+const stages = [
+  'qualification',
+  'proposal',
+  'negotiation',
+  'closed_won',
+  'closed_lost',
+] as const
+
+type OpportunityStage = typeof stages[number]
 
 interface OpportunitiesKanbanProps {
-  opportunities: Opportunity[]
+  opportunities: OpportunityDB[]
 }
 
 export function OpportunitiesKanban({ opportunities }: OpportunitiesKanbanProps) {
@@ -70,11 +71,11 @@ export function OpportunitiesKanban({ opportunities }: OpportunitiesKanbanProps)
       // If dropping on another card, find which stage that card is in
       const targetOpp = opportunities.find(opp => opp.id === over.id)
       if (targetOpp) {
-        targetStage = targetOpp.salesStage || 'Qualification'
+        targetStage = targetOpp.sales_stage || 'qualification'
       }
     }
 
-    if (targetStage && opportunity.salesStage !== targetStage) {
+    if (targetStage && opportunity.sales_stage !== targetStage) {
       updateStageMutation.mutate({
         id: opportunity.id!,
         stage: targetStage as OpportunityStage,
@@ -83,9 +84,9 @@ export function OpportunitiesKanban({ opportunities }: OpportunitiesKanbanProps)
   }
 
   const opportunitiesByStage = stages.reduce((acc, stage) => {
-    acc[stage] = opportunities.filter(opp => opp.salesStage === stage)
+    acc[stage] = opportunities.filter(opp => opp.sales_stage === stage)
     return acc
-  }, {} as Record<OpportunityStage, Opportunity[]>)
+  }, {} as Record<OpportunityStage, OpportunityDB[]>)
 
   const activeOpportunity = activeId
     ? opportunities.find(opp => opp.id === activeId)

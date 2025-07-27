@@ -1,0 +1,16 @@
+COLUMN_NAME	DATA_TYPE	CHARACTER_MAXIMUM_LENGTH	IS_NULLABLE	COLUMN_KEY	COLUMN_DEFAULT
+id	char	36	NO	PRI	NULL
+user_name	varchar	60	YES	MUL	NULL
+user_hash	varchar	255	YES		NULL
+first_name	varchar	255	YES		NULL
+last_name	varchar	255	YES		NULL
+department	varchar	50	YES		NULL
+title	varchar	50	YES		NULL
+phone_work	varchar	50	YES		NULL
+email1	varchar	100	YES		NULL
+status	varchar	100	YES		NULL
+is_admin	tinyint	NULL	YES		0
+deleted	tinyint	NULL	YES		0
+date_entered	datetime	NULL	YES		NULL
+date_modified	datetime	NULL	YES		NULL
+created_by	char	36	YES		NULL

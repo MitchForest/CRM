@@ -13,28 +13,30 @@ import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import { ActivityTimeline } from '@/components/activities/ActivityTimeline';
 import { useActivitiesByParent } from '@/hooks/use-activities';
 
-const stageColors: Record<string, string> = {
-  'Prospecting': 'bg-gray-100 text-gray-700',
-  'Qualification': 'bg-blue-100 text-blue-700',
-  'Needs Analysis': 'bg-indigo-100 text-indigo-700',
-  'Value Proposition': 'bg-purple-100 text-purple-700',
-  'Decision Makers': 'bg-pink-100 text-pink-700',
-  'Proposal': 'bg-orange-100 text-orange-700',
-  'Negotiation': 'bg-yellow-100 text-yellow-700',
-  'Closed Won': 'bg-green-100 text-green-700',
-  'Closed Lost': 'bg-red-100 text-red-700',
+const stageColors = {
+  prospecting: 'bg-gray-100 text-gray-700',
+  qualification: 'bg-blue-100 text-blue-700',
+  needs_analysis: 'bg-indigo-100 text-indigo-700',
+  value_proposition: 'bg-purple-100 text-purple-700',
+  decision_makers: 'bg-pink-100 text-pink-700',
+  perception_analysis: 'bg-purple-100 text-purple-700',
+  proposal: 'bg-orange-100 text-orange-700',
+  negotiation: 'bg-yellow-100 text-yellow-700',
+  closed_won: 'bg-green-100 text-green-700',
+  closed_lost: 'bg-red-100 text-red-700',
 };
 
-const stageProbabilities: Record<string, number> = {
-  'Prospecting': 10,
-  'Qualification': 20,
-  'Needs Analysis': 30,
-  'Value Proposition': 40,
-  'Decision Makers': 50,
-  'Proposal': 60,
-  'Negotiation': 80,
-  'Closed Won': 100,
-  'Closed Lost': 0,
+const stageProbabilities = {
+  prospecting: 10,
+  qualification: 20,
+  needs_analysis: 25,
+  value_proposition: 30,
+  decision_makers: 40,
+  perception_analysis: 50,
+  proposal: 65,
+  negotiation: 80,
+  closed_won: 100,
+  closed_lost: 0,
 };
 
 export function OpportunityDetailPage() {
@@ -80,7 +82,7 @@ export function OpportunityDetailPage() {
     );
   }
 
-  const probability = stageProbabilities[opportunity.salesStage] || 0;
+  const probability = stageProbabilities[opportunity.sales_stage as keyof typeof stageProbabilities] || 0;
   const expectedValue = (opportunity.amount || 0) * (probability / 100);
 
   return (
@@ -95,8 +97,10 @@ export function OpportunityDetailPage() {
           <div>
             <h1 className="text-3xl font-bold">{opportunity.name}</h1>
             <div className="flex items-center gap-4 mt-1 text-muted-foreground">
-              <Badge className={stageColors[opportunity.salesStage] || 'bg-gray-100'}>
-                {opportunity.salesStage}
+              <Badge className={stageColors[opportunity.sales_stage as keyof typeof stageColors] || 'bg-gray-100'}>
+                {opportunity.sales_stage?.split('_').map((word: string) => 
+                  word.charAt(0).toUpperCase() + word.slice(1)
+                ).join(' ')}
               </Badge>
               <span>{probability}% probability</span>
             </div>
@@ -149,18 +153,18 @@ export function OpportunityDetailPage() {
                       <p className="text-sm font-medium text-muted-foreground">Close Date</p>
                       <p className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
-                        {formatDate(opportunity.closeDate)}
+                        {formatDate(opportunity.date_closed || '')}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Contact</p>
-                      {opportunity.contactId && opportunity.contactName ? (
+                      {opportunity.account_id && opportunity.account_name ? (
                         <Link 
-                          to={`/contacts/${opportunity.contactId}`}
+                          to={`/accounts/${opportunity.account_id}`}
                           className="flex items-center gap-2 text-primary hover:underline"
                         >
                           <User className="h-4 w-4" />
-                          {opportunity.contactName}
+                          {opportunity.account_name}
                         </Link>
                       ) : (
                         <p className="text-muted-foreground">Not specified</p>
@@ -174,7 +178,7 @@ export function OpportunityDetailPage() {
                       <p className="text-sm font-medium text-muted-foreground">Assigned To</p>
                       <p className="flex items-center gap-2">
                         <User className="h-4 w-4" />
-                        {opportunity.assignedUserName || 'Unassigned'}
+                        {opportunity.assigned_user_name || 'Unassigned'}
                       </p>
                     </div>
                   </div>
@@ -264,18 +268,18 @@ export function OpportunityDetailPage() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Days in Stage</p>
                 <p className="text-2xl font-bold">
-                  {opportunity.updatedAt && 
-                    Math.floor((new Date().getTime() - new Date(opportunity.updatedAt).getTime()) / (1000 * 60 * 60 * 24))
+                  {opportunity.date_modified && 
+                    Math.floor((new Date().getTime() - new Date(opportunity.date_modified).getTime()) / (1000 * 60 * 60 * 24))
                   } days
                 </p>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Created</p>
-                <p className="text-sm">{formatDateTime(opportunity.createdAt || '')}</p>
+                <p className="text-sm">{formatDateTime(opportunity.date_entered || '')}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Last Modified</p>
-                <p className="text-sm">{formatDateTime(opportunity.updatedAt || opportunity.createdAt || '')}</p>
+                <p className="text-sm">{formatDateTime(opportunity.date_modified || opportunity.date_entered || '')}</p>
               </div>
             </CardContent>
           </Card>

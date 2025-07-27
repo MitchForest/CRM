@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
-import type { Contact, QueryParams } from '@/types/api.generated'
+import type { QueryParams } from '@/types/api.generated'
+import type { Contact } from '@/types/api.generated'
 
 export function useContacts(params?: QueryParams) {
   return useQuery({
@@ -21,7 +22,7 @@ export function useCreateContact() {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: (data: Partial<Contact>) => apiClient.createContact(data),
+    mutationFn: (data: Partial<ContactDB>) => apiClient.createContact(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] })
     },
@@ -32,7 +33,7 @@ export function useUpdateContact() {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Contact> }) => 
+    mutationFn: ({ id, data }: { id: string; data: Partial<ContactDB> }) => 
       apiClient.updateContact(id, data),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['contact', id] })

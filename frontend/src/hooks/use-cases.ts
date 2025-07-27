@@ -2,7 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
 import { toast } from 'sonner'
 import type { Case } from '@/types/api.generated'
-import type { CasePriority } from '@/types/phase2.types'
+
+export type CasePriority = 'High' | 'Medium' | 'Low'
 import { getErrorMessage } from '@/lib/error-utils'
 
 // Get paginated cases
@@ -58,7 +59,7 @@ export function useCreateCase() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (data: Omit<Case, 'id'>) => {
+    mutationFn: async (data: Omit<CaseDB, 'id' | 'date_entered' | 'date_modified'>) => {
       return await apiClient.createCase(data)
     },
     onSuccess: async () => {
@@ -77,7 +78,7 @@ export function useUpdateCase(id: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (data: Partial<Case>) => {
+    mutationFn: async (data: Partial<CaseDB>) => {
       return await apiClient.updateCase(id, data)
     },
     onSuccess: () => {
@@ -98,7 +99,7 @@ export function useResolveCase(id: string) {
   return useMutation({
     mutationFn: async (resolution: string) => {
       return await apiClient.updateCase(id, {
-        status: 'Closed',
+        status: 'closed',
         resolution,
       })
     },
@@ -139,18 +140,18 @@ export function useCaseMetrics() {
       const response = await apiClient.getCases({ pageSize: 1000 })
       const cases = response.data
 
-      const openCases = cases.filter(c => c.status !== 'Closed').length
-      const criticalCases = cases.filter(c => c.priority === 'High').length
+      const openCases = cases.filter(c => c.status !== 'closed').length
+      const criticalCases = cases.filter(c => c.priority === 'P1').length
       
       // Calculate average resolution time (would be better done on backend)
-      const closedCases = cases.filter(c => c.status === 'Closed')
+      const closedCases = cases.filter(c => c.status === 'closed')
       let avgResolutionTime = 0
       
       if (closedCases.length > 0) {
         const totalTime = closedCases.reduce((sum, c) => {
-          if (c.createdAt && c.updatedAt) {
-            const created = new Date(c.createdAt).getTime()
-            const updated = new Date(c.updatedAt).getTime()
+          if (c.date_entered && c.date_modified) {
+            const created = new Date(c.date_entered).getTime()
+            const updated = new Date(c.date_modified).getTime()
             return sum + (updated - created)
           }
           return sum
@@ -161,9 +162,9 @@ export function useCaseMetrics() {
 
       // Cases by priority
       const casesByPriority = [
-        { priority: 'P1' as CasePriority, count: cases.filter(c => c.priority === 'High').length },
-        { priority: 'P2' as CasePriority, count: cases.filter(c => c.priority === 'Medium').length },
-        { priority: 'P3' as CasePriority, count: cases.filter(c => c.priority === 'Low').length },
+        { priority: 'P1' as CasePriority, count: cases.filter(c => c.priority === 'P1').length },
+        { priority: 'P2' as CasePriority, count: cases.filter(c => c.priority === 'P2').length },
+        { priority: 'P3' as CasePriority, count: cases.filter(c => c.priority === 'P3').length },
       ]
 
       return {
@@ -183,12 +184,12 @@ export function useCriticalCases() {
     queryFn: async () => {
       const response = await apiClient.getCases({ 
         pageSize: 100,
-        priority: 'High' // or 'P1' depending on backend
+        priority: 'P1'
       })
       
       return response.data.filter(c => 
-        c.status !== 'Closed' && 
-        c.priority === 'High'
+        c.status !== 'closed' && 
+        c.priority === 'P1'
       )
     },
   })

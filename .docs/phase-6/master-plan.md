@@ -1,4 +1,4 @@
-# Master Plan: Modernizing SuiteCRM for Software Sales Teams
+# Master Plan: Sassy CRM - Modernizing SuiteCRM for Software Sales Teams
 
 ## Executive Summary
 

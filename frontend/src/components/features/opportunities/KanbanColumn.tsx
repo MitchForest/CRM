@@ -15,8 +15,8 @@ export function KanbanColumn({ id, title, count, value, children, isEmpty }: Kan
     id,
   })
 
-  const isClosedStage = id === 'Closed Won' || id === 'Closed Lost'
-  const isWonStage = id === 'Closed Won'
+  const isClosedStage = id === 'closed_won' || id === 'closed_lost'
+  const isWonStage = id === 'closed_won'
 
   return (
     <div
@@ -37,7 +37,7 @@ export function KanbanColumn({ id, title, count, value, children, isEmpty }: Kan
           <h3 className={cn(
             "font-semibold",
             isWonStage && "text-green-700",
-            id === 'Closed Lost' && "text-red-700"
+            id === 'closed_lost' && "text-red-700"
           )}>
             {title}
           </h3>

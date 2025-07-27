@@ -38,11 +38,11 @@ export function CaseDetail() {
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      'New': 'bg-blue-100 text-blue-800',
-      'Assigned': 'bg-yellow-100 text-yellow-800',
-      'In Progress': 'bg-purple-100 text-purple-800',
-      'Pending Input': 'bg-orange-100 text-orange-800',
-      'Closed': 'bg-gray-100 text-gray-800',
+      'new': 'bg-blue-100 text-blue-800',
+      'assigned': 'bg-yellow-100 text-yellow-800',
+      'pending': 'bg-orange-100 text-orange-800',
+      'resolved': 'bg-green-100 text-green-800',
+      'closed': 'bg-gray-100 text-gray-800',
     }
     return colors[status] || 'bg-gray-100 text-gray-800'
   }
@@ -52,7 +52,7 @@ export function CaseDetail() {
 
     try {
       await createNote.mutateAsync({
-        name: `Note for Case #${caseItem.caseNumber}`,
+        name: `Note for Case #${caseItem.case_number || caseItem.id.slice(0, 8)}`,
         description: newNote,
         parentType: 'Cases',
         parentId: id,

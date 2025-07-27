@@ -22,10 +22,10 @@ import { toast } from 'sonner'
 const caseSchema = z.object({
   name: z.string().min(1, 'Subject is required'),
   status: z.string(),
-  priority: z.enum(['High', 'Medium', 'Low']),
+  priority: z.enum(['P1', 'P2', 'P3']),
   type: z.string(),
-  accountId: z.string().optional(),
-  contactId: z.string().optional(),
+  account_id: z.string().optional(),
+  contact_id: z.string().optional(),
   description: z.string().optional(),
   resolution: z.string().optional(),
 })
@@ -53,9 +53,9 @@ export function CaseForm() {
   } = useForm<CaseFormData>({
     resolver: zodResolver(caseSchema),
     defaultValues: {
-      status: 'Open',
-      priority: 'Medium',
-      type: 'Technical',
+      status: 'new',
+      priority: 'P3',
+      type: 'question',
     },
   })
 
@@ -66,10 +66,11 @@ export function CaseForm() {
     if (caseData?.data && isEdit) {
       reset({
         name: caseData.data.name,
-        status: caseData.data.status,
-        priority: caseData.data.priority as 'High' | 'Medium' | 'Low',
-        type: caseData.data.type,
-        contactId: caseData.data.contactId,
+        status: caseData.data.status || 'new',
+        priority: caseData.data.priority as 'P1' | 'P2' | 'P3' || 'P3',
+        type: caseData.data.type || 'question',
+        contact_id: caseData.data.contact_id,
+        account_id: caseData.data.account_id,
         description: caseData.data.description,
         resolution: caseData.data.resolution,
       })
@@ -78,14 +79,10 @@ export function CaseForm() {
 
   const onSubmit = async (data: CaseFormData) => {
     try {
-      const formattedData = {
-        ...data,
-        status: data.status as 'Open' | 'In Progress' | 'Resolved' | 'Closed'
-      }
       if (isEdit && id) {
-        await updateCase.mutateAsync(formattedData)
+        await updateCase.mutateAsync(data)
       } else {
-        await createCase.mutateAsync(formattedData)
+        await createCase.mutateAsync(data)
       }
       
       navigate('/cases')
@@ -139,10 +136,11 @@ export function CaseForm() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Open">Open</SelectItem>
-                <SelectItem value="In Progress">In Progress</SelectItem>
-                <SelectItem value="Resolved">Resolved</SelectItem>
-                <SelectItem value="Closed">Closed</SelectItem>
+                <SelectItem value="new">New</SelectItem>
+                <SelectItem value="assigned">Assigned</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="resolved">Resolved</SelectItem>
+                <SelectItem value="closed">Closed</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -150,16 +148,16 @@ export function CaseForm() {
           <div className="space-y-2">
             <Label htmlFor="priority">Priority</Label>
             <Select
-              value={watch('priority') || 'Medium'}
-              onValueChange={(value) => setValue('priority', value as 'High' | 'Medium' | 'Low')}
+              value={watch('priority') || 'P3'}
+              onValueChange={(value) => setValue('priority', value as 'P1' | 'P2' | 'P3')}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="High">P1 - High</SelectItem>
-                <SelectItem value="Medium">P2 - Medium</SelectItem>
-                <SelectItem value="Low">P3 - Low</SelectItem>
+                <SelectItem value="P1">P1 - Critical</SelectItem>
+                <SelectItem value="P2">P2 - High</SelectItem>
+                <SelectItem value="P3">P3 - Normal</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -167,27 +165,27 @@ export function CaseForm() {
           <div className="space-y-2">
             <Label htmlFor="type">Type</Label>
             <Select
-              value={watch('type') || 'Problem'}
+              value={watch('type') || 'question'}
               onValueChange={(value) => setValue('type', value)}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Technical">Technical</SelectItem>
-                <SelectItem value="Billing">Billing</SelectItem>
-                <SelectItem value="Feature Request">Feature Request</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
+                <SelectItem value="bug">🐛 Bug</SelectItem>
+                <SelectItem value="feature_request">✨ Feature Request</SelectItem>
+                <SelectItem value="question">❓ Question</SelectItem>
+                <SelectItem value="other">📋 Other</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="contactId">Contact</Label>
+          <Label htmlFor="contact_id">Contact</Label>
           <Select
-            value={watch('contactId') || ''}
-            onValueChange={(value) => setValue('contactId', value)}
+            value={watch('contact_id') || ''}
+            onValueChange={(value) => setValue('contact_id', value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select contact" />
@@ -195,7 +193,7 @@ export function CaseForm() {
             <SelectContent>
               {contacts?.data.map((contact) => (
                 <SelectItem key={contact.id || ''} value={contact.id || ''}>
-                  {contact.firstName} {contact.lastName}
+                  {contact.first_name} {contact.last_name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -213,7 +211,7 @@ export function CaseForm() {
           />
         </div>
 
-        {status === 'Closed' && (
+        {(status === 'resolved' || status === 'closed') && (
           <div className="space-y-2">
             <Label htmlFor="resolution">Resolution</Label>
             <Textarea

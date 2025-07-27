@@ -26,18 +26,17 @@ export function LeadFormPage() {
   const form = useForm<LeadFormData>({
     resolver: zodResolver(leadSchema),
     defaultValues: {
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      mobile: '',
+      first_name: '',
+      last_name: '',
+      email1: '',
+      phone_work: '',
+      phone_mobile: '',
       title: '',
-      company: '',
-      accountName: '',
+      account_name: '',
       website: '',
       description: '',
-      status: 'New',
-      source: undefined,
+      status: 'new',
+      lead_source: undefined,
     },
   })
 
@@ -45,18 +44,17 @@ export function LeadFormPage() {
     if (isEdit && leadData?.data) {
       const lead = leadData.data
       form.reset({
-        firstName: lead.firstName,
-        lastName: lead.lastName,
-        email: lead.email,
-        phone: lead.phone || '',
-        mobile: lead.mobile || '',
+        first_name: lead.first_name,
+        last_name: lead.last_name,
+        email1: lead.email1,
+        phone_work: lead.phone_work || '',
+        phone_mobile: lead.phone_mobile || '',
         title: lead.title || '',
-        company: lead.company || '',
-        accountName: lead.accountName || '',
+        account_name: lead.account_name || '',
         website: lead.website || '',
         description: lead.description || '',
         status: lead.status,
-        source: lead.source as LeadFormData['source'] || undefined,
+        lead_source: lead.lead_source as LeadFormData['lead_source'] || undefined,
       })
     }
   }, [isEdit, leadData, form])
@@ -139,7 +137,7 @@ export function LeadFormPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <FormField
                   control={form.control}
-                  name="firstName"
+                  name="first_name"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>First Name</FormLabel>
@@ -153,7 +151,7 @@ export function LeadFormPage() {
 
                 <FormField
                   control={form.control}
-                  name="lastName"
+                  name="last_name"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Last Name</FormLabel>
@@ -167,7 +165,7 @@ export function LeadFormPage() {
 
                 <FormField
                   control={form.control}
-                  name="email"
+                  name="email1"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Email</FormLabel>
@@ -181,10 +179,10 @@ export function LeadFormPage() {
 
                 <FormField
                   control={form.control}
-                  name="phone"
+                  name="phone_work"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Phone</FormLabel>
+                      <FormLabel>Work Phone</FormLabel>
                       <FormControl>
                         <Input type="tel" {...field} />
                       </FormControl>
@@ -195,10 +193,10 @@ export function LeadFormPage() {
 
                 <FormField
                   control={form.control}
-                  name="mobile"
+                  name="phone_mobile"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Mobile</FormLabel>
+                      <FormLabel>Mobile Phone</FormLabel>
                       <FormControl>
                         <Input type="tel" {...field} />
                       </FormControl>
@@ -223,30 +221,13 @@ export function LeadFormPage() {
 
                 <FormField
                   control={form.control}
-                  name="company"
+                  name="account_name"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Company</FormLabel>
                       <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="accountName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Account Name</FormLabel>
-                      <FormControl>
                         <Input {...field} placeholder="e.g., Acme Corporation" />
                       </FormControl>
-                      <FormDescription>
-                        The parent account this lead is associated with
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -279,9 +260,11 @@ export function LeadFormPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="New">New</SelectItem>
-                          <SelectItem value="Contacted">Contacted</SelectItem>
-                          <SelectItem value="Qualified">Qualified</SelectItem>
+                          <SelectItem value="new">New</SelectItem>
+                          <SelectItem value="contacted">Contacted</SelectItem>
+                          <SelectItem value="qualified">Qualified</SelectItem>
+                          <SelectItem value="converted">Converted</SelectItem>
+                          <SelectItem value="dead">Dead</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -291,7 +274,7 @@ export function LeadFormPage() {
 
                 <FormField
                   control={form.control}
-                  name="source"
+                  name="lead_source"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Lead Source</FormLabel>
@@ -302,11 +285,11 @@ export function LeadFormPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Website">Website</SelectItem>
-                          <SelectItem value="Referral">Referral</SelectItem>
-                          <SelectItem value="Campaign">Campaign</SelectItem>
-                          <SelectItem value="Social Media">Social Media</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
+                          <SelectItem value="website">Website</SelectItem>
+                          <SelectItem value="referral">Referral</SelectItem>
+                          <SelectItem value="cold_call">Cold Call</SelectItem>
+                          <SelectItem value="conference">Conference</SelectItem>
+                          <SelectItem value="advertisement">Advertisement</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormDescription>

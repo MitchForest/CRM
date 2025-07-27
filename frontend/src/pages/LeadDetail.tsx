@@ -126,7 +126,7 @@ export function LeadDetailPage() {
                     {lead.company || 'No company'}
                   </CardDescription>
                 </div>
-                <Badge className={`${statusColors[lead.status]} border-transparent`}>
+                <Badge className={`${statusColors[lead.status as keyof typeof statusColors] || ''} border-transparent`}>
                   {lead.status}
                 </Badge>
               </div>

@@ -353,8 +353,8 @@ export function useActivitiesByParent(parentType: string, parentId: string) {
     queryFn: async () => {
       // Fetch all activity types with parent filters
       const filters = [
-        { field: 'parentType', operator: 'eq' as const, value: parentType },
-        { field: 'parentId', operator: 'eq' as const, value: parentId }
+        { field: 'parent_type', operator: 'eq' as const, value: parentType },
+        { field: 'parent_id', operator: 'eq' as const, value: parentId }
       ]
       
       const [callsResponse, meetingsResponse, tasksResponse, notesResponse] = await Promise.all([
@@ -364,39 +364,31 @@ export function useActivitiesByParent(parentType: string, parentId: string) {
         apiClient.getNotes({ pageSize: 50, filters }),
       ])
 
-      // Combine all activities into a single array
+      // Combine all activities into a single array with type tag
       const activities = [
         ...callsResponse.data.map(call => ({
           ...call,
           type: 'call' as const,
-          dateCreated: call.startDate || call.createdAt,
-          assignedUserName: call.assignedUserName,
         })),
         ...meetingsResponse.data.map(meeting => ({
           ...meeting,
           type: 'meeting' as const,
-          dateCreated: meeting.startDate || meeting.createdAt,
-          assignedUserName: meeting.assignedUserName,
         })),
         ...tasksResponse.data.map(task => ({
           ...task,
           type: 'task' as const,
-          dateCreated: task.dueDate || task.createdAt,
-          assignedUserName: task.assignedUserName,
         })),
         ...notesResponse.data.map(note => ({
           ...note,
           type: 'note' as const,
-          dateCreated: note.createdAt,
-          assignedUserName: note.assignedUserName,
           status: 'completed' as const, // Notes don't have status, so we default to completed
         })),
       ]
 
       // Sort by date, most recent first
       return activities.sort((a, b) => {
-        const dateA = new Date(a.dateCreated || 0)
-        const dateB = new Date(b.dateCreated || 0)
+        const dateA = new Date(a.date_entered || 0)
+        const dateB = new Date(b.date_entered || 0)
         return dateB.getTime() - dateA.getTime()
       })
     },

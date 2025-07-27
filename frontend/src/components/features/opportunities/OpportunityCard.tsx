@@ -8,7 +8,7 @@ import type { Opportunity } from '@/types/api.generated'
 import { cn } from '@/lib/utils'
 
 interface OpportunityCardProps {
-  opportunity: Opportunity
+  opportunity: OpportunityDB
 }
 
 export function OpportunityCard({ opportunity }: OpportunityCardProps) {
@@ -43,7 +43,7 @@ export function OpportunityCard({ opportunity }: OpportunityCardProps) {
     
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: opportunity.currency || 'USD',
+      currency: 'USD', // TODO: Use currency_id when currency table is available
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(numAmount)
@@ -84,10 +84,10 @@ export function OpportunityCard({ opportunity }: OpportunityCardProps) {
           >
             <h4 className="font-medium line-clamp-1">{opportunity.name}</h4>
             
-            {opportunity.contactName && (
+            {opportunity.account_name && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Building2 className="h-3 w-3" />
-                <span className="line-clamp-1">{opportunity.contactName}</span>
+                <span className="line-clamp-1">{opportunity.account_name}</span>
               </div>
             )}
 
@@ -105,12 +105,12 @@ export function OpportunityCard({ opportunity }: OpportunityCardProps) {
 
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Calendar className="h-3 w-3" />
-              <span>Close: {formatDate(opportunity.closeDate)}</span>
+              <span>Close: {formatDate(opportunity.date_closed || '')}</span>
             </div>
 
-            {opportunity.nextStep && (
+            {opportunity.next_step && (
               <p className="text-xs text-muted-foreground line-clamp-2">
-                Next: {opportunity.nextStep}
+                Next: {opportunity.next_step}
               </p>
             )}
           </Link>

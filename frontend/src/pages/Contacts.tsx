@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { type ColumnDef } from '@tanstack/react-table'
 import { Plus, MoreHorizontal, ArrowUpDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +18,7 @@ import type { Contact } from '@/types/api.generated'
 import { Skeleton } from '@/components/ui/skeleton'
 
 // Define columns for the contacts table
-const columns: ColumnDef<Contact>[] = [
+const columns: ColumnDef<ContactDB>[] = [
   {
     accessorKey: 'name',
     header: ({ column }) => {
@@ -40,67 +39,54 @@ const columns: ColumnDef<Contact>[] = [
           to={`/contacts/${contact.id}`}
           className="font-medium hover:underline"
         >
-          {contact.firstName} {contact.lastName}
+          {contact.first_name} {contact.last_name}
         </Link>
       )
     },
   },
   {
-    accessorKey: 'email',
+    accessorKey: 'email1',
     header: 'Email',
+    cell: ({ row }) => (
+      <a href={`mailto:${row.getValue('email1')}`} className="hover:underline">
+        {row.getValue('email1')}
+      </a>
+    ),
   },
   {
-    accessorKey: 'phone',
+    accessorKey: 'phone_work',
     header: 'Phone',
-  },
-  {
-    accessorKey: 'preferredContactMethod',
-    header: 'Preferred Contact',
     cell: ({ row }) => {
-      const method = row.getValue('preferredContactMethod') as string
-      if (!method) return null
-      
-      const colors = {
-        email: 'default',
-        phone: 'secondary',
-        sms: 'outline',
-      } as const
-      
-      return (
-        <Badge variant={colors[method as keyof typeof colors] || 'default'}>
-          {method}
-        </Badge>
+      const phone = row.getValue('phone_work') as string
+      return phone ? (
+        <a href={`tel:${phone}`} className="hover:underline">
+          {phone}
+        </a>
+      ) : (
+        '-'
       )
     },
   },
   {
-    accessorKey: 'tags',
-    header: 'Tags',
-    cell: ({ row }) => {
-      const tags = row.getValue('tags') as string[] | undefined
-      if (!tags || tags.length === 0) return null
-      
-      return (
-        <div className="flex gap-1">
-          {tags.slice(0, 2).map((tag, index) => (
-            <Badge key={index} variant="outline" className="text-xs">
-              {tag}
-            </Badge>
-          ))}
-          {tags.length > 2 && (
-            <Badge variant="outline" className="text-xs">
-              +{tags.length - 2}
-            </Badge>
-          )}
-        </div>
-      )
-    },
+    accessorKey: 'account_name',
+    header: 'Company',
+    cell: ({ row }) => row.getValue('account_name') || '-',
   },
   {
-    accessorKey: 'createdAt',
+    accessorKey: 'lead_source',
+    header: 'Source',
+    cell: ({ row }) => row.getValue('lead_source') || '-',
+  },
+  {
+    accessorKey: 'assigned_user_name',
+    header: 'Assigned To',
+    cell: ({ row }) => row.getValue('assigned_user_name') || '-',
+  },
+  {
+    accessorKey: 'date_entered',
     header: 'Created',
     cell: ({ row }) => {
-      const date = row.getValue('createdAt') as string
+      const date = row.getValue('date_entered') as string
       return date ? formatDate(date) : '-'
     },
   },
@@ -179,7 +165,7 @@ export function ContactsPage() {
       <DataTable
         columns={columns}
         data={contacts}
-        searchKey="email"
+        searchKey="email1"
       />
     </div>
   )

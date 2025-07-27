@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
 import { toast } from 'sonner'
 import type { Opportunity } from '@/types/api.generated'
-import type { OpportunityStage } from '@/types/phase2.types'
 import { getErrorMessage } from '@/lib/error-utils'
 
 // Get paginated opportunities
@@ -31,11 +30,11 @@ export function useOpportunity(id: string) {
 }
 
 // Get opportunities by stage
-export function useOpportunitiesByStage(stage?: OpportunityStage) {
+export function useOpportunitiesByStage(stage?: OpportunityDB['sales_stage']) {
   return useQuery({
     queryKey: ['opportunities', 'by-stage', stage],
     queryFn: async () => {
-      const params = stage ? { salesStage: stage } : {}
+      const params = stage ? { sales_stage: stage } : {}
       return await apiClient.getOpportunities({ 
         pageSize: 100, // Get more for pipeline view
         ...params
@@ -49,7 +48,7 @@ export function useCreateOpportunity() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (data: Omit<Opportunity, 'id'>) => {
+    mutationFn: async (data: Omit<OpportunityDB, 'id' | 'date_entered' | 'date_modified'>) => {
       return await apiClient.createOpportunity(data)
     },
     onSuccess: async () => {
@@ -68,7 +67,7 @@ export function useUpdateOpportunity(id: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (data: Partial<Opportunity>) => {
+    mutationFn: async (data: Partial<OpportunityDB>) => {
       return await apiClient.updateOpportunity(id, data)
     },
     onSuccess: () => {
@@ -100,15 +99,15 @@ export function useUpdateOpportunityStage() {
       // Optimistically update to the new value
       queryClient.setQueryData(['opportunities', 'pipeline'], (old: unknown) => {
         if (!old) return old
-        const typedOld = old as { opportunities: Opportunity[] }
+        const typedOld = old as { opportunities: OpportunityDB[] }
         
-        const updatedOpportunities = typedOld.opportunities.map((opp: Opportunity) =>
-          opp.id === id ? { ...opp, salesStage: stage } : opp
+        const updatedOpportunities = typedOld.opportunities.map((opp: OpportunityDB) =>
+          opp.id === id ? { ...opp, sales_stage: stage as OpportunityDB['sales_stage'] } : opp
         )
         
         // Rebuild the byStage grouping
-        const opportunitiesByStage = updatedOpportunities.reduce((acc: Record<string, Opportunity[]>, opp: Opportunity) => {
-          const stageKey = opp.salesStage || 'Qualification'
+        const opportunitiesByStage = updatedOpportunities.reduce((acc: Record<string, OpportunityDB[]>, opp: OpportunityDB) => {
+          const stageKey = opp.sales_stage || 'qualification'
           if (!acc[stageKey]) {
             acc[stageKey] = []
           }
@@ -171,13 +170,13 @@ export function useOpportunitiesPipeline() {
       
       // Group by stage for pipeline
       const opportunitiesByStage = response.data.reduce((acc, opp) => {
-        const stage = opp.salesStage || 'Qualification'
+        const stage = opp.sales_stage || 'qualification'
         if (!acc[stage]) {
           acc[stage] = []
         }
         acc[stage].push(opp)
         return acc
-      }, {} as Record<string, Opportunity[]>)
+      }, {} as Record<string, OpportunityDB[]>)
       
       return {
         opportunities: response.data,

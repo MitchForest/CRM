@@ -39,11 +39,11 @@ export function CasesList() {
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      'New': 'bg-blue-100 text-blue-800',
-      'Assigned': 'bg-yellow-100 text-yellow-800',
-      'In Progress': 'bg-purple-100 text-purple-800',
-      'Pending Input': 'bg-orange-100 text-orange-800',
-      'Closed': 'bg-gray-100 text-gray-800',
+      'new': 'bg-blue-100 text-blue-800',
+      'assigned': 'bg-yellow-100 text-yellow-800',
+      'pending': 'bg-orange-100 text-orange-800',
+      'resolved': 'bg-green-100 text-green-800',
+      'closed': 'bg-gray-100 text-gray-800',
     }
     return colors[status] || 'bg-gray-100 text-gray-800'
   }
@@ -87,11 +87,11 @@ export function CasesList() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="New">New</SelectItem>
-            <SelectItem value="Assigned">Assigned</SelectItem>
-            <SelectItem value="In Progress">In Progress</SelectItem>
-            <SelectItem value="Pending Input">Pending Input</SelectItem>
-            <SelectItem value="Closed">Closed</SelectItem>
+            <SelectItem value="new">New</SelectItem>
+            <SelectItem value="assigned">Assigned</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="resolved">Resolved</SelectItem>
+            <SelectItem value="closed">Closed</SelectItem>
           </SelectContent>
         </Select>
         <Select
@@ -103,9 +103,9 @@ export function CasesList() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All priorities</SelectItem>
-            <SelectItem value="High">P1 - High</SelectItem>
-            <SelectItem value="Medium">P2 - Medium</SelectItem>
-            <SelectItem value="Low">P3 - Low</SelectItem>
+            <SelectItem value="P1">P1 - Critical</SelectItem>
+            <SelectItem value="P2">P2 - High</SelectItem>
+            <SelectItem value="P3">P3 - Normal</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -143,7 +143,7 @@ export function CasesList() {
               {data.data.map((caseItem) => (
                 <TableRow key={caseItem.id}>
                   <TableCell className="font-medium">
-                    {caseItem.caseNumber}
+                    {caseItem.case_number || `#${caseItem.id.slice(0, 8)}`}
                   </TableCell>
                   <TableCell>{caseItem.name}</TableCell>
                   <TableCell>-</TableCell>
@@ -155,8 +155,8 @@ export function CasesList() {
                       {caseItem.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{caseItem.assignedUserName || '-'}</TableCell>
-                  <TableCell>{formatDate(caseItem.createdAt || caseItem.updatedAt || '')}</TableCell>
+                  <TableCell>{caseItem.assigned_user_name || '-'}</TableCell>
+                  <TableCell>{formatDate(caseItem.date_entered || '')}</TableCell>
                   <TableCell>
                     <Button variant="ghost" size="sm" asChild>
                       <Link to={`/cases/${caseItem.id}`}>View</Link>

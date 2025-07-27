@@ -1,0 +1,21 @@
+COLUMN_NAME	DATA_TYPE	CHARACTER_MAXIMUM_LENGTH	IS_NULLABLE	COLUMN_KEY	COLUMN_DEFAULT
+id	char	36	NO	PRI	NULL
+date_entered	datetime	NULL	YES		NULL
+date_modified	datetime	NULL	YES		NULL
+created_by	char	36	YES		NULL
+modified_user_id	char	36	YES		NULL
+assigned_user_id	char	36	YES	MUL	NULL
+deleted	tinyint	NULL	YES		0
+name	varchar	150	YES	MUL	NULL
+account_type	varchar	50	YES		NULL
+industry	varchar	50	YES		NULL
+annual_revenue	varchar	100	YES		NULL
+phone_office	varchar	100	YES		NULL
+website	varchar	255	YES		NULL
+employees	varchar	10	YES		NULL
+billing_address_street	varchar	150	YES		NULL
+billing_address_city	varchar	100	YES		NULL
+billing_address_state	varchar	100	YES		NULL
+billing_address_postalcode	varchar	20	YES		NULL
+billing_address_country	varchar	255	YES		NULL
+description	text	65535	YES		NULL
