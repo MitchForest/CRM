@@ -58,15 +58,20 @@ export function Homepage() {
     setIsSubmitting(true)
     
     try {
-      const response = await apiClient.createLead({
+      // Get visitor tracking info if available
+      const visitorId = localStorage.getItem('crm_visitor_id')
+      const sessionId = sessionStorage.getItem('crm_session_id')
+      
+      const response = await apiClient.submitPublicLead({
         first_name: formData.firstName,
         last_name: formData.lastName,
-        email1: formData.email,
-        account_name: formData.company,
-        phone_work: formData.phone,
-        description: formData.message,
-        lead_source: 'Contact Form',
-        status: 'New'
+        email: formData.email,
+        company: formData.company,
+        phone: formData.phone,
+        message: formData.message,
+        form_source: 'Contact Form',
+        visitor_id: visitorId || undefined,
+        session_id: sessionId || undefined
       })
       
       if (response.success) {
@@ -81,14 +86,17 @@ export function Homepage() {
           message: ''
         })
         
-        // Trigger AI scoring in background
-        if (response.data?.id) {
-          apiClient.customPost(`/leads/${response.data.id}/ai-score`).catch(() => {
-            // Silent fail - scoring happens in background
+        // Track conversion event
+        if ((window as any).ActivityTracker) {
+          (window as any).ActivityTracker.trackConversion('contact_form', 0, {
+            lead_id: response.data?.lead_id
           })
         }
+      } else {
+        throw new Error(response.error?.error || 'Failed to submit form')
       }
-    } catch {
+    } catch (error) {
+      console.error('Form submission error:', error)
       toast.error('Failed to submit form. Please try again.')
     } finally {
       setIsSubmitting(false)
@@ -100,17 +108,25 @@ export function Homepage() {
     setIsSupportSubmitting(true)
     
     try {
-      const response = await apiClient.createCase({
-        name: supportFormData.subject,
-        description: supportFormData.description,
-        priority: supportFormData.priority as 'High' | 'Medium' | 'Low',
-        type: 'technical',
-        status: 'Open'
+             // Get visitor tracking info
+       const visitorId = localStorage.getItem('crm_visitor_id')
+       const sessionId = sessionStorage.getItem('crm_session_id')
+      
+      // First create/update lead
+      const leadResponse = await apiClient.submitPublicLead({
+        first_name: supportFormData.name.split(' ')[0] || supportFormData.name,
+        last_name: supportFormData.name.split(' ').slice(1).join(' ') || '',
+        email: supportFormData.email,
+        form_source: 'Support Form',
+        message: `Support Request: ${supportFormData.subject}\n\nPriority: ${supportFormData.priority}\n\n${supportFormData.description}`,
+        visitor_id: visitorId || undefined,
+        session_id: sessionId || undefined
       })
       
-      if (response.success) {
+      if (leadResponse.success) {
         toast.success('Support ticket created! We\'ll get back to you within 24 hours.')
-        // Reset form and hide it
+        
+        // Reset form
         setSupportFormData({
           name: '',
           email: '',
@@ -119,8 +135,18 @@ export function Homepage() {
           description: ''
         })
         setShowSupportForm(false)
+        
+        // Track conversion
+        if ((window as any).ActivityTracker) {
+          (window as any).ActivityTracker.trackConversion('support_ticket', 0, {
+            lead_id: leadResponse.data?.lead_id
+          })
+        }
+      } else {
+        throw new Error(leadResponse.error?.error || 'Failed to submit support request')
       }
-    } catch {
+    } catch (error) {
+      console.error('Support form error:', error)
       toast.error('Failed to create support ticket. Please try again.')
     } finally {
       setIsSupportSubmitting(false)

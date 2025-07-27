@@ -21,7 +21,7 @@ export function KnowledgeBasePublic() {
   // Fetch categories
   const { data: categories = [] } = useQuery({
     queryKey: ['kb-categories-public'],
-    queryFn: () => knowledgeBaseService.getCategories()
+    queryFn: () => knowledgeBaseService.getPublicCategories()
   });
 
   // Fetch featured articles
@@ -33,10 +33,9 @@ export function KnowledgeBasePublic() {
   // Search articles
   const { data: searchResults, isLoading: isSearching } = useQuery({
     queryKey: ['kb-search', searchQuery, selectedCategoryId],
-    queryFn: () => knowledgeBaseService.searchArticles(searchQuery, {
-      limit: 20,
-      category_id: selectedCategoryId || undefined,
-      is_public: true
+    queryFn: () => knowledgeBaseService.searchPublicArticles(searchQuery, {
+      category: selectedCategoryId || undefined,
+      limit: 20
     }),
     enabled: searchQuery.length > 2
   });
@@ -84,13 +83,13 @@ export function KnowledgeBasePublic() {
                 <Home className="h-4 w-4" />
               </a>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              {article.category_name && (
+              {article.category && (
                 <>
                   <a 
-                    href={`/kb/public?category=${article.category_id}`}
+                    href={`/kb/public?category=${article.category}`}
                     className="hover:text-primary"
                   >
-                    {article.category_name}
+                    {article.category}
                   </a>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </>
@@ -211,9 +210,9 @@ export function KnowledgeBasePublic() {
                           className="block hover:text-primary"
                         >
                           <h4 className="font-medium text-sm">{related.title}</h4>
-                          {related.excerpt && (
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                              {related.excerpt}
+                          {related.summary && (
+                            <p className="text-sm text-muted-foreground">
+                              {related.summary}
                             </p>
                           )}
                         </a>
@@ -274,7 +273,7 @@ export function KnowledgeBasePublic() {
                     </CardHeader>
                     <CardContent>
                       <p className="text-sm text-muted-foreground line-clamp-3">
-                        {result.article?.excerpt || result.content || 'No excerpt available'}
+                        {result.article?.summary || result.content || 'No summary available'}
                       </p>
                       {result.similarity && (
                         <div className="mt-2">
@@ -300,25 +299,19 @@ export function KnowledgeBasePublic() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {categories.map(category => (
               <Card 
-                key={category.id} 
+                key={category.category} 
                 className={cn(
                   "cursor-pointer hover:shadow-md transition-all",
-                  selectedCategoryId === category.id && "ring-2 ring-primary"
+                  selectedCategoryId === category.category && "ring-2 ring-primary"
                 )}
                 onClick={() => setSelectedCategoryId(
-                  selectedCategoryId === category.id ? null : category.id
+                  selectedCategoryId === category.category ? null : category.category
                 )}
               >
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    {category.icon && <span className="text-2xl">{category.icon}</span>}
-                    <span>{category.name}</span>
+                    <span>{category.category}</span>
                   </CardTitle>
-                  {category.description && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      {category.description}
-                    </p>
-                  )}
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -348,14 +341,14 @@ export function KnowledgeBasePublic() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground line-clamp-3">
-                      {article.excerpt || 'No excerpt available'}
+                      {article.summary || 'No summary available'}
                     </p>
                     <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground">
-                      <span>{article.views} views</span>
-                      {article.category_name && (
+                      <span>{article.view_count || 0} views</span>
+                      {article.category && (
                         <>
                           <span>•</span>
-                          <span>{article.category_name}</span>
+                          <span>{article.category}</span>
                         </>
                       )}
                     </div>

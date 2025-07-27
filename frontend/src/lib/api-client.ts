@@ -14,7 +14,8 @@ import type {
   DashboardMetrics,
   PipelineData,
   ActivityMetrics,
-  CaseMetrics
+  CaseMetrics,
+  TimelineResponse
 } from '@/types/api.types'
 
 import type {
@@ -568,6 +569,32 @@ class ApiClient {
           error: 'Failed to delete lead',
           code: 'LEAD_DELETE_ERROR',
           details: { message: 'Unable to delete lead' }
+        }
+      }
+    }
+  }
+
+  async getLeadTimeline(leadId: string, params?: { limit?: number; offset?: number }): Promise<ApiResponse<TimelineResponse>> {
+    try {
+      const queryParams = new URLSearchParams()
+      if (params?.limit) queryParams.append('limit', params.limit.toString())
+      if (params?.offset) queryParams.append('offset', params.offset.toString())
+      
+      const url = `/crm/leads/${leadId}/timeline${queryParams.toString() ? '?' + queryParams.toString() : ''}`
+      const response = await this.customClient.get(url)
+      
+      return {
+        success: true,
+        data: response.data.data
+      }
+    } catch (error) {
+      console.error('Failed to get lead timeline:', error)
+      return {
+        success: false,
+        error: {
+          error: 'Failed to get timeline',
+          code: 'TIMELINE_ERROR',
+          details: { message: error instanceof Error ? error.message : 'Unknown error' }
         }
       }
     }
@@ -1163,6 +1190,122 @@ class ApiClient {
     const publicConfig = { ...config, headers: { ...config?.headers, Authorization: undefined } }
     const response = await this.customClient.post(url, data, publicConfig)
     return response.data
+  }
+
+  // Public API methods (no authentication required)
+  async submitPublicLead(data: {
+    first_name: string
+    last_name: string
+    email: string
+    phone?: string
+    company?: string
+    message?: string
+    form_source?: string
+    visitor_id?: string
+    session_id?: string
+  }): Promise<ApiResponse<{ lead_id: string; is_new: boolean }>> {
+    try {
+      // Filter out undefined and null values
+      const filteredData = Object.entries(data).reduce((acc, [key, value]) => {
+        if (value !== undefined && value !== null) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as any);
+      
+      const response = await this.publicPost('/public/capture/lead', filteredData)
+      // Backend already returns { success: true, data: {...} }
+      if (response.success && response.data) {
+        return {
+          success: true,
+          data: response.data
+        }
+      }
+      // Fallback for unexpected response structure
+      return {
+        success: true,
+        data: response
+      }
+    } catch (error) {
+      console.error('Failed to submit public lead:', error)
+      return {
+        success: false,
+        error: {
+          error: 'Failed to submit form',
+          code: 'FORM_SUBMIT_ERROR',
+          details: { message: error instanceof Error ? error.message : 'Unknown error' }
+        }
+      }
+    }
+  }
+
+  async requestPublicDemo(data: {
+    first_name: string
+    last_name: string
+    email: string
+    phone?: string
+    company: string
+    company_size?: string
+    demo_date: string
+    demo_time: string
+    timezone?: string
+    message?: string
+    visitor_id?: string
+    session_id?: string
+  }): Promise<ApiResponse<{ lead_id: string; meeting_id: string; scheduled_time: string }>> {
+    try {
+      // Filter out undefined and null values
+      const filteredData = Object.entries(data).reduce((acc, [key, value]) => {
+        if (value !== undefined && value !== null) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as any);
+      
+      const response = await this.publicPost('/public/demo-request', filteredData)
+      // Backend already returns { success: true, data: {...} }
+      if (response.success && response.data) {
+        return {
+          success: true,
+          data: response.data
+        }
+      }
+      // Fallback for unexpected response structure
+      return {
+        success: true,
+        data: response
+      }
+    } catch (error) {
+      console.error('Failed to request demo:', error)
+      return {
+        success: false,
+        error: {
+          error: 'Failed to schedule demo',
+          code: 'DEMO_REQUEST_ERROR',
+          details: { message: error instanceof Error ? error.message : 'Unknown error' }
+        }
+      }
+    }
+  }
+
+  async submitPublicForm(formId: string, data: any): Promise<ApiResponse<any>> {
+    try {
+      const response = await this.publicPost(`/public/forms/${formId}/submit`, data)
+      return {
+        success: true,
+        data: response.data
+      }
+    } catch (error) {
+      console.error('Failed to submit form:', error)
+      return {
+        success: false,
+        error: {
+          error: 'Failed to submit form',
+          code: 'FORM_SUBMIT_ERROR',
+          details: { message: error instanceof Error ? error.message : 'Unknown error' }
+        }
+      }
+    }
   }
 
   // Legacy method for backward compatibility

@@ -121,6 +121,39 @@ try {
         echo "⚠ Table activity_tracking_events already exists\n";
     }
 
+    // Add lead_id columns if they don't exist
+    echo "\nChecking for lead_id columns...\n";
+    
+    if (!$schema->hasColumn('activity_tracking_visitors', 'lead_id')) {
+        $schema->table('activity_tracking_visitors', function (Blueprint $table) {
+            $table->char('lead_id', 36)->nullable()->after('visitor_id');
+            $table->index('lead_id');
+        });
+        echo "✓ Added lead_id column to activity_tracking_visitors\n";
+    } else {
+        echo "⚠ Column lead_id already exists in activity_tracking_visitors\n";
+    }
+    
+    if (!$schema->hasColumn('activity_tracking_sessions', 'lead_id')) {
+        $schema->table('activity_tracking_sessions', function (Blueprint $table) {
+            $table->char('lead_id', 36)->nullable()->after('visitor_id');
+            $table->index('lead_id');
+        });
+        echo "✓ Added lead_id column to activity_tracking_sessions\n";
+    } else {
+        echo "⚠ Column lead_id already exists in activity_tracking_sessions\n";
+    }
+    
+    if (!$schema->hasColumn('activity_tracking_page_views', 'lead_id')) {
+        $schema->table('activity_tracking_page_views', function (Blueprint $table) {
+            $table->char('lead_id', 36)->nullable()->after('visitor_id');
+            $table->index('lead_id');
+        });
+        echo "✓ Added lead_id column to activity_tracking_page_views\n";
+    } else {
+        echo "⚠ Column lead_id already exists in activity_tracking_page_views\n";
+    }
+
     echo "\n✅ Migration completed successfully!\n";
     
 } catch (\Exception $e) {

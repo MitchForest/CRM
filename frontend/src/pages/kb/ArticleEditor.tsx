@@ -61,11 +61,11 @@ export function ArticleEditor() {
     if (article) {
       setTitle(article.title);
       setSlug(article.slug || '');
-      setExcerpt(article.excerpt || '');
-      setCategoryId(article.category_id || 'none');
+      setExcerpt(article.summary || '');  // Changed from excerpt
+      setCategoryId(article.category || 'none');  // Changed from category_id
       setTags(article.tags || []);
-      setIsPublic(article.is_public || false);
-      setIsFeatured(article.is_featured || false);
+      setIsPublic(!!article.is_published);  // Changed from is_public and ensure boolean
+      setIsFeatured(!!article.is_featured);  // Ensure boolean
       setContent(article.content || '');
     }
   }, [article]);
@@ -126,10 +126,10 @@ export function ArticleEditor() {
       title,
       slug,
       content,
-      excerpt: excerpt || undefined,
-      category_id: categoryId === 'none' ? undefined : categoryId || undefined,
+      summary: excerpt || undefined,  // Changed from excerpt
+      category: categoryId === 'none' ? undefined : categoryId || undefined,  // Changed from category_id
       tags,
-      is_public: isPublic,
+      is_published: isPublic,  // Changed from is_public
       is_featured: isFeatured
     };
 

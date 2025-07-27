@@ -2,6 +2,7 @@ import { apiClient } from '@/lib/api-client';
 import type { 
   KBArticle, 
   KBCategory,
+  KBPublicCategory,
   KBSearchResult
 } from '@/types/api.types';
 
@@ -9,10 +10,10 @@ class KnowledgeBaseService {
   // Category Management
   
   /**
-   * Get all categories
+   * Get all categories (admin)
    */
   async getCategories(): Promise<KBCategory[]> {
-    const response = await apiClient.customGet('/kb/categories');
+    const response = await apiClient.customGet('/admin/knowledge-base/categories');
     // The response IS the data, not wrapped in success/data
     if (!response || !response.data) {
       throw new Error('Failed to fetch categories');
@@ -21,21 +22,32 @@ class KnowledgeBaseService {
   }
 
   /**
+   * Get public categories
+   */
+  async getPublicCategories(): Promise<KBPublicCategory[]> {
+    const response = await apiClient.publicGet('/public/kb/categories');
+    if (!response || !response.data) {
+      throw new Error('Failed to fetch public categories');
+    }
+    return response.data;
+  }
+
+  /**
    * Get category by ID
    */
   async getCategory(id: string): Promise<KBCategory> {
-    const response = await apiClient.customGet(`/knowledge-base/categories/${id}`);
+    const response = await apiClient.customGet(`/admin/knowledge-base/categories/${id}`);
     if (!response) {
       throw new Error('Failed to fetch category');
     }
-    return response;
+    return response.data;
   }
 
   /**
    * Create a new category
    */
   async createCategory(data: Partial<KBCategory>): Promise<KBCategory> {
-    const response = await apiClient.customPost('/knowledge-base/categories', data);
+    const response = await apiClient.customPost('/admin/knowledge-base/categories', data);
     if (!response) {
       throw new Error('Failed to create category');
     }
@@ -46,7 +58,7 @@ class KnowledgeBaseService {
    * Update a category
    */
   async updateCategory(id: string, data: Partial<KBCategory>): Promise<KBCategory> {
-    const response = await apiClient.customPut(`/knowledge-base/categories/${id}`, data);
+    const response = await apiClient.customPut(`/admin/knowledge-base/categories/${id}`, data);
     if (!response) {
       throw new Error('Failed to update category');
     }
@@ -57,7 +69,7 @@ class KnowledgeBaseService {
    * Delete a category
    */
   async deleteCategory(id: string): Promise<void> {
-    const response = await apiClient.customDelete(`/knowledge-base/categories/${id}`);
+    const response = await apiClient.customDelete(`/admin/knowledge-base/categories/${id}`);
     if (response === null || response === undefined) {
       throw new Error('Failed to delete category');
     }
@@ -76,31 +88,28 @@ class KnowledgeBaseService {
     is_featured?: boolean;
     search?: string;
     tags?: string[];
-    author_id?: string;
-  }): Promise<{ 
-    data: KBArticle[]; 
-    total: number;
-    page: number;
-    limit: number;
-  }> {
-    const response = await apiClient.customGet('/knowledge-base/articles', { params });
-    // Response format: { data: [...], meta: { total, page, limit } }
+  }): Promise<{ data: KBArticle[]; meta: any }> {
+    // Transform params to match backend expectations
+    const backendParams = {
+      ...params,
+      category: params?.category_id,
+      is_published: params?.is_public,
+    };
+    delete backendParams.category_id;
+    delete backendParams.is_public;
+    
+    const response = await apiClient.customGet('/admin/knowledge-base/articles', { params: backendParams });
     if (!response || !response.data) {
       throw new Error('Failed to fetch articles');
     }
-    return {
-      data: response.data,
-      total: response.meta?.total || 0,
-      page: response.meta?.page || 1,
-      limit: response.meta?.limit || 20
-    };
+    return response;
   }
 
   /**
-   * Get article by ID
+   * Get article by ID (admin)
    */
   async getArticle(id: string): Promise<KBArticle> {
-    const response = await apiClient.customGet(`/knowledge-base/articles/${id}`);
+    const response = await apiClient.customGet(`/admin/knowledge-base/articles/${id}`);
     if (!response || !response.data) {
       throw new Error('Failed to fetch article');
     }
@@ -111,7 +120,7 @@ class KnowledgeBaseService {
    * Get public article by slug (no auth required)
    */
   async getPublicArticle(slug: string): Promise<KBArticle> {
-    const response = await apiClient.customGet(`/kb/articles/${slug}`);
+    const response = await apiClient.publicGet(`/public/kb/articles/${slug}`);
     if (!response || !response.data) {
       throw new Error('Article not found');
     }
@@ -122,7 +131,7 @@ class KnowledgeBaseService {
    * Create a new article
    */
   async createArticle(data: Partial<KBArticle>): Promise<KBArticle> {
-    const response = await apiClient.customPost('/knowledge-base/articles', data);
+    const response = await apiClient.customPost('/admin/knowledge-base/articles', data);
     if (!response || !response.data) {
       throw new Error('Failed to create article');
     }
@@ -133,7 +142,7 @@ class KnowledgeBaseService {
    * Update an article
    */
   async updateArticle(id: string, data: Partial<KBArticle>): Promise<KBArticle> {
-    const response = await apiClient.customPut(`/knowledge-base/articles/${id}`, data);
+    const response = await apiClient.customPut(`/admin/knowledge-base/articles/${id}`, data);
     if (!response || !response.data) {
       throw new Error('Failed to update article');
     }
@@ -144,7 +153,7 @@ class KnowledgeBaseService {
    * Delete an article
    */
   async deleteArticle(id: string): Promise<void> {
-    const response = await apiClient.customDelete(`/knowledge-base/articles/${id}`);
+    const response = await apiClient.customDelete(`/admin/knowledge-base/articles/${id}`);
     if (response === null || response === undefined) {
       throw new Error('Failed to delete article');
     }
@@ -153,14 +162,24 @@ class KnowledgeBaseService {
   /**
    * Duplicate an article
    */
-  async duplicateArticle(id: string, newTitle: string): Promise<KBArticle> {
-    const response = await apiClient.customPost(`/knowledge-base/articles/${id}/duplicate`, { 
-      title: newTitle 
-    });
-    if (!response || !response.data) {
-      throw new Error('Failed to duplicate article');
-    }
-    return response.data;
+  async duplicateArticle(id: string, newTitle?: string): Promise<KBArticle> {
+    // First get the original article
+    const original = await this.getArticle(id);
+    
+    // Create a copy with a new title
+    const copy = {
+      ...original,
+      id: undefined,  // Remove ID so a new one is generated
+      title: newTitle || `${original.title} (Copy)`,
+      slug: undefined,  // Let backend generate new slug
+      is_published: false,  // Start as draft
+      view_count: 0,
+      helpful_count: 0,
+      not_helpful_count: 0
+    };
+    
+    // Create the new article
+    return this.createArticle(copy);
   }
 
   /**
@@ -180,8 +199,9 @@ class KnowledgeBaseService {
   /**
    * Track article view (public endpoint)
    */
-  async trackView(id: string): Promise<void> {
-    await apiClient.publicPost(`/knowledge-base/articles/${id}/view`);
+  async trackView(_id: string): Promise<void> {
+    // The view tracking is handled automatically by the backend when fetching the article
+    // No need for a separate API call
   }
 
   /**
@@ -202,40 +222,60 @@ class KnowledgeBaseService {
     return response.data.results || [];
   }
 
-
   /**
-   * Get related articles
+   * Search articles (public)
    */
-  async getRelatedArticles(articleId: string, limit = 5): Promise<KBArticle[]> {
-    const response = await apiClient.customGet(`/knowledge-base/articles/${articleId}/related`, {
-      params: { limit }
+  async searchPublicArticles(query: string, options?: {
+    category?: string;
+    limit?: number;
+  }): Promise<KBSearchResult[]> {
+    const response = await apiClient.publicGet('/public/kb/search', {
+      params: {
+        q: query,
+        category: options?.category,
+        limit: options?.limit || 20
+      }
     });
+    
     if (!response || !response.data) {
-      throw new Error('Failed to fetch related articles');
+      throw new Error('Failed to search articles');
     }
     return response.data;
   }
 
   /**
-   * Get popular articles
+   * Get related articles (uses same category)
+   */
+  async getRelatedArticles(_articleId: string, _limit = 5): Promise<KBArticle[]> {
+    // For now, we'll return an empty array since there's no related articles endpoint
+    // In the future, this could fetch articles from the same category
+    return [];
+  }
+
+  /**
+   * Get popular articles (uses regular articles sorted by view count)
    */
   async getPopularArticles(params?: {
     limit?: number;
     days?: number;
     category_id?: string;
   }): Promise<KBArticle[]> {
-    const response = await apiClient.customGet('/knowledge-base/articles/popular', { params });
-    if (!response || !response.data) {
-      throw new Error('Failed to fetch popular articles');
-    }
-    return response.data;
+    // Since there's no dedicated popular endpoint, use regular articles
+    const response = await this.getArticles({
+      limit: params?.limit || 10,
+      category_id: params?.category_id
+    });
+    
+    // Sort by view_count if available
+    const articles = response.data.sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
+    return articles.slice(0, params?.limit || 10);
   }
 
   /**
-   * Get featured articles
+   * Get featured articles (public)
    */
   async getFeaturedArticles(limit = 10): Promise<KBArticle[]> {
-    const response = await apiClient.customGet('/kb/articles', {
+    const response = await apiClient.publicGet('/public/kb/articles', {
       params: { limit, is_featured: true }
     });
     // The response has data and meta fields
@@ -246,20 +286,51 @@ class KnowledgeBaseService {
   }
 
   /**
-   * Export articles
+   * Get public articles
    */
-  async exportArticles(format: 'pdf' | 'docx' | 'json', params?: {
-    category_id?: string;
-    article_ids?: string[];
-  }): Promise<Blob> {
-    const response = await apiClient.customPost('/knowledge-base/export', {
-      format,
-      ...params
-    }, {
-      responseType: 'blob'
+  async getPublicArticles(options?: {
+    category?: string;
+    limit?: number;
+    page?: number;
+  }): Promise<{ data: KBArticle[]; meta: any }> {
+    const response = await apiClient.publicGet('/public/kb/articles', {
+      params: {
+        category: options?.category,
+        limit: options?.limit || 10,
+        page: options?.page || 1
+      }
     });
+    
+    if (!response || !response.data) {
+      throw new Error('Failed to fetch public articles');
+    }
     return response;
   }
+
+  /**
+   * Submit article feedback
+   */
+  async submitFeedback(articleId: string, helpful: boolean): Promise<void> {
+    await apiClient.publicPost(`/public/kb/articles/${articleId}/feedback`, {
+      helpful
+    });
+  }
+
+  /**
+   * Export articles (NOT IMPLEMENTED)
+   */
+  // async exportArticles(format: 'pdf' | 'docx' | 'json', params?: {
+  //   category_id?: string;
+  //   article_ids?: string[];
+  // }): Promise<Blob> {
+  //   const response = await apiClient.customPost('/admin/knowledge-base/export', {
+  //     format,
+  //     ...params
+  //   }, {
+  //     responseType: 'blob'
+  //   });
+  //   return response;
+  // }
 
   /**
    * Generate table of contents for an article
@@ -287,14 +358,26 @@ class KnowledgeBaseService {
   }
 
   /**
-   * Validate article slug
+   * Validate slug uniqueness
    */
   async validateSlug(slug: string, excludeId?: string): Promise<boolean> {
-    const response = await apiClient.customPost('/knowledge-base/validate-slug', {
-      slug,
-      exclude_id: excludeId
-    });
-    return response.data.available;
+    // Check if slug is unique by searching for articles with this slug
+    try {
+      const response = await this.getArticles({
+        search: slug,
+        limit: 10
+      });
+      
+      // Check if any article has this exact slug (excluding the current article)
+      const exists = response.data.some(article => 
+        article.slug === slug && article.id !== excludeId
+      );
+      
+      return !exists;  // Return true if slug is valid (doesn't exist)
+    } catch (error) {
+      // If there's an error, assume slug is valid
+      return true;
+    }
   }
 }
 

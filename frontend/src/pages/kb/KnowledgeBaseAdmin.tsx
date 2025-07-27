@@ -166,9 +166,9 @@ export function KnowledgeBaseAdmin() {
           <FileText className="h-4 w-4 text-muted-foreground mt-1" />
           <div>
             <div className="font-medium">{row.original.title}</div>
-            {row.original.excerpt && (
+            {row.original.summary && (
               <p className="text-sm text-muted-foreground line-clamp-2">
-                {row.original.excerpt}
+                {row.original.summary}
               </p>
             )}
           </div>
@@ -176,21 +176,21 @@ export function KnowledgeBaseAdmin() {
       )
     },
     {
-      accessorKey: 'category_name',
+      accessorKey: 'category',
       header: 'Category',
       cell: ({ row }: { row: { original: KBArticle } }) => (
-        row.original.category_name ? (
-          <Badge variant="secondary">{row.original.category_name}</Badge>
+        row.original.category ? (
+          <Badge variant="secondary">{row.original.category}</Badge>
         ) : null
       )
     },
     {
-      accessorKey: 'is_public',
+      accessorKey: 'is_published',
       header: 'Status',
       cell: ({ row }: { row: { original: KBArticle } }) => (
         <div className="flex items-center gap-2">
-          <Badge variant={row.original.is_public ? 'default' : 'secondary'}>
-            {row.original.is_public ? 'Public' : 'Draft'}
+          <Badge variant={row.original.is_published ? 'default' : 'secondary'}>
+            {row.original.is_published ? 'Published' : 'Draft'}
           </Badge>
           {row.original.is_featured && (
             <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
@@ -245,7 +245,7 @@ export function KnowledgeBaseAdmin() {
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => navigate(`/kb/edit/${row.original.id}`)}
+            onClick={() => navigate(`/app/kb/edit/${row.original.id}`)}
           >
             <Edit className="h-4 w-4" />
           </Button>
@@ -269,8 +269,8 @@ export function KnowledgeBaseAdmin() {
   ];
 
   const totalArticles = articles.length;
-  const publicArticles = articles.filter(a => a.is_public).length;
-  const totalViews = articles.reduce((sum, a) => sum + (a.views || 0), 0);
+  const publicArticles = articles.filter(a => a.is_published).length;
+  const totalViews = articles.reduce((sum, a) => sum + (a.view_count || 0), 0);
 
   return (
     <div className="p-6 space-y-6">
@@ -282,7 +282,7 @@ export function KnowledgeBaseAdmin() {
             Manage articles and categories for your help center
           </p>
         </div>
-        <Button onClick={() => navigate('/kb/new')}>
+        <Button onClick={() => navigate('/app/kb/new')}>
           <Plus className="mr-2 h-4 w-4" />
           New Article
         </Button>

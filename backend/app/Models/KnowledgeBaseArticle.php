@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class KnowledgeBaseArticle extends BaseModel
 {
@@ -47,6 +48,11 @@ class KnowledgeBaseArticle extends BaseModel
     public function feedback(): HasMany
     {
         return $this->hasMany(KnowledgeBaseFeedback::class, 'article_id');
+    }
+    
+    public function author(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'author_id');
     }
     
     public function getHelpfulnessRateAttribute(): ?float

@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useLead, useConvertLead, useDeleteLead } from '@/hooks/use-leads'
 import { formatDateTime } from '@/lib/utils'
 import { ActivityTimeline } from '@/components/activities/ActivityTimeline'
+import { LeadActivityTimeline } from '@/components/activities/LeadActivityTimeline'
 import { useActivitiesByParent } from '@/hooks/use-activities'
 
 const statusColors = {
@@ -217,7 +218,7 @@ export function LeadDetailPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ActivityTimeline parentType="Lead" parentId={id!} />
+                  <LeadActivityTimeline leadId={id!} />
                 </CardContent>
               </Card>
             </TabsContent>

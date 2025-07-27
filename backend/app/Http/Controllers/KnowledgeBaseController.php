@@ -89,7 +89,6 @@ class KnowledgeBaseController extends Controller
         // Support both ID and slug
         $article = KnowledgeBaseArticle::where('id', $idOrSlug)
             ->orWhere('slug', $idOrSlug)
-            ->with('author')
             ->first();
         
         if (!$article) {
@@ -319,27 +318,63 @@ class KnowledgeBaseController extends Controller
     {
         $params = $request->getQueryParams();
         $query = $params['q'] ?? '';
+        $category = $params['category'] ?? null;
+        $limit = min(intval($params['limit'] ?? 10), 50);
         
         if (empty($query)) {
             return $this->json($response, [
-                'articles' => [],
-                'total' => 0
+                'data' => [],
+                'meta' => [
+                    'total' => 0,
+                    'query' => $query
+                ]
             ]);
         }
         
-        // Simple search implementation
-        $articles = KnowledgeBaseArticle::where('is_published', 1)
-            ->where('deleted', 0)
-            ->where(function($q) use ($query) {
-                $q->where('title', 'LIKE', '%' . $query . '%')
-                  ->orWhere('content', 'LIKE', '%' . $query . '%');
-            })
-            ->limit(10)
+        // Build search query
+        $searchQuery = KnowledgeBaseArticle::where('is_published', 1)
+            ->where('deleted', 0);
+        
+        // Add category filter if provided
+        if ($category) {
+            $searchQuery->where('category', $category);
+        }
+        
+        // Search in title and content
+        $searchQuery->where(function($q) use ($query) {
+            $q->where('title', 'LIKE', '%' . $query . '%')
+              ->orWhere('content', 'LIKE', '%' . $query . '%')
+              ->orWhere('summary', 'LIKE', '%' . $query . '%');
+        });
+        
+        // Get results
+        $articles = $searchQuery->limit($limit)
+            ->orderBy('is_featured', 'desc')
+            ->orderBy('view_count', 'desc')
             ->get();
         
+        // Format results
+        $data = $articles->map(function ($article) {
+            return [
+                'id' => $article->id,
+                'slug' => $article->slug,
+                'title' => $article->title,
+                'summary' => $article->summary,
+                'category' => $article->category,
+                'tags' => $article->tags,
+                'published_date' => $article->published_date,
+                'is_featured' => $article->is_featured,
+                'view_count' => $article->view_count
+            ];
+        });
+        
         return $this->json($response, [
-            'articles' => $articles,
-            'total' => count($articles)
+            'data' => $data,
+            'meta' => [
+                'total' => count($data),
+                'query' => $query,
+                'category' => $category
+            ]
         ]);
     }
     
@@ -351,6 +386,7 @@ class KnowledgeBaseController extends Controller
     {
         $params = $request->getQueryParams();
         $category = $params['category'] ?? null;
+        $isFeatured = isset($params['is_featured']) ? filter_var($params['is_featured'], FILTER_VALIDATE_BOOLEAN) : null;
         $page = intval($params['page'] ?? 1);
         $limit = min(intval($params['limit'] ?? 10), 50);
         
@@ -359,6 +395,10 @@ class KnowledgeBaseController extends Controller
         
         if ($category) {
             $query->where('category', $category);
+        }
+        
+        if ($isFeatured !== null) {
+            $query->where('is_featured', $isFeatured ? 1 : 0);
         }
         
         $articles = $query->orderBy('is_featured', 'desc')
@@ -373,8 +413,8 @@ class KnowledgeBaseController extends Controller
                 'summary' => $article->summary,
                 'category' => $article->category,
                 'tags' => $article->tags,
-                'author' => $article->author,
-                'published_date' => $article->published_date,
+                'author' => null,  // Don't expose author details in public API
+                'published_date' => $article->date_published,
                 'is_featured' => $article->is_featured,
                 'view_count' => $article->view_count
             ];
@@ -420,8 +460,8 @@ class KnowledgeBaseController extends Controller
                 'summary' => $article->summary,
                 'category' => $article->category,
                 'tags' => $article->tags,
-                'author' => $article->author,
-                'published_date' => $article->published_date,
+                'author' => null,  // Don't expose author details in public API
+                'published_date' => $article->date_published,
                 'is_featured' => $article->is_featured,
                 'view_count' => $article->view_count,
                 'helpful_count' => $article->helpful_count,
@@ -436,7 +476,7 @@ class KnowledgeBaseController extends Controller
      */
     public function getPublicCategories(Request $request, Response $response, array $args): Response
     {
-        $categories = DB::table('kb_articles')
+        $categories = DB::table('knowledge_base_articles')
             ->where('is_published', 1)
             ->where('deleted', 0)
             ->select('category', DB::raw('COUNT(*) as article_count'))

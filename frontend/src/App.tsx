@@ -131,12 +131,19 @@ function AppContent() {
             <Route path="demo" element={<DemoBooking />} />
           </Route>
           
-          {/* Public KB Route */}
-          <Route path="/kb/public/*" element={
-            <Suspense fallback={<PageLoader />}>
-              <KnowledgeBasePublic />
-            </Suspense>
-          } />
+          {/* Public KB Routes */}
+          <Route path="/kb/public">
+            <Route index element={
+              <Suspense fallback={<PageLoader />}>
+                <KnowledgeBasePublic />
+              </Suspense>
+            } />
+            <Route path=":slug" element={
+              <Suspense fallback={<PageLoader />}>
+                <KnowledgeBasePublic />
+              </Suspense>
+            } />
+          </Route>
           
           {/* Auth Route */}
           <Route path="/login" element={<LoginPage />} />

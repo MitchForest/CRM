@@ -54,19 +54,56 @@ class ActivityTrackingController extends Controller
                 $sessionId = 'session_' . uniqid() . '_' . time();
             }
             
-            // Temporarily return success without database operations
-            // TODO: Enable database tracking once tables are created
-            $result = [
+            // Get or create visitor
+            $visitor = ActivityTrackingVisitor::firstOrCreate(
+                ['visitor_id' => $visitorId],
+                [
+                    'first_visit' => new \DateTime(),
+                    'last_visit' => new \DateTime(),
+                    'visit_count' => 1,
+                    'page_view_count' => 0,
+                    'referrer' => $data['referrer'] ?? null,
+                    'user_agent' => $data['user_agent'] ?? $request->getHeaderLine('User-Agent')
+                ]
+            );
+            
+            // Update visitor activity
+            $visitor->last_visit = new \DateTime();
+            $visitor->page_view_count++;
+            $visitor->save();
+            
+            // Get or create session
+            $session = ActivityTrackingSession::firstOrCreate(
+                ['session_id' => $sessionId],
+                [
+                    'visitor_id' => $visitorId,
+                    'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null,
+                    'user_agent' => $data['user_agent'] ?? $request->getHeaderLine('User-Agent'),
+                    'start_time' => new \DateTime(),
+                    'page_count' => 0,
+                    'date_entered' => new \DateTime()
+                ]
+            );
+            
+            // Update session
+            $session->page_count++;
+            $session->end_time = new \DateTime();
+            $session->save();
+            
+            // Create page view
+            $pageView = ActivityTrackingPageView::create([
                 'visitor_id' => $visitorId,
                 'session_id' => $sessionId,
-                'page_view_id' => 'tracked_' . uniqid(),
-                'status' => 'success'
-            ];
+                'page_url' => $data['page_url'],
+                'page_title' => $data['page_title'] ?? null,
+                'referrer' => $data['referrer'] ?? null,
+                'date_entered' => new \DateTime()
+            ]);
             
             return $this->json($response, [
-                'visitor_id' => $result['visitor_id'],
-                'session_id' => $result['session_id'],
-                'page_view_id' => $result['page_view_id']
+                'visitor_id' => $visitorId,
+                'session_id' => $sessionId,
+                'page_view_id' => $pageView->id
             ]);
             
         } catch (\Exception $e) {

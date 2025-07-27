@@ -18,8 +18,7 @@ import {
   Sparkles,
   Users
 } from 'lucide-react'
-import { format, setHours, setMinutes, isBefore, isWeekend } from 'date-fns'
-import { aiService } from '@/services/ai.service'
+import { format, isBefore, isWeekend } from 'date-fns'
 import { apiClient } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
 import { ArrowRight } from 'lucide-react'
@@ -69,53 +68,45 @@ export function DemoBooking() {
     setIsSubmitting(true)
     
     try {
-      // Create lead first
-      const leadResponse = await apiClient.createLead({
+      // Format date for API
+      const demoDate = format(selectedDate, 'yyyy-MM-dd')
+      
+      // Get visitor tracking info if available
+      const visitorId = localStorage.getItem('crm_visitor_id')
+      const sessionId = sessionStorage.getItem('crm_session_id')
+      
+      // Use public demo request endpoint
+      const response = await apiClient.requestPublicDemo({
         first_name: formData.firstName,
         last_name: formData.lastName,
-        email1: formData.email,
-        phone_work: formData.phone,
-        account_name: formData.company,
-        description: `Demo request - Company size: ${formData.companySize}`,
-        lead_source: 'Demo Request',
-        status: 'New',
+        email: formData.email,
+        phone: formData.phone || undefined,
+        company: formData.company,
+        company_size: formData.companySize || undefined,
+        demo_date: demoDate,
+        demo_time: selectedTime,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        visitor_id: visitorId || undefined,
+        session_id: sessionId || undefined
       })
 
-      if (!leadResponse.success || !leadResponse.data) {
-        throw new Error('Failed to create lead')
+      if (response.success && response.data) {
+        setStep('confirm')
+        toast.success('Demo scheduled successfully!')
+        
+        // Track conversion event
+        if ((window as any).ActivityTracker) {
+          (window as any).ActivityTracker.trackConversion('demo_scheduled', 0, {
+            lead_id: response.data.lead_id,
+            meeting_id: response.data.meeting_id
+          })
+        }
+      } else {
+        throw new Error(response.error?.error || 'Failed to schedule demo')
       }
-
-      // Schedule meeting
-      const [hours, minutes] = selectedTime.split(':').map(Number)
-      const meetingDate = setHours(setMinutes(selectedDate!, minutes ?? 0), hours ?? 0)
-      
-      const meetingResponse = await apiClient.createMeeting({
-        name: `Demo with ${formData.firstName} ${formData.lastName} - ${formData.company}`,
-        date_start: format(meetingDate, "yyyy-MM-dd HH:mm:ss"),
-        date_end: format(new Date(meetingDate.getTime() + 30 * 60000), "yyyy-MM-dd HH:mm:ss"),
-        duration_hours: 0,
-        duration_minutes: 30,
-        status: 'Planned',
-        location: 'Virtual',
-        description: `Demo meeting\nCompany size: ${formData.companySize}\nContact: ${formData.email}`,
-        parent_type: 'Leads',
-        parent_id: leadResponse.data.id,
-        assigned_user_id: '1' // Default to admin user
-      })
-
-      if (!meetingResponse.success) {
-        throw new Error('Failed to schedule meeting')
-      }
-
-      // Trigger AI scoring for the lead
-      await aiService.scoreLead(leadResponse.data.id!)
-      
-      setStep('confirm')
-      toast.success('Demo scheduled successfully!')
-      
     } catch (error) {
       console.error('Error scheduling demo:', error)
-      toast.error('Failed to schedule demo. Please try again.')
+      toast.error(error instanceof Error ? error.message : 'Failed to schedule demo. Please try again.')
     } finally {
       setIsSubmitting(false)
     }

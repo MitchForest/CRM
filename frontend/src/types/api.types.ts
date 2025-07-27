@@ -121,28 +121,37 @@ export interface KBCategory {
   article_count?: number;
 }
 
+export interface KBPublicCategory {
+  category: string;
+  article_count: number;
+}
+
 export interface KBArticle {
   id: string;
   title: string;
   content: string;
-  category_id: string;
-  status: 'draft' | 'published' | 'archived';
-  views: number;
-  helpful_count: number;
-  created_at: string;
-  updated_at: string;
+  category: string;  // Changed from category_id
+  slug?: string;
+  summary?: string;
+  status?: 'draft' | 'published' | 'archived';
+  views?: number;
+  view_count?: number;  // Backend uses view_count
+  helpful_count?: number;
+  not_helpful_count?: number;
+  created_at?: string;
+  updated_at?: string;
+  published_date?: string | null;
+  is_featured?: number | boolean;
+  is_published?: number | boolean;  // Added for admin interface
   // Additional fields used by components
-  category_name?: string;
+  author?: string | null;
   author_name?: string;
   date_modified?: string;
   date_created?: string;
+  date_entered?: string;
   tags?: string[];
   helpful_yes?: number;
   helpful_no?: number;
-  slug?: string;
-  excerpt?: string;
-  is_public?: boolean;
-  is_featured?: boolean;
 }
 
 // Form builder types (Phase 3)
@@ -314,3 +323,61 @@ export interface TrackingEvent {
   visitor_id?: string;
   session_id?: string;
 }
+
+// Timeline/Activity Feed types
+export interface TimelineActivity {
+  id?: string;
+  type: 'web_session' | 'page_view' | 'form_submission' | 'chat_conversation' | 
+        'call' | 'meeting' | 'note' | 'task' | 'score_change' | 'demo_scheduled' |
+        'session_start' | 'chat_message' | 'lead_score_change' | 'email';
+  title?: string;
+  description?: string;
+  timestamp: string;
+  icon?: string;
+  data?: Record<string, any>;
+  metadata?: Record<string, any>;
+  user_name?: string;
+}
+
+export interface TimelineResponse {
+  lead_id: string;
+  timeline: TimelineActivity[];
+  pagination: {
+    limit: number;
+    offset: number;
+    has_more: boolean;
+  };
+}
+
+// Form submission types
+export interface PublicLeadSubmission {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  message?: string;
+  form_source?: string;
+  visitor_id?: string;
+  session_id?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+}
+
+export interface PublicDemoRequest {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  company: string;
+  company_size?: string;
+  demo_date: string;
+  demo_time: string;
+  timezone?: string;
+  message?: string;
+  visitor_id?: string;
+  session_id?: string;
+}
+
+// Chat types

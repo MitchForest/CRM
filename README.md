@@ -1,5 +1,58 @@
 # Sassy CRM: Modernizing SuiteCRM for Software Sales Teams
 
+## 🚀 Quick Start
+
+### Option 1: Docker (Recommended - 5 minutes)
+```bash
+# Clone and start everything with one command
+git clone https://github.com/yourusername/sassy-crm.git
+cd sassy-crm
+docker-compose up -d
+
+# Access the application
+# Frontend: http://localhost:5173
+# API: http://localhost:8080
+# API Docs: http://localhost:8080/api-docs
+
+# Default login: admin@example.com / password
+```
+
+### Option 2: Local Development
+```bash
+# Prerequisites: PHP 8.2+, Node.js 18+, MySQL 8+
+
+# Clone repository
+git clone https://github.com/yourusername/sassy-crm.git
+cd sassy-crm
+
+# Backend setup
+cd backend
+composer install
+cp .env.example .env
+# Edit .env with your database credentials
+php bin/migrate.php
+php bin/seed.php
+
+# Frontend setup
+cd ../frontend
+npm install
+npm run dev
+
+# Start backend (if not using Docker)
+cd ../backend
+php -S localhost:8080 -t public
+```
+
+### Demo Data Included
+The seeder creates a complete demo environment with:
+- 3 demo users (admin, sales rep, support agent)
+- 50+ leads with varying scores
+- Active opportunities in pipeline
+- Sample support cases
+- Activity history and timeline data
+
+---
+
 ## 🎯 Project Overview
 
 This project demonstrates the transformation of SuiteCRM v7.14 - a legacy PHP monolith with over 230 database tables - into a modern, headless CRM specifically designed for B2B software sales teams. We preserved the battle-tested data layer while completely reimagining the architecture to support modern development practices and software-specific sales workflows.
@@ -15,7 +68,7 @@ This project demonstrates the transformation of SuiteCRM v7.14 - a legacy PHP mo
 5. [New Features for Software Sales Niche](#new-features-for-software-sales-niche)
 6. [Technical Architecture](#technical-architecture)
 7. [Results & Impact](#results--impact)
-8. [Quick Start Guide](#quick-start-guide)
+8. [Development Guide](#development-guide)
 
 ## 🏛️ Understanding SuiteCRM's Legacy Architecture
 
@@ -171,6 +224,7 @@ Modern Architecture:
 - **Authentication**: JWT tokens with refresh tokens
 - **Validation**: Respect/Validation
 - **API**: RESTful with OpenAPI documentation
+- **Containerization**: Docker for consistent environments
 
 **Frontend Revolution**:
 - **Framework**: React 18 with TypeScript
@@ -178,6 +232,12 @@ Modern Architecture:
 - **UI Library**: Custom components with Tailwind CSS
 - **State Management**: Zustand for simplicity
 - **API Client**: Generated from OpenAPI spec
+
+**DevOps & Deployment**:
+- **Docker Compose**: One-command development environment
+- **Environment Parity**: Dev/staging/production consistency
+- **Database Migrations**: Version-controlled schema changes
+- **Automated Seeding**: Demo data for quick testing
 
 ### 4. Preserving What Works
 
@@ -436,6 +496,55 @@ Moving beyond SuiteCRM's session-based auth:
 5. **Input Validation**: Comprehensive request validation
 6. **SQL Injection Prevention**: Parameterized queries only
 
+## 🐳 Docker Containerization
+
+### Why Docker Was Essential
+
+SuiteCRM's traditional installation is notoriously complex:
+- Manual Apache/PHP configuration
+- Specific PHP version requirements
+- File permission issues
+- Database setup complexity
+- Module dependencies
+
+### Our Docker Solution
+
+```yaml
+# docker-compose.yml structure
+services:
+  backend:
+    build: ./docker/backend
+    environment:
+      - DB_HOST=mysql
+      - JWT_SECRET=${JWT_SECRET}
+    volumes:
+      - ./backend:/var/www/html
+    
+  frontend:
+    build: ./docker/frontend
+    volumes:
+      - ./frontend:/app
+    environment:
+      - VITE_API_URL=http://localhost:8080
+    
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_DATABASE=sassy_crm
+      - MYSQL_ROOT_PASSWORD=root
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+```
+
+### Benefits Achieved
+
+1. **Instant Setup**: From zero to running CRM in 5 minutes
+2. **Consistency**: Same environment for all developers
+3. **Isolation**: No conflicts with local PHP/MySQL versions
+4. **Easy Updates**: Just rebuild containers
+5. **Production Ready**: Same containers deploy to production
+
 ## 📊 Results & Impact
 
 ### Performance Improvements
@@ -464,37 +573,83 @@ Moving beyond SuiteCRM's session-based auth:
 4. **Sales Velocity**: 40% faster pipeline movement
 5. **Developer Onboarding**: 1 week vs 1 month
 
-## 🚀 Quick Start Guide
+## 🚀 Development Guide
+
+### Project Structure
+```
+sassy-crm/
+├── docker/                     # Docker configurations
+│   ├── backend/
+│   │   ├── Dockerfile         # PHP 8.2 + Apache
+│   │   └── apache-config.conf # API routing
+│   ├── frontend/
+│   │   └── Dockerfile         # Node.js for Vite
+│   └── mysql/
+│       └── init.sql           # Database initialization
+├── docker-compose.yml         # Orchestration
+├── backend/
+│   ├── app/                   # Application code
+│   ├── public/               # Web root
+│   └── vendor/               # Composer dependencies
+├── frontend/
+│   ├── src/                  # React application
+│   └── node_modules/         # NPM dependencies
+└── README.md                 # This file
+```
+
+### Common Development Tasks
+
+```bash
+# View logs
+docker-compose logs -f backend
+
+# Run migrations
+docker-compose exec backend php bin/migrate.php
+
+# Create new seeder
+docker-compose exec backend php bin/create-seeder.php
+
+# Run tests
+docker-compose exec backend vendor/bin/phpunit
+docker-compose exec frontend npm test
+
+# Access MySQL
+docker-compose exec mysql mysql -u root -proot sassy_crm
+
+# Rebuild after dependency changes
+docker-compose build --no-cache
+docker-compose up -d
+```
+
+### Environment Variables
+
+Create `.env` file in root:
+```env
+# API Configuration
+JWT_SECRET=your-secret-key-here
+API_URL=http://localhost:8080
+
+# Database (for local development)
+DB_HOST=mysql
+DB_NAME=sassy_crm
+DB_USER=root
+DB_PASS=root
+
+# OpenAI (for AI features)
+OPENAI_API_KEY=sk-your-key-here
+
+# Frontend
+VITE_API_URL=http://localhost:8080
+```
 
 ### Prerequisites
 - Docker & Docker Compose
-- Node.js 18+
+- Node.js 18+ (for local development)
 - Git
 
 ### Installation
 
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/sassy-crm.git
-cd sassy-crm
-
-# Start the stack
-docker-compose up -d
-
-# Install dependencies
-cd frontend && npm install
-cd ../backend && composer install
-
-# Run migrations
-cd backend && php bin/migrate.php
-
-# Seed demo data
-php bin/seed.php
-
-# Start development servers
-cd ../frontend && npm run dev
-# Backend runs via Docker
-```
+See [Quick Start](#quick-start) at the top of this document for detailed setup instructions.
 
 ### Access Points
 - Frontend: http://localhost:5173

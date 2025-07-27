@@ -25,13 +25,19 @@ export function Support() {
     setIsSubmitting(true)
     
     try {
-      // Create a support case
-      const response = await apiClient.createCase({
-        name: formData.subject,
-        description: formData.description,
-        priority: formData.priority as 'High' | 'Medium' | 'Low',
-        type: formData.category,
-        status: 'Open'
+      // Get visitor tracking info
+      const visitorId = localStorage.getItem('crm_visitor_id')
+      const sessionId = sessionStorage.getItem('crm_session_id')
+      
+      // Create support ticket through public lead API
+      const response = await apiClient.submitPublicLead({
+        first_name: formData.name.split(' ')[0] || formData.name,
+        last_name: formData.name.split(' ').slice(1).join(' ') || '',
+        email: formData.email,
+        form_source: 'Support Page',
+        message: `Support Request: ${formData.subject}\n\nCategory: ${formData.category}\nPriority: ${formData.priority}\n\n${formData.description}`,
+        visitor_id: visitorId || undefined,
+        session_id: sessionId || undefined
       })
       
       if (response.success) {
@@ -45,8 +51,20 @@ export function Support() {
           category: 'technical',
           description: ''
         })
+        
+        // Track conversion event
+        if ((window as any).ActivityTracker) {
+          (window as any).ActivityTracker.trackConversion('support_page_ticket', 0, {
+            lead_id: response.data?.lead_id,
+            category: formData.category,
+            priority: formData.priority
+          })
+        }
+      } else {
+        throw new Error(response.error?.error || 'Failed to submit support request')
       }
-    } catch {
+    } catch (error) {
+      console.error('Support form error:', error)
       toast.error('Failed to create support ticket. Please try again.')
     } finally {
       setIsSubmitting(false)
