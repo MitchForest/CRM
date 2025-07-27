@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Case;
+use App\Models\SupportCase;
 use App\Models\Contact;
 use App\Models\Call;
 use App\Models\Meeting;
@@ -16,7 +16,7 @@ class CasesController extends Controller
     public function index(Request $request, Response $response, array $args): Response
     {
         $params = $request->getQueryParams();
-        $query = Case::with(['assignedUser', 'contacts'])
+        $query = SupportCase::with(['assignedUser', 'contacts'])
             ->where('deleted', 0);
         
         // Apply filters
@@ -70,12 +70,11 @@ class CasesController extends Controller
                 'resolution' => $case->resolution,
                 'contactId' => $contact?->id,
                 'contactName' => $contact?->full_name,
-                'assignedUserId' => $case->assigned_user_id,
-                'assignedUserName' => $case->assignedUser?->full_name,
-                'dateEntered' => $case->date_entered?->toIso8601String(),
-                'dateModified' => $case->date_modified?->toIso8601String(),
-                'createdBy' => $case->created_by,
-                'modifiedUserId' => $case->modified_user_id
+                'assigned_user_id' => $case->assigned_user_id,
+                'date_entered' => $case->date_entered?->toIso8601String(),
+                'date_modified' => $case->date_modified?->toIso8601String(),
+                'created_by' => $case->created_by,
+                'modified_user_id' => $case->modified_user_id
             ];
         });
         
@@ -83,11 +82,9 @@ class CasesController extends Controller
             'data' => $data,
             'pagination' => [
                 'page' => $cases->currentPage(),
-                'pageSize' => $cases->perPage(),
-                'totalPages' => $cases->lastPage(),
-                'totalCount' => $cases->total(),
-                'hasNext' => $cases->hasMorePages(),
-                'hasPrevious' => $cases->currentPage() > 1
+                'limit' => $cases->perPage(),
+                'total' => $cases->total(),
+                'total_pages' => $cases->lastPage()
             ]
         ]);
     }
@@ -95,7 +92,7 @@ class CasesController extends Controller
     public function show(Request $request, Response $response, array $args): Response
     {
         $id = $args['id'];
-        $case = Case::with(['assignedUser', 'contacts', 'calls', 'meetings', 'notes'])
+        $case = SupportCase::with(['assignedUser', 'contacts', 'calls', 'meetings', 'notes'])
             ->where('deleted', 0)
             ->find($id);
         
@@ -126,12 +123,11 @@ class CasesController extends Controller
                 'type' => $case->type,
                 'description' => $case->description,
                 'resolution' => $case->resolution,
-                'assignedUserId' => $case->assigned_user_id,
-                'assignedUserName' => $case->assignedUser?->full_name,
-                'dateEntered' => $case->date_entered?->toIso8601String(),
-                'dateModified' => $case->date_modified?->toIso8601String(),
-                'createdBy' => $case->created_by,
-                'modifiedUserId' => $case->modified_user_id,
+                'assigned_user_id' => $case->assigned_user_id,
+                'date_entered' => $case->date_entered?->toIso8601String(),
+                'date_modified' => $case->date_modified?->toIso8601String(),
+                'created_by' => $case->created_by,
+                'modified_user_id' => $case->modified_user_id,
                 'contacts' => $contacts,
                 'activities' => $activities
             ]
@@ -147,14 +143,14 @@ class CasesController extends Controller
             'type' => 'sometimes|string|max:100',
             'description' => 'sometimes|string',
             'resolution' => 'sometimes|string',
-            'assignedUserId' => 'sometimes|string|exists:users,id',
-            'contactId' => 'sometimes|string|exists:contacts,id'
+            'assigned_user_id' => 'sometimes|string|exists:users,id',
+            'contact_id' => 'sometimes|string|exists:contacts,id'
         ]);
         
         DB::beginTransaction();
         
         try {
-            $case = new Case();
+            $case = new SupportCase();
             $case->case_number = $this->generateCaseNumber();
             $case->name = $data['name'];
             $case->status = $data['status'] ?? 'Open';
@@ -162,13 +158,13 @@ class CasesController extends Controller
             $case->type = $data['type'] ?? 'Technical';
             $case->description = $data['description'] ?? '';
             $case->resolution = $data['resolution'] ?? '';
-            $case->assigned_user_id = $data['assignedUserId'] ?? $request->getAttribute('user_id');
+            $case->assigned_user_id = $data['assigned_user_id'] ?? $request->getAttribute('user_id');
             
             $case->save();
             
             // Add contact if provided
-            if (isset($data['contactId'])) {
-                $case->contacts()->attach($data['contactId']);
+            if (isset($data['contact_id'])) {
+                $case->contacts()->attach($data['contact_id']);
             }
             
             DB::commit();
@@ -190,7 +186,7 @@ class CasesController extends Controller
     public function update(Request $request, Response $response, array $args): Response
     {
         $id = $args['id'];
-        $case = Case::where('deleted', 0)->find($id);
+        $case = SupportCase::where('deleted', 0)->find($id);
         
         if (!$case) {
             return $this->error($response, 'Case not found', 404);
@@ -203,8 +199,8 @@ class CasesController extends Controller
             'type' => 'sometimes|string|max:100',
             'description' => 'sometimes|string',
             'resolution' => 'sometimes|string',
-            'assignedUserId' => 'sometimes|string|exists:users,id',
-            'contactId' => 'sometimes|nullable|string|exists:contacts,id'
+            'assigned_user_id' => 'sometimes|string|exists:users,id',
+            'contact_id' => 'sometimes|nullable|string|exists:contacts,id'
         ]);
         
         DB::beginTransaction();
@@ -217,14 +213,14 @@ class CasesController extends Controller
             if (isset($data['type'])) $case->type = $data['type'];
             if (isset($data['description'])) $case->description = $data['description'];
             if (isset($data['resolution'])) $case->resolution = $data['resolution'];
-            if (isset($data['assignedUserId'])) $case->assigned_user_id = $data['assignedUserId'];
+            if (isset($data['assigned_user_id'])) $case->assigned_user_id = $data['assigned_user_id'];
             
             $case->save();
             
             // Update contact if provided
-            if (isset($data['contactId'])) {
-                if ($data['contactId']) {
-                    $case->contacts()->sync([$data['contactId']]);
+            if (isset($data['contact_id'])) {
+                if ($data['contact_id']) {
+                    $case->contacts()->sync([$data['contact_id']]);
                 } else {
                     $case->contacts()->detach();
                 }
@@ -246,7 +242,7 @@ class CasesController extends Controller
     public function delete(Request $request, Response $response, array $args): Response
     {
         $id = $args['id'];
-        $case = Case::where('deleted', 0)->find($id);
+        $case = SupportCase::where('deleted', 0)->find($id);
         
         if (!$case) {
             return $this->error($response, 'Case not found', 404);
@@ -262,7 +258,7 @@ class CasesController extends Controller
     
     private function generateCaseNumber(): string
     {
-        $lastCase = Case::orderBy('case_number', 'DESC')->first();
+        $lastCase = SupportCase::orderBy('case_number', 'DESC')->first();
         
         if ($lastCase && preg_match('/CASE-(\d+)/', $lastCase->case_number, $matches)) {
             $lastNumber = (int)$matches[1];
@@ -272,7 +268,7 @@ class CasesController extends Controller
         return 'CASE-001';
     }
     
-    private function getCaseActivities(Case $case): array
+    private function getCaseActivities(SupportCase $case): array
     {
         $activities = [];
         

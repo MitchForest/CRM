@@ -2,7 +2,7 @@
 
 namespace App\Services\CRM;
 
-use App\Models\Case;
+use App\Models\SupportCase;
 use App\Services\AI\OpenAIService;
 use Illuminate\Support\Collection;
 
@@ -15,14 +15,14 @@ class CaseService
     /**
      * Create a new case
      */
-    public function create(array $data): Case
+    public function create(array $data): SupportCase
     {
         // Generate case number if not provided
         if (empty($data['case_number'])) {
             $data['case_number'] = $this->generateCaseNumber();
         }
         
-        $case = Case::create($data);
+        $case = SupportCase::create($data);
         
         // Auto-assign if rules are configured
         if (empty($data['assigned_user_id'])) {
@@ -40,9 +40,9 @@ class CaseService
     /**
      * Update a case
      */
-    public function update(string $id, array $data): Case
+    public function update(string $id, array $data): SupportCase
     {
-        $case = Case::findOrFail($id);
+        $case = SupportCase::findOrFail($id);
         $oldStatus = $case->status;
         
         $case->update($data);
@@ -67,7 +67,7 @@ class CaseService
     {
         $prefix = 'CASE';
         $year = now()->format('Y');
-        $lastCase = Case::whereYear('date_entered', $year)
+        $lastCase = SupportCase::whereYear('date_entered', $year)
             ->orderBy('case_number', 'desc')
             ->first();
         
@@ -83,10 +83,10 @@ class CaseService
     /**
      * Auto-assign case based on rules
      */
-    private function autoAssignCase(Case $case): void
+    private function autoAssignCase(SupportCase $case): void
     {
         // Simple round-robin assignment
-        $lastAssigned = Case::orderBy('date_entered', 'desc')
+        $lastAssigned = SupportCase::orderBy('date_entered', 'desc')
             ->whereNotNull('assigned_user_id')
             ->first();
         
@@ -163,7 +163,7 @@ class CaseService
      */
     public function getCasesRequiringAttention(string $userId = null): Collection
     {
-        $query = Case::with(['contact', 'account'])
+        $query = SupportCase::with(['contact', 'account'])
             ->where('status', '!=', 'closed');
         
         if ($userId) {
@@ -204,7 +204,7 @@ class CaseService
      */
     public function getCaseMetrics(array $dateRange = []): array
     {
-        $query = Case::query();
+        $query = SupportCase::query();
         
         if (!empty($dateRange)) {
             $query->whereBetween('date_entered', [$dateRange['start'], $dateRange['end']]);
@@ -281,10 +281,10 @@ class CaseService
      */
     public function getSuggestedSolutions(string $caseId): array
     {
-        $case = Case::findOrFail($caseId);
+        $case = SupportCase::findOrFail($caseId);
         
         // Find similar resolved cases
-        $similarCases = Case::where('status', 'closed')
+        $similarCases = SupportCase::where('status', 'closed')
             ->where('id', '!=', $caseId)
             ->where(function ($query) use ($case) {
                 $query->where('type', $case->type)
@@ -342,7 +342,7 @@ class CaseService
      */
     public function escalateCase(string $id, array $data): Case
     {
-        $case = Case::findOrFail($id);
+        $case = SupportCase::findOrFail($id);
         
         $updates = [
             'priority' => 'high',

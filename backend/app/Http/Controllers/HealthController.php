@@ -2,12 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Redis;
-use Illuminate\Support\Facades\Storage;
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Illuminate\Database\Capsule\Manager as DB;
 
 class HealthController extends Controller
 {
@@ -15,11 +12,11 @@ class HealthController extends Controller
      * System health check endpoint
      * GET /api/health
      */
-    public function check(Request $request): JsonResponse
+    public function check(Request $request, Response $response, array $args): Response
     {
         $health = [
             'status' => 'healthy',
-            'timestamp' => now()->toIso8601String(),
+            'timestamp' => (new \DateTime())->format('c'),
             'checks' => []
         ];
         
@@ -27,12 +24,6 @@ class HealthController extends Controller
         $health['checks']['database'] = $this->checkDatabase();
         if ($health['checks']['database']['status'] === 'error') {
             $health['status'] = 'unhealthy';
-        }
-        
-        // Check cache connection
-        $health['checks']['cache'] = $this->checkCache();
-        if ($health['checks']['cache']['status'] === 'error') {
-            $health['status'] = 'degraded';
         }
         
         // Check filesystem
@@ -52,40 +43,16 @@ class HealthController extends Controller
         
         // Add application info
         $health['application'] = [
-            'name' => config('app.name', 'Sassy CRM'),
-            'environment' => config('app.env'),
-            'debug_mode' => config('app.debug'),
-            'timezone' => config('app.timezone'),
-            'php_version' => PHP_VERSION,
-            'laravel_version' => app()->version()
+            'name' => $_ENV['APP_NAME'] ?? 'Sassy CRM',
+            'environment' => $_ENV['APP_ENV'] ?? 'production',
+            'debug_mode' => $_ENV['APP_DEBUG'] ?? false,
+            'timezone' => $_ENV['TZ'] ?? 'UTC',
+            'php_version' => PHP_VERSION
         ];
         
         $statusCode = $health['status'] === 'healthy' ? 200 : 503;
         
-        return response()->json($health, $statusCode);
-    }
-    
-    /**
-     * Detailed system status
-     * GET /api/health/status
-     */
-    public function status(Request $request): JsonResponse
-    {
-        // Check admin permissions
-        if (!$request->user() || !$request->user()->isAdmin()) {
-            return response()->json(['error' => 'Admin access required'], 403);
-        }
-        
-        $status = [
-            'timestamp' => now()->toIso8601String(),
-            'database' => $this->getDatabaseStatus(),
-            'cache' => $this->getCacheStatus(),
-            'queue' => $this->getQueueStatus(),
-            'storage' => $this->getStorageStatus(),
-            'services' => $this->getServicesStatus()
-        ];
-        
-        return response()->json($status);
+        return $this->json($response, $health, $statusCode);
     }
     
     /**
@@ -101,7 +68,8 @@ class HealthController extends Controller
             $missingTables = [];
             
             foreach ($tables as $table) {
-                if (!DB::getSchemaBuilder()->hasTable($table)) {
+                $tableExists = DB::select("SHOW TABLES LIKE ?", [$table]);
+                if (empty($tableExists)) {
                     $missingTables[] = $table;
                 }
             }
@@ -116,7 +84,7 @@ class HealthController extends Controller
             return [
                 'status' => 'ok',
                 'message' => 'Database connection successful',
-                'driver' => DB::getDriverName()
+                'driver' => DB::connection()->getConfig('driver')
             ];
             
         } catch (\Exception $e) {
@@ -128,47 +96,15 @@ class HealthController extends Controller
     }
     
     /**
-     * Check cache connection
-     */
-    private function checkCache(): array
-    {
-        try {
-            $key = 'health_check_' . time();
-            Cache::put($key, 'test', 60);
-            $value = Cache::get($key);
-            Cache::forget($key);
-            
-            if ($value === 'test') {
-                return [
-                    'status' => 'ok',
-                    'message' => 'Cache is working',
-                    'driver' => config('cache.default')
-                ];
-            }
-            
-            return [
-                'status' => 'warning',
-                'message' => 'Cache test failed'
-            ];
-            
-        } catch (\Exception $e) {
-            return [
-                'status' => 'error',
-                'message' => 'Cache check failed: ' . $e->getMessage()
-            ];
-        }
-    }
-    
-    /**
      * Check filesystem
      */
     private function checkFilesystem(): array
     {
         try {
             $directories = [
-                'storage/app' => storage_path('app'),
-                'storage/logs' => storage_path('logs'),
-                'storage/framework/cache' => storage_path('framework/cache')
+                'storage/app' => $this->storagePath('app'),
+                'storage/logs' => $this->storagePath('logs'),
+                'storage/framework/cache' => $this->storagePath('framework/cache')
             ];
             
             $issues = [];
@@ -279,7 +215,7 @@ class HealthController extends Controller
     private function checkDiskSpace(): array
     {
         try {
-            $path = storage_path();
+            $path = $this->storagePath();
             $freeSpace = disk_free_space($path);
             $totalSpace = disk_total_space($path);
             
@@ -317,90 +253,6 @@ class HealthController extends Controller
     }
     
     /**
-     * Get detailed database status
-     */
-    private function getDatabaseStatus(): array
-    {
-        try {
-            $pdo = DB::connection()->getPdo();
-            
-            return [
-                'connected' => true,
-                'driver' => DB::getDriverName(),
-                'version' => $pdo->getAttribute(\PDO::ATTR_SERVER_VERSION),
-                'database' => DB::getDatabaseName(),
-                'tables_count' => count(DB::getSchemaBuilder()->getAllTables())
-            ];
-            
-        } catch (\Exception $e) {
-            return [
-                'connected' => false,
-                'error' => $e->getMessage()
-            ];
-        }
-    }
-    
-    /**
-     * Get cache status
-     */
-    private function getCacheStatus(): array
-    {
-        return [
-            'driver' => config('cache.default'),
-            'stores' => array_keys(config('cache.stores', [])),
-            'prefix' => config('cache.prefix')
-        ];
-    }
-    
-    /**
-     * Get queue status
-     */
-    private function getQueueStatus(): array
-    {
-        return [
-            'driver' => config('queue.default'),
-            'connections' => array_keys(config('queue.connections', []))
-        ];
-    }
-    
-    /**
-     * Get storage status
-     */
-    private function getStorageStatus(): array
-    {
-        return [
-            'default' => config('filesystems.default'),
-            'disks' => array_keys(config('filesystems.disks', []))
-        ];
-    }
-    
-    /**
-     * Get services status
-     */
-    private function getServicesStatus(): array
-    {
-        $services = [];
-        
-        // Check if OpenAI service is configured
-        if (config('services.openai.key')) {
-            $services['openai'] = [
-                'configured' => true,
-                'model' => config('services.openai.model', 'gpt-3.5-turbo')
-            ];
-        } else {
-            $services['openai'] = ['configured' => false];
-        }
-        
-        // Check if email service is configured
-        $services['email'] = [
-            'driver' => config('mail.default'),
-            'from_address' => config('mail.from.address')
-        ];
-        
-        return $services;
-    }
-    
-    /**
      * Convert memory string to bytes
      */
     private function convertToBytes(string $value): int
@@ -419,5 +271,14 @@ class HealthController extends Controller
         }
         
         return $value;
+    }
+    
+    /**
+     * Get storage path
+     */
+    private function storagePath(string $path = ''): string
+    {
+        $basePath = dirname(dirname(dirname(__DIR__))) . '/storage';
+        return $path ? $basePath . '/' . $path : $basePath;
     }
 }

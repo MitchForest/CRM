@@ -5,41 +5,40 @@ namespace App\Http\Controllers;
 use App\Models\Account;
 use App\Models\CustomerHealthScore;
 use App\Services\CRM\CustomerHealthService;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Illuminate\Database\Capsule\Manager as DB;
 
 class CustomerHealthController extends Controller
 {
     private CustomerHealthService $healthService;
     
-    public function __construct(CustomerHealthService $healthService)
+    public function __construct()
     {
-        $this->healthService = $healthService;
+        parent::__construct();
+        $this->healthService = new CustomerHealthService();
     }
     
     /**
      * Calculate health score for a single account
      * POST /api/crm/accounts/{id}/health-score
      */
-    public function calculateHealthScore(Request $request, string $id): JsonResponse
+    public function calculateHealthScore(Request $request, Response $response, array $args): Response
     {
+        $id = $args['id'];
         $account = Account::find($id);
         
         if (!$account) {
-            return response()->json(['error' => 'Account not found'], 404);
+            return $this->error($response, 'Account not found', 404);
         }
         
         try {
             $result = $this->healthService->calculateHealthScore($account);
             
-            return response()->json($result);
+            return $this->json($response, $result);
             
         } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to calculate health score',
-                'message' => $e->getMessage()
-            ], 500);
+            return $this->error($response, 'Failed to calculate health score: ' . $e->getMessage(), 500);
         }
     }
     
@@ -47,23 +46,20 @@ class CustomerHealthController extends Controller
      * Batch calculate health scores
      * POST /api/crm/accounts/health-score-batch
      */
-    public function batchCalculateHealthScores(Request $request): JsonResponse
+    public function batchCalculateHealthScores(Request $request, Response $response, array $args): Response
     {
-        $request->validate([
+        $data = $this->validate($request, [
             'account_ids' => 'required|array|min:1',
             'account_ids.*' => 'string|exists:accounts,id'
         ]);
         
         try {
-            $results = $this->healthService->batchCalculateHealthScores($request->input('account_ids'));
+            $results = $this->healthService->batchCalculateHealthScores($data['account_ids']);
             
-            return response()->json($results);
+            return $this->json($response, $results);
             
         } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to calculate batch health scores',
-                'message' => $e->getMessage()
-            ], 500);
+            return $this->error($response, 'Failed to calculate batch health scores: ' . $e->getMessage(), 500);
         }
     }
     
@@ -71,21 +67,23 @@ class CustomerHealthController extends Controller
      * Get health score history for an account
      * GET /api/crm/accounts/{id}/health-history
      */
-    public function getHealthHistory(Request $request, string $id): JsonResponse
+    public function getHealthHistory(Request $request, Response $response, array $args): Response
     {
-        $request->validate([
-            'limit' => 'sometimes|integer|min:1|max:100'
-        ]);
+        $params = $request->getQueryParams();
+        $limit = intval($params['limit'] ?? 30);
         
+        if ($limit < 1 || $limit > 100) {
+            return $this->error($response, 'Limit must be between 1 and 100', 400);
+        }
+        
+        $id = $args['id'];
         $account = Account::find($id);
         
         if (!$account) {
-            return response()->json(['error' => 'Account not found'], 404);
+            return $this->error($response, 'Account not found', 404);
         }
         
         try {
-            $limit = $request->input('limit', 30);
-            
             $history = CustomerHealthScore::where('account_id', $id)
                 ->orderBy('calculated_at', 'desc')
                 ->limit($limit)
@@ -101,16 +99,13 @@ class CustomerHealthController extends Controller
                     ];
                 });
             
-            return response()->json([
+            return $this->json($response, [
                 'account_id' => $id,
                 'history' => $history
             ]);
             
         } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to retrieve health history',
-                'message' => $e->getMessage()
-            ], 500);
+            return $this->error($response, 'Failed to retrieve health history: ' . $e->getMessage(), 500);
         }
     }
     
@@ -118,30 +113,31 @@ class CustomerHealthController extends Controller
      * Get accounts by risk level
      * GET /api/crm/accounts/at-risk
      */
-    public function getAtRiskAccounts(Request $request): JsonResponse
+    public function getAtRiskAccounts(Request $request, Response $response, array $args): Response
     {
-        $request->validate([
-            'risk_level' => 'sometimes|string|in:healthy,at_risk,critical',
-            'limit' => 'sometimes|integer|min:1|max:100'
-        ]);
+        $params = $request->getQueryParams();
+        $riskLevel = $params['risk_level'] ?? 'at_risk';
+        $limit = intval($params['limit'] ?? 50);
         
-        $riskLevel = $request->input('risk_level', 'at_risk');
-        $limit = $request->input('limit', 50);
+        if (!in_array($riskLevel, ['healthy', 'at_risk', 'critical'])) {
+            return $this->error($response, 'Invalid risk level. Must be: healthy, at_risk, or critical', 400);
+        }
+        
+        if ($limit < 1 || $limit > 100) {
+            return $this->error($response, 'Limit must be between 1 and 100', 400);
+        }
         
         try {
             $accounts = $this->healthService->getAccountsByRiskLevel($riskLevel, $limit);
             
-            return response()->json([
+            return $this->json($response, [
                 'risk_level' => $riskLevel,
                 'count' => count($accounts),
                 'accounts' => $accounts
             ]);
             
         } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to retrieve at-risk accounts',
-                'message' => $e->getMessage()
-            ], 500);
+            return $this->error($response, 'Failed to retrieve at-risk accounts: ' . $e->getMessage(), 500);
         }
     }
     
@@ -149,7 +145,7 @@ class CustomerHealthController extends Controller
      * Get health analytics dashboard data
      * GET /api/crm/analytics/health-dashboard
      */
-    public function getHealthDashboard(Request $request): JsonResponse
+    public function getHealthDashboard(Request $request, Response $response, array $args): Response
     {
         try {
             // Get overall statistics
@@ -167,7 +163,7 @@ class CustomerHealthController extends Controller
             // Get recent alerts (accounts with declining health)
             $recentAlerts = $this->getRecentHealthAlerts();
             
-            return response()->json([
+            return $this->json($response, [
                 'summary' => [
                     'total_accounts' => $totalAccounts,
                     'healthy' => count($healthy),
@@ -186,10 +182,7 @@ class CustomerHealthController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to retrieve health dashboard',
-                'message' => $e->getMessage()
-            ], 500);
+            return $this->error($response, 'Failed to retrieve health dashboard: ' . $e->getMessage(), 500);
         }
     }
     
@@ -197,123 +190,218 @@ class CustomerHealthController extends Controller
      * Trigger recalculation of all health scores
      * POST /api/crm/admin/recalculate-health-scores
      */
-    public function recalculateAllScores(Request $request): JsonResponse
+    public function recalculateAllScores(Request $request, Response $response, array $args): Response
     {
-        // Check admin permissions
-        if (!$request->user()->isAdmin()) {
-            return response()->json(['error' => 'Admin access required'], 403);
-        }
-        
         try {
-            // This should ideally be run as a background job
-            $result = $this->healthService->calculateAllHealthScores();
+            DB::beginTransaction();
             
-            return response()->json([
-                'message' => 'Health scores recalculation completed',
-                'processed' => $result['processed'],
-                'errors' => $result['errors'],
-                'completed_at' => $result['completed_at']
-            ]);
+            $accounts = Account::where('deleted', 0)->get();
+            $results = [
+                'total' => $accounts->count(),
+                'success' => 0,
+                'failed' => 0,
+                'errors' => []
+            ];
             
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to recalculate health scores',
-                'message' => $e->getMessage()
-            ], 500);
-        }
-    }
-    
-    /**
-     * Webhook endpoint for periodic health checks
-     * POST /api/webhooks/health-check
-     */
-    public function webhookHealthCheck(Request $request): JsonResponse
-    {
-        // Simple auth token for webhook
-        $token = $request->header('X-Webhook-Token');
-        $expectedToken = env('HEALTH_CHECK_WEBHOOK_TOKEN', 'your-secret-token-here');
-        
-        if ($token !== $expectedToken) {
-            return response()->json(['error' => 'Invalid webhook token'], 401);
-        }
-        
-        try {
-            // Check for inactive accounts
-            $this->healthService->checkInactiveAccounts();
-            
-            // Calculate scores for at-risk accounts only
-            $atRiskAccounts = $this->healthService->getAccountsByRiskLevel('at_risk', 20);
-            $processed = 0;
-            
-            foreach ($atRiskAccounts as $account) {
+            foreach ($accounts as $account) {
                 try {
-                    $this->healthService->calculateHealthScore(
-                        Account::find($account['account_id'])
-                    );
-                    $processed++;
+                    $this->healthService->calculateHealthScore($account);
+                    $results['success']++;
                 } catch (\Exception $e) {
-                    \Log::error("Failed to calculate health score for account {$account['account_id']}: " . $e->getMessage());
+                    $results['failed']++;
+                    $results['errors'][] = [
+                        'account_id' => $account->id,
+                        'account_name' => $account->name,
+                        'error' => $e->getMessage()
+                    ];
                 }
             }
             
-            return response()->json([
-                'message' => 'Health check completed',
-                'inactive_accounts_checked' => true,
-                'at_risk_accounts_processed' => $processed,
-                'timestamp' => now()->toIso8601String()
-            ]);
+            DB::commit();
+            
+            return $this->json($response, $results);
             
         } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Webhook health check failed',
-                'message' => $e->getMessage()
-            ], 500);
+            DB::rollBack();
+            return $this->error($response, 'Failed to recalculate health scores: ' . $e->getMessage(), 500);
         }
     }
     
     /**
-     * Get health score recommendations
-     * GET /api/crm/accounts/{id}/health-recommendations
+     * Get health score rules
+     * GET /api/crm/admin/health-rules
      */
-    public function getHealthRecommendations(Request $request, string $id): JsonResponse
+    public function getRules(Request $request, Response $response, array $args): Response
     {
-        $account = Account::find($id);
+        try {
+            $rules = $this->healthService->getHealthRules();
+            
+            return $this->json($response, ['rules' => $rules]);
+            
+        } catch (\Exception $e) {
+            return $this->error($response, 'Failed to retrieve health rules: ' . $e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * Create new health rule
+     * POST /api/crm/admin/health-rules
+     */
+    public function createRule(Request $request, Response $response, array $args): Response
+    {
+        $data = $this->validate($request, [
+            'name' => 'required|string|max:255',
+            'description' => 'sometimes|string',
+            'factor' => 'required|string|in:engagement,satisfaction,usage,revenue,support',
+            'condition' => 'required|string',
+            'weight' => 'required|numeric|min:0|max:1',
+            'active' => 'sometimes|boolean'
+        ]);
         
-        if (!$account) {
-            return response()->json(['error' => 'Account not found'], 404);
+        try {
+            $rule = $this->healthService->createHealthRule($data);
+            
+            return $this->json($response, ['rule' => $rule], 201);
+            
+        } catch (\Exception $e) {
+            return $this->error($response, 'Failed to create health rule: ' . $e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * Update health rule
+     * PUT /api/crm/admin/health-rules/{id}
+     */
+    public function updateRule(Request $request, Response $response, array $args): Response
+    {
+        $id = $args['id'];
+        
+        $data = $this->validate($request, [
+            'name' => 'sometimes|string|max:255',
+            'description' => 'sometimes|string',
+            'factor' => 'sometimes|string|in:engagement,satisfaction,usage,revenue,support',
+            'condition' => 'sometimes|string',
+            'weight' => 'sometimes|numeric|min:0|max:1',
+            'active' => 'sometimes|boolean'
+        ]);
+        
+        try {
+            $rule = $this->healthService->updateHealthRule($id, $data);
+            
+            if (!$rule) {
+                return $this->error($response, 'Health rule not found', 404);
+            }
+            
+            return $this->json($response, ['rule' => $rule]);
+            
+        } catch (\Exception $e) {
+            return $this->error($response, 'Failed to update health rule: ' . $e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * Delete health rule
+     * DELETE /api/crm/admin/health-rules/{id}
+     */
+    public function deleteRule(Request $request, Response $response, array $args): Response
+    {
+        $id = $args['id'];
+        
+        try {
+            $deleted = $this->healthService->deleteHealthRule($id);
+            
+            if (!$deleted) {
+                return $this->error($response, 'Health rule not found', 404);
+            }
+            
+            return $this->json($response, ['message' => 'Health rule deleted successfully']);
+            
+        } catch (\Exception $e) {
+            return $this->error($response, 'Failed to delete health rule: ' . $e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * Calculate scores for all accounts
+     * POST /api/crm/admin/health-scores/calculate
+     */
+    public function calculateScores(Request $request, Response $response, array $args): Response
+    {
+        return $this->recalculateAllScores($request, $response, $args);
+    }
+    
+    /**
+     * Get health scores for all accounts
+     * GET /api/crm/admin/health-scores
+     */
+    public function getScores(Request $request, Response $response, array $args): Response
+    {
+        $params = $request->getQueryParams();
+        $page = intval($params['page'] ?? 1);
+        $limit = intval($params['limit'] ?? 20);
+        
+        if ($limit < 1 || $limit > 100) {
+            return $this->error($response, 'Limit must be between 1 and 100', 400);
         }
         
         try {
-            $latestScore = CustomerHealthScore::where('account_id', $id)
+            $scores = CustomerHealthScore::with('account')
                 ->orderBy('calculated_at', 'desc')
-                ->first();
+                ->paginate($limit, ['*'], 'page', $page);
             
-            if (!$latestScore) {
-                // Calculate if no score exists
-                $result = $this->healthService->calculateHealthScore($account);
-                $latestScore = CustomerHealthScore::where('account_id', $id)
-                    ->orderBy('calculated_at', 'desc')
-                    ->first();
-            }
+            $data = $scores->items()->map(function ($score) {
+                return [
+                    'id' => $score->id,
+                    'account_id' => $score->account_id,
+                    'account_name' => $score->account?->name,
+                    'score' => $score->score,
+                    'score_change' => $score->score_change,
+                    'risk_level' => $score->risk_level,
+                    'factors' => $score->factors,
+                    'calculated_at' => $score->calculated_at
+                ];
+            });
             
-            return response()->json([
-                'account_id' => $id,
-                'current_score' => $latestScore->score,
-                'risk_level' => $latestScore->risk_level,
-                'recommendations' => $latestScore->recommendations,
-                'factors' => $latestScore->factors
+            return $this->json($response, [
+                'data' => $data,
+                'pagination' => [
+                    'page' => $scores->currentPage(),
+                    'limit' => $scores->perPage(),
+                    'total' => $scores->total(),
+                    'total_pages' => $scores->lastPage()
+                ]
             ]);
             
         } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to get health recommendations',
-                'message' => $e->getMessage()
-            ], 500);
+            return $this->error($response, 'Failed to retrieve health scores: ' . $e->getMessage(), 500);
         }
     }
     
     /**
-     * Calculate average score from accounts array
+     * Get health trends
+     * GET /api/crm/admin/health-trends
+     */
+    public function getHealthTrends(Request $request, Response $response, array $args): Response
+    {
+        $params = $request->getQueryParams();
+        $days = intval($params['days'] ?? 30);
+        
+        if ($days < 1 || $days > 365) {
+            return $this->error($response, 'Days must be between 1 and 365', 400);
+        }
+        
+        try {
+            $trends = $this->healthService->getHealthTrends($days);
+            
+            return $this->json($response, $trends);
+            
+        } catch (\Exception $e) {
+            return $this->error($response, 'Failed to retrieve health trends: ' . $e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * Calculate average score for accounts
      */
     private function calculateAverageScore(array $accounts): float
     {
@@ -321,32 +409,31 @@ class CustomerHealthController extends Controller
             return 0;
         }
         
-        $total = array_sum(array_column($accounts, 'score'));
+        $total = array_reduce($accounts, function ($carry, $account) {
+            return $carry + ($account['health_score'] ?? 0);
+        }, 0);
+        
         return round($total / count($accounts), 1);
     }
     
     /**
      * Get recent health alerts
      */
-    private function getRecentHealthAlerts(int $limit = 10): array
+    private function getRecentHealthAlerts(): array
     {
-        return CustomerHealthScore::with(['account.assignedUser'])
-            ->where('score_change', '<', -20)
-            ->where('calculated_at', '>=', now()->subDays(7))
+        return CustomerHealthScore::where('score_change', '<', -10)
+            ->where('calculated_at', '>=', date('Y-m-d H:i:s', strtotime('-7 days')))
+            ->with('account')
             ->orderBy('score_change', 'asc')
-            ->limit($limit)
+            ->limit(10)
             ->get()
             ->map(function ($score) {
                 return [
-                    'id' => $score->id,
                     'account_id' => $score->account_id,
-                    'account_name' => $score->account->name,
-                    'assigned_to' => $score->account->assignedUser->full_name ?? null,
-                    'score' => $score->score,
+                    'account_name' => $score->account?->name,
+                    'current_score' => $score->score,
                     'score_change' => $score->score_change,
                     'risk_level' => $score->risk_level,
-                    'factors' => $score->factors,
-                    'recommendations' => $score->recommendations,
                     'calculated_at' => $score->calculated_at
                 ];
             })

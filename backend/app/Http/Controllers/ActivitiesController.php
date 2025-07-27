@@ -41,40 +41,40 @@ class ActivitiesController extends Controller
             $dateFrom = $data['date_from'] ?? null;
             $dateTo = $data['date_to'] ?? null;
             
-            $activities = collect();
+            $activities = [];
             
             // Get activities based on type
             if ($type === 'all' || $type === 'call') {
-                $activities = $activities->merge($this->getCalls($parentType, $parentId, $assignedUserId, $dateFrom, $dateTo));
+                $activities = array_merge($activities, $this->getCalls($parentType, $parentId, $assignedUserId, $dateFrom, $dateTo)->toArray());
             }
             if ($type === 'all' || $type === 'meeting') {
-                $activities = $activities->merge($this->getMeetings($parentType, $parentId, $assignedUserId, $dateFrom, $dateTo));
+                $activities = array_merge($activities, $this->getMeetings($parentType, $parentId, $assignedUserId, $dateFrom, $dateTo)->toArray());
             }
             if ($type === 'all' || $type === 'task') {
-                $activities = $activities->merge($this->getTasks($parentType, $parentId, $assignedUserId, $dateFrom, $dateTo));
+                $activities = array_merge($activities, $this->getTasks($parentType, $parentId, $assignedUserId, $dateFrom, $dateTo)->toArray());
             }
             if ($type === 'all' || $type === 'note') {
-                $activities = $activities->merge($this->getNotes($parentType, $parentId, $assignedUserId, $dateFrom, $dateTo));
+                $activities = array_merge($activities, $this->getNotes($parentType, $parentId, $assignedUserId, $dateFrom, $dateTo)->toArray());
             }
             
             // Sort by date descending
-            $activities = $activities->sortByDesc('date');
+            usort($activities, function ($a, $b) {
+                return strcmp($b['date'], $a['date']);
+            });
             
-            $totalCount = $activities->count();
+            $totalCount = count($activities);
             
             // Apply pagination
             $offset = ($page - 1) * $limit;
-            $activities = $activities->slice($offset, $limit)->values();
+            $activities = array_slice($activities, $offset, $limit);
             
             return $this->json($response, [
                 'data' => $activities,
                 'pagination' => [
                     'page' => $page,
-                    'pageSize' => $limit,
-                    'totalPages' => ceil($totalCount / $limit),
-                    'totalCount' => $totalCount,
-                    'hasNext' => $page < ceil($totalCount / $limit),
-                    'hasPrevious' => $page > 1
+                    'limit' => $limit,
+                    'total' => $totalCount,
+                    'total_pages' => ceil($totalCount / $limit)
                 ]
             ]);
             
@@ -100,7 +100,7 @@ class ActivitiesController extends Controller
             $assignedUserId = $data['assigned_user_id'] ?? $request->getAttribute('user_id');
             
             $currentDate = (new \DateTime())->format('Y-m-d H:i:s');
-            $activities = collect();
+            $activities = [];
             
             // Get upcoming calls
             $calls = Call::where('deleted', 0)
@@ -145,8 +145,11 @@ class ActivitiesController extends Controller
                 });
             
             // Merge and sort by date
-            $activities = $activities->merge($calls)->merge($meetings)->merge($tasks);
-            $activities = $activities->sortBy('date')->take($limit)->values();
+            $activities = array_merge($activities, $calls->toArray(), $meetings->toArray(), $tasks->toArray());
+            usort($activities, function ($a, $b) {
+                return strcmp($a['date'], $b['date']);
+            });
+            $activities = array_slice($activities, 0, $limit);
             
             return $this->json($response, [
                 'data' => $activities
@@ -174,7 +177,7 @@ class ActivitiesController extends Controller
             $assignedUserId = $data['assigned_user_id'] ?? $request->getAttribute('user_id');
             
             $currentDate = (new \DateTime())->format('Y-m-d H:i:s');
-            $activities = collect();
+            $activities = [];
             
             // Get overdue calls
             $calls = Call::where('deleted', 0)
@@ -219,8 +222,11 @@ class ActivitiesController extends Controller
                 });
             
             // Merge all overdue activities
-            $activities = $activities->merge($calls)->merge($meetings)->merge($tasks);
-            $activities = $activities->sortByDesc('date')->take($limit)->values();
+            $activities = array_merge($activities, $calls->toArray(), $meetings->toArray(), $tasks->toArray());
+            usort($activities, function ($a, $b) {
+                return strcmp($b['date'], $a['date']);
+            });
+            $activities = array_slice($activities, 0, $limit);
             
             return $this->json($response, [
                 'data' => $activities,
@@ -653,12 +659,11 @@ class ActivitiesController extends Controller
             'type' => $type,
             'name' => $activity->name,
             'description' => $activity->description ?? '',
-            'assignedUserId' => $activity->assigned_user_id,
-            'assignedUserName' => $activity->assignedUser ? $activity->assignedUser->first_name . ' ' . $activity->assignedUser->last_name : null,
-            'parentType' => $activity->parent_type ?? '',
-            'parentId' => $activity->parent_id ?? '',
-            'dateEntered' => $activity->date_entered,
-            'dateModified' => $activity->date_modified
+            'assigned_user_id' => $activity->assigned_user_id,
+            'parent_type' => $activity->parent_type ?? '',
+            'parent_id' => $activity->parent_id ?? '',
+            'date_entered' => $activity->date_entered,
+            'date_modified' => $activity->date_modified
         ];
         
         // Add type-specific fields

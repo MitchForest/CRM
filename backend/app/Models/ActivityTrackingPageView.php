@@ -13,17 +13,16 @@ class ActivityTrackingPageView extends BaseModel
         'visitor_id',
         'page_url',
         'page_title',
+        'referrer',
         'time_on_page',
-        'bounce',
         'exit_page',
-        'created_at'
+        'date_entered'
     ];
     
     protected $casts = [
         'time_on_page' => 'integer',
-        'bounce' => 'boolean',
-        'exit_page' => 'boolean',
-        'created_at' => 'datetime'
+        'exit_page' => 'integer',
+        'date_entered' => 'datetime'
     ];
     
     public $timestamps = false;

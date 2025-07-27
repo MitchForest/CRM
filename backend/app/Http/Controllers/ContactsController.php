@@ -8,7 +8,7 @@ use App\Models\ChatConversation;
 use App\Models\Call;
 use App\Models\Meeting;
 use App\Models\Note;
-use App\Models\Case;
+use App\Models\SupportCase;
 use App\Models\CustomerHealthScore;
 use App\Models\Opportunity;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -70,9 +70,9 @@ class ContactsController extends Controller
             'data' => $data,
             'pagination' => [
                 'page' => $contacts->currentPage(),
-                'pageSize' => $contacts->perPage(),
+                'limit' => $contacts->perPage(),
                 'total' => $contacts->total(),
-                'totalPages' => $contacts->lastPage()
+                'total_pages' => $contacts->lastPage()
             ]
         ]);
     }
@@ -236,7 +236,7 @@ class ContactsController extends Controller
         });
         
         // Get support tickets
-        $tickets = Case::where('deleted', 0)
+        $tickets = SupportCase::where('deleted', 0)
             ->where('account_id', $contact->account_id)
             ->orderBy('date_entered', 'DESC')
             ->get()
@@ -247,7 +247,7 @@ class ContactsController extends Controller
                     'status' => $ticket->status,
                     'priority' => $ticket->priority,
                     'type' => $ticket->type,
-                    'dateEntered' => $ticket->date_entered?->toIso8601String()
+                    'date_entered' => $ticket->date_entered?->toIso8601String()
                 ];
             });
         

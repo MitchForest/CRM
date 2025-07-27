@@ -12,38 +12,41 @@ class Opportunity extends BaseModel
     
     protected $fillable = [
         'name',
+        'date_entered',
+        'date_modified',
         'created_by',
         'modified_user_id',
         'assigned_user_id',
+        'deleted',
         'opportunity_type',
         'account_id',
+        'lead_source',
         'amount',
-        'amount_usdollar',          // USD equivalent
+        'amount_usdollar',
+        'currency_id',
         'date_closed',
         'next_step',
         'sales_stage',
         'probability',
         'description',
-        'lead_source',
-        'campaign_id'
+        'ai_close_probability',
+        'ai_risk_factors',
+        'ai_recommendations'
     ];
     
     protected $casts = [
-        'amount' => 'decimal:2',
-        'amount_usdollar' => 'decimal:2',
-        'probability' => 'integer',
-        'date_closed' => 'date',
         'date_entered' => 'datetime',
         'date_modified' => 'datetime',
-        'deleted' => 'boolean'
+        'deleted' => 'integer',
+        'amount' => 'float',
+        'amount_usdollar' => 'float',
+        'date_closed' => 'date',
+        'probability' => 'float',
+        'ai_close_probability' => 'float',
+        'ai_risk_factors' => 'json',
+        'ai_recommendations' => 'json'
     ];
     
-    protected $appends = ['weighted_amount'];
-    
-    public function getWeightedAmountAttribute(): float
-    {
-        return ($this->amount ?? 0) * ($this->probability ?? 0) / 100;
-    }
     
     public function assignedUser(): BelongsTo
     {

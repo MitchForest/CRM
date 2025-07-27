@@ -5,8 +5,6 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
-
-    /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
@@ -14,14 +12,10 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "esModuleInterop": true,
-
-    /* Path mapping */
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
-
-    /* Linting - Strict settings */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -36,7 +30,8 @@
   "include": [
     "src/**/*",
     "tests/**/*",
-    "vite.config.ts"
+    "vite.config.ts",
+    "src/api/generated/**/*"
   ],
   "exclude": [
     "node_modules",

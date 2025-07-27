@@ -3,7 +3,7 @@ import type {
   KBArticle, 
   KBCategory,
   KBSearchResult
-} from '@/types/phase3.types';
+} from '@/types/api.types';
 
 class KnowledgeBaseService {
   // Category Management

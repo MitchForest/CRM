@@ -12,26 +12,23 @@ class ActivityTrackingSession extends BaseModel
     protected $fillable = [
         'session_id',
         'visitor_id',
-        'lead_id',
-        'contact_id',
-        'started_at',
-        'ended_at',
+        'ip_address',
+        'user_agent',
+        'start_time',
+        'end_time',
         'duration',
-        'page_views',
-        'events_count',
-        'form_submissions',
-        'utm_source',
-        'utm_medium',
-        'utm_campaign'
+        'page_count',
+        'bounce',
+        'date_entered'
     ];
     
     protected $casts = [
-        'started_at' => 'datetime',
-        'ended_at' => 'datetime',
+        'start_time' => 'datetime',
+        'end_time' => 'datetime',
         'duration' => 'integer',
-        'page_views' => 'integer',
-        'events_count' => 'integer',
-        'form_submissions' => 'integer'
+        'page_count' => 'integer',
+        'bounce' => 'integer',
+        'date_entered' => 'datetime'
     ];
     
     public $timestamps = false;

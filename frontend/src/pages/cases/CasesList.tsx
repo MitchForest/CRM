@@ -151,7 +151,7 @@ export function CasesList() {
                     <PriorityBadge priority={caseItem.priority} />
                   </TableCell>
                   <TableCell>
-                    <Badge className={getStatusColor(caseItem.status)}>
+                    <Badge className={getStatusColor(caseItem.status || '')}>
                       {caseItem.status}
                     </Badge>
                   </TableCell>

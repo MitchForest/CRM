@@ -9,23 +9,20 @@ class User extends BaseModel
     protected $table = 'users';
     
     protected $fillable = [
-        'user_name',                // Login username
-        'user_hash',                // Password hash
+        'user_name',
+        'user_hash',
         'first_name',
         'last_name',
-        'email',                    // NOTE: Just 'email', NOT 'email1' for users
+        'department',
+        'title',
+        'phone_work',
+        'email1',
         'status',
         'is_admin',
-        'default_team',
-        'phone_work',
-        'phone_mobile',
-        'address_street',           // NOTE: No prefix for users
-        'address_city',
-        'address_state',
-        'address_postalcode',
-        'address_country',
-        'title',
-        'department'
+        'deleted',
+        'date_entered',
+        'date_modified',
+        'created_by'
     ];
     
     protected $hidden = [
@@ -34,17 +31,12 @@ class User extends BaseModel
     ];
     
     protected $casts = [
-        'is_admin' => 'boolean',
+        'is_admin' => 'integer',
+        'deleted' => 'integer',
         'date_entered' => 'datetime',
         'date_modified' => 'datetime'
     ];
     
-    protected $appends = ['full_name'];
-    
-    public function getFullNameAttribute(): string
-    {
-        return trim("{$this->first_name} {$this->last_name}");
-    }
     
     public function leads(): HasMany
     {
@@ -63,7 +55,7 @@ class User extends BaseModel
     
     public function cases(): HasMany
     {
-        return $this->hasMany(\App\Models\Case::class, 'assigned_user_id');
+        return $this->hasMany(\App\Models\SupportCase::class, 'assigned_user_id');
     }
     
     public function tasks(): HasMany

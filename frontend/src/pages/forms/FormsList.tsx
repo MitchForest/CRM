@@ -26,7 +26,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { formBuilderService } from '@/services/formBuilder.service';
 import { formatDistanceToNow } from 'date-fns';
-import type { Form } from '@/types/phase3.types';
+import type { Form } from '@/types/api.types';
 
 export function FormsList() {
   const navigate = useNavigate();

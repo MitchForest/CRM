@@ -9,19 +9,23 @@ class CustomerHealthScore extends BaseModel
     protected $table = 'customer_health_scores';
     
     protected $fillable = [
-        'contact_id',
         'account_id',
         'score',
+        'previous_score',
+        'score_change',
         'factors',
-        'trend',
         'risk_level',
-        'calculated_at'
+        'recommendations',
+        'date_scored'
     ];
     
     protected $casts = [
-        'score' => 'decimal:2',
-        'factors' => 'array',
-        'calculated_at' => 'datetime'
+        'score' => 'integer',
+        'previous_score' => 'integer',
+        'score_change' => 'integer',
+        'factors' => 'json',
+        'recommendations' => 'json',
+        'date_scored' => 'datetime'
     ];
     
     public $timestamps = false;

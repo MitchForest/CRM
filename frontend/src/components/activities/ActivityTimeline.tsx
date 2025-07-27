@@ -136,8 +136,8 @@ export function ActivityTimeline({ parentType, parentId, className }: ActivityTi
             
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
               <span>{formatDateTime(activity.date_entered || '')}</span>
-              {activity.assigned_user_name && (
-                <span>Assigned to {activity.assigned_user_name}</span>
+              {activity.assigned_user_id && (
+                <span>Assigned: {activity.assigned_user_id}</span>
               )}
               {activity.type === 'call' && 'duration_minutes' in activity && activity.duration_minutes && (
                 <span>{activity.duration_minutes} min</span>

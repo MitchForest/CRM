@@ -11,38 +11,31 @@ class Account extends BaseModel
     protected $table = 'accounts';
     
     protected $fillable = [
-        'name',                     // Company name
+        'name',
+        'date_entered',
+        'date_modified',
         'created_by',
         'modified_user_id',
         'assigned_user_id',
+        'deleted',
         'account_type',
         'industry',
         'annual_revenue',
-        'phone_office',             // NOT 'phone_work'
-        'phone_alternate',
+        'phone_office',
         'website',
-        'email1',                   // NOT 'email'
         'employees',
-        'billing_address_street',   // NOTE: 'billing_' prefix
+        'billing_address_street',
         'billing_address_city',
         'billing_address_state',
         'billing_address_postalcode',
         'billing_address_country',
-        'description',
-        'rating',
-        'ownership',
-        'health_score',
-        'renewal_date',
-        'contract_value'
+        'description'
     ];
     
     protected $casts = [
         'date_entered' => 'datetime',
         'date_modified' => 'datetime',
-        'renewal_date' => 'date',
-        'contract_value' => 'decimal:2',
-        'health_score' => 'integer',
-        'deleted' => 'boolean'
+        'deleted' => 'integer'
     ];
     
     public function assignedUser(): BelongsTo
@@ -63,6 +56,6 @@ class Account extends BaseModel
     
     public function cases(): HasMany
     {
-        return $this->hasMany(Case::class, 'account_id');
+        return $this->hasMany(\App\Models\SupportCase::class, 'account_id');
     }
 }

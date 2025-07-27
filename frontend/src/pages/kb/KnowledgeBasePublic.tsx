@@ -141,7 +141,7 @@ export function KnowledgeBasePublic() {
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <span>By {article.author_name}</span>
                   <span>•</span>
-                  <span>{formatDistanceToNow(new Date(article.date_modified), { addSuffix: true })}</span>
+                  <span>{article.date_modified ? formatDistanceToNow(new Date(article.date_modified), { addSuffix: true }) : 'Recently'}</span>
                   <span>•</span>
                   <span>{article.views} views</span>
                 </div>
@@ -264,17 +264,17 @@ export function KnowledgeBasePublic() {
             {searchResults && searchResults.length > 0 ? (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {searchResults.map((result) => (
-                  <Card key={result.article.id} className="hover:shadow-md transition-shadow">
+                  <Card key={result.article?.id || result.id} className="hover:shadow-md transition-shadow">
                     <CardHeader>
-                      <a href={`/kb/public/${result.article.slug}`}>
+                      <a href={`/kb/public/${result.article?.slug || result.id}`}>
                         <CardTitle className="text-lg hover:text-primary">
-                          {result.article.title}
+                          {result.article?.title || result.title}
                         </CardTitle>
                       </a>
                     </CardHeader>
                     <CardContent>
                       <p className="text-sm text-muted-foreground line-clamp-3">
-                        {result.article.excerpt || 'No excerpt available'}
+                        {result.article?.excerpt || result.content || 'No excerpt available'}
                       </p>
                       {result.similarity && (
                         <div className="mt-2">

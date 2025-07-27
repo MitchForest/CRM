@@ -268,22 +268,8 @@ export function LeadDetailPage() {
               </div>
               <div>
                 <p className="text-muted-foreground">Last Updated</p>
-                <p>{lead.date_modified ? formatDateTime(lead.date_modified) : 'Unknown'}</p>
+                <p>{lead.date_modified ? formatDateTime(String(lead.date_modified)) : 'Unknown'}</p>
               </div>
-              {lead.contact_id && (
-                <div>
-                  <p className="text-muted-foreground">Converted To</p>
-                  <Link to={`/contacts/${lead.contact_id}`} className="hover:underline">
-                    View Contact
-                  </Link>
-                </div>
-              )}
-              {lead.converted && (
-                <div>
-                  <p className="text-muted-foreground">Converted On</p>
-                  <p>{formatDateTime(lead.date_modified)}</p>
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>

@@ -15,7 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { KanbanColumn } from './KanbanColumn'
 import { OpportunityCard } from './OpportunityCard'
 import { useUpdateOpportunityStage } from '@/hooks/use-opportunities'
-import type { Opportunity } from '@/types/api.generated'
+import type { OpportunityDB } from '@/types/database.types'
 
 const stages = [
   'qualification',

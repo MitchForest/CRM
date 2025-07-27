@@ -12,19 +12,15 @@ class ApiRefreshToken extends BaseModel
         'user_id',
         'token',
         'expires_at',
-        'last_used_at',
-        'ip_address',
-        'user_agent'
+        'created_at'
     ];
     
     protected $casts = [
         'expires_at' => 'datetime',
-        'last_used_at' => 'datetime',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'created_at' => 'datetime'
     ];
     
-    public $timestamps = true;
+    public $timestamps = false;
     
     public function user(): BelongsTo
     {

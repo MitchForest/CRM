@@ -69,7 +69,7 @@ export function OpportunityForm() {
   const isEdit = Boolean(id)
 
   const { data: opportunityData, isLoading: isLoadingOpportunity } = useOpportunity(id || '')
-  const { data: accountsData } = useAccounts({ page: 1, pageSize: 100 })
+  const { data: accountsData } = useAccounts({ page: 1, limit: 100 })
   const createMutation = useCreateOpportunity()
   const updateMutation = useUpdateOpportunity(id || '')
 
@@ -94,7 +94,7 @@ export function OpportunityForm() {
   useEffect(() => {
     if (opportunityData?.data && isEdit) {
       const opp = opportunityData.data
-      setValue('name', opp.name)
+      setValue('name', opp.name || '')
       setValue('sales_stage', opp.sales_stage || 'qualification')
       setValue('amount', opp.amount || 0)
       setValue('probability', opp.probability || 0)
@@ -129,7 +129,22 @@ export function OpportunityForm() {
       if (isEdit) {
         await updateMutation.mutateAsync(formattedData)
       } else {
-        await createMutation.mutateAsync(formattedData)
+        // Add required fields for creation
+        const createData = {
+          ...formattedData,
+          created_by: null,
+          modified_user_id: null,
+          assigned_user_id: null,
+          deleted: 0,
+          opportunity_type: null,
+          lead_source: null,
+          amount_usdollar: formattedData.amount,
+          currency_id: null,
+          ai_close_probability: null,
+          ai_risk_factors: null,
+          ai_recommendations: null
+        }
+        await createMutation.mutateAsync(createData)
       }
       navigate('/opportunities')
     } catch {

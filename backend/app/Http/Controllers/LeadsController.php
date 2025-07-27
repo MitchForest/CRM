@@ -8,8 +8,62 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Illuminate\Database\Capsule\Manager as DB;
 
+/**
+ * @OA\Tag(
+ *     name="Leads",
+ *     description="Lead management endpoints"
+ * )
+ */
 class LeadsController extends Controller
 {
+    /**
+     * @OA\Get(
+     *     path="/api/crm/leads",
+     *     tags={"Leads"},
+     *     summary="List leads",
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="limit",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=20, maximum=100)
+     *     ),
+     *     @OA\Parameter(
+     *         name="filter[status]",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="string", enum={"new", "contacted", "qualified", "unqualified", "converted"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="filter[assigned_user_id]",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Parameter(
+     *         name="filter[search]",
+     *         in="query",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Success",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="data", type="array",
+     *                 @OA\Items(ref="#/components/schemas/Lead")
+     *             ),
+     *             @OA\Property(property="pagination", ref="#/components/schemas/Pagination")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, ref="#/components/responses/Unauthorized")
+     * )
+     */
     public function index(Request $request, Response $response, array $args): Response
     {
         $params = $request->getQueryParams();
@@ -66,7 +120,7 @@ class LeadsController extends Controller
                 'page' => $leads->currentPage(),
                 'limit' => $leads->perPage(),
                 'total' => $leads->total(),
-                'totalPages' => $leads->lastPage()
+                'total_pages' => $leads->lastPage()
             ]
         ]);
     }

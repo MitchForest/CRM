@@ -5,28 +5,33 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Case extends BaseModel
+class SupportCase extends BaseModel
 {
     protected $table = 'cases';
     
     protected $fillable = [
-        'case_number',              // Auto-increment
-        'name',                     // Subject/Title
+        'date_entered',
+        'date_modified',
         'created_by',
         'modified_user_id',
         'assigned_user_id',
-        'type',
+        'deleted',
+        'case_number',
+        'name',
+        'account_id',
+        'contact_id',
         'status',
         'priority',
-        'resolution',
+        'type',
         'description',
-        'account_id',
-        'contact_id'
+        'resolution'
     ];
     
     protected $casts = [
         'date_entered' => 'datetime',
-        'date_modified' => 'datetime'
+        'date_modified' => 'datetime',
+        'deleted' => 'integer',
+        'case_number' => 'integer'
     ];
     
     public function assignedUser(): BelongsTo

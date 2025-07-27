@@ -5,11 +5,11 @@ namespace App\Services\CRM;
 use App\Models\Lead;
 use App\Models\Contact;
 use App\Models\Opportunity;
-use App\Models\Case;
+use App\Models\SupportCase;
 use App\Models\ActivityTrackingSession;
 use App\Models\FormSubmission;
 use App\Models\ChatConversation;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Capsule\Manager as DB;
 
 class AnalyticsService
 {
@@ -18,8 +18,8 @@ class AnalyticsService
      */
     public function getAnalyticsDashboard(array $dateRange = []): array
     {
-        $startDate = $dateRange['start'] ?? now()->subDays(30);
-        $endDate = $dateRange['end'] ?? now();
+        $startDate = $dateRange['start'] ?? (new \DateTime())->modify('-30 days');
+        $endDate = $dateRange['end'] ?? new \DateTime();
         
         return [
             'overview' => $this->getOverviewMetrics($startDate, $endDate),
@@ -58,8 +58,8 @@ class AnalyticsService
                     ->where('sales_stage', 'Closed Won')->sum('amount')
             ],
             'support' => [
-                'cases_created' => Case::whereBetween('date_entered', [$startDate, $endDate])->count(),
-                'cases_resolved' => Case::whereBetween('date_modified', [$startDate, $endDate])
+                'cases_created' => SupportCase::whereBetween('date_entered', [$startDate, $endDate])->count(),
+                'cases_resolved' => SupportCase::whereBetween('date_modified', [$startDate, $endDate])
                     ->where('status', 'closed')->count()
             ]
         ];
@@ -280,26 +280,26 @@ class AnalyticsService
     private function getPredictiveAnalytics(): array
     {
         // Simple predictions based on historical data
-        $lastMonth = now()->subMonth();
-        $thisMonth = now();
+        $lastMonth = (new \DateTime())->modify('-1 month');
+        $thisMonth = new \DateTime();
         
         // Revenue prediction
         $lastMonthRevenue = Opportunity::where('sales_stage', 'Closed Won')
-            ->whereMonth('date_closed', $lastMonth->month)
-            ->whereYear('date_closed', $lastMonth->year)
+            ->whereMonth('date_closed', $lastMonth->format('n'))
+            ->whereYear('date_closed', $lastMonth->format('Y'))
             ->sum('amount');
         
         $thisMonthRevenue = Opportunity::where('sales_stage', 'Closed Won')
-            ->whereMonth('date_closed', $thisMonth->month)
-            ->whereYear('date_closed', $thisMonth->year)
+            ->whereMonth('date_closed', $thisMonth->format('n'))
+            ->whereYear('date_closed', $thisMonth->format('Y'))
             ->sum('amount');
         
-        $daysInMonth = $thisMonth->daysInMonth;
-        $daysPassed = $thisMonth->day;
+        $daysInMonth = (int)$thisMonth->format('t');
+        $daysPassed = (int)$thisMonth->format('j');
         $projectedRevenue = $daysInMonth > 0 ? ($thisMonthRevenue / $daysPassed) * $daysInMonth : 0;
         
         // Lead prediction
-        $avgLeadsPerDay = Lead::where('date_entered', '>=', now()->subDays(30))
+        $avgLeadsPerDay = Lead::where('date_entered', '>=', (new \DateTime())->modify('-30 days')->format('Y-m-d'))
             ->count() / 30;
         
         $projectedLeads = $avgLeadsPerDay * ($daysInMonth - $daysPassed);
@@ -402,7 +402,7 @@ class AnalyticsService
     
     private function calculateAverageResolutionTime($startDate, $endDate): float
     {
-        $cases = Case::whereBetween('date_modified', [$startDate, $endDate])
+        $cases = SupportCase::whereBetween('date_modified', [$startDate, $endDate])
             ->where('status', 'closed')
             ->get();
         

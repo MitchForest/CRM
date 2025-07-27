@@ -87,7 +87,7 @@ class EmailController extends Controller
                     'page' => $page,
                     'limit' => $limit,
                     'total' => $totalCount,
-                    'totalPages' => ceil($totalCount / $limit)
+                    'total_pages' => ceil($totalCount / $limit)
                 ]
             ]);
             

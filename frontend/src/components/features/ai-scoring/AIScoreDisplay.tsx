@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
-import type { AIScoreResult } from '@/types/phase3.types';
+import type { AIScoreResult } from '@/types/api.types';
 
 interface AIScoreDisplayProps {
   score?: AIScoreResult;

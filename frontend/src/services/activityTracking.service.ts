@@ -3,7 +3,7 @@ import type {
   WebsiteSession, 
   ActivityHeatmap,
   TrackingEvent
-} from '@/types/phase3.types';
+} from '@/types/api.types';
 
 class ActivityTrackingService {
   private visitorId: string | null = null;

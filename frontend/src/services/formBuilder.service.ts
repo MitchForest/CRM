@@ -3,7 +3,7 @@ import type {
   Form, 
   FormSubmission, 
   FormField
-} from '@/types/phase3.types';
+} from '@/types/api.types';
 
 class FormBuilderService {
   /**

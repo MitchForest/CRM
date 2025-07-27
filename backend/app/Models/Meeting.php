@@ -9,38 +9,34 @@ class Meeting extends BaseModel
     protected $table = 'meetings';
     
     protected $fillable = [
-        'name',                     // Meeting subject
+        'date_entered',
+        'date_modified',
         'created_by',
         'modified_user_id',
         'assigned_user_id',
+        'deleted',
+        'name',
         'location',
         'duration_hours',
         'duration_minutes',
         'date_start',
         'date_end',
+        'status',
         'parent_type',
         'parent_id',
-        'status',
-        'type',
-        'description',
-        'reminder_time'
+        'description'
     ];
     
     protected $casts = [
-        'date_start' => 'datetime',
-        'date_end' => 'datetime',
+        'date_entered' => 'datetime',
+        'date_modified' => 'datetime',
+        'deleted' => 'integer',
         'duration_hours' => 'integer',
         'duration_minutes' => 'integer',
-        'date_entered' => 'datetime',
-        'date_modified' => 'datetime'
+        'date_start' => 'datetime',
+        'date_end' => 'datetime'
     ];
     
-    protected $appends = ['duration_total_minutes'];
-    
-    public function getDurationTotalMinutesAttribute(): int
-    {
-        return ($this->duration_hours * 60) + $this->duration_minutes;
-    }
     
     public function assignedUser(): BelongsTo
     {
@@ -64,7 +60,7 @@ class Meeting extends BaseModel
             case 'Opportunities':
                 return $this->belongsTo(Opportunity::class, 'parent_id');
             case 'Cases':
-                return $this->belongsTo(Case::class, 'parent_id');
+                return $this->belongsTo(\App\Models\SupportCase::class, 'parent_id');
             default:
                 return null;
         }

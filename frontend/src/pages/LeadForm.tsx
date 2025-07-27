@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCreateLead, useUpdateLead, useLead } from '@/hooks/use-leads'
 import { leadSchema, type LeadFormData } from '@/lib/validation'
-import type { Lead } from '@/types/api.generated'
+import type { LeadDB } from '@/types/database.types'
 
 export function LeadFormPage() {
   const { id } = useParams<{ id: string }>()
@@ -44,16 +44,16 @@ export function LeadFormPage() {
     if (isEdit && leadData?.data) {
       const lead = leadData.data
       form.reset({
-        first_name: lead.first_name,
-        last_name: lead.last_name,
-        email1: lead.email1,
+        first_name: lead.first_name || '',
+        last_name: lead.last_name || '',
+        email1: lead.email1 || '',
         phone_work: lead.phone_work || '',
         phone_mobile: lead.phone_mobile || '',
         title: lead.title || '',
         account_name: lead.account_name || '',
         website: lead.website || '',
         description: lead.description || '',
-        status: lead.status,
+        status: (lead.status || 'new') as LeadFormData['status'],
         lead_source: lead.lead_source as LeadFormData['lead_source'] || undefined,
       })
     }
@@ -70,10 +70,30 @@ export function LeadFormPage() {
       }, {})
       
       if (isEdit) {
-        await updateLead.mutateAsync(cleanedData as Partial<Lead>)
+        await updateLead.mutateAsync(cleanedData as Partial<LeadDB>)
         navigate(`/leads/${id}`)
       } else {
-        await createLead.mutateAsync(cleanedData as Omit<Lead, 'id'>)
+        const leadData = {
+          ...cleanedData,
+          created_by: null,
+          modified_user_id: null,
+          assigned_user_id: null,
+          deleted: 0,
+          salutation: null,
+          department: null,
+          primary_address_street: null,
+          primary_address_city: null,
+          primary_address_state: null,
+          primary_address_postalcode: null,
+          primary_address_country: null,
+          status_description: null,
+          lead_source_description: null,
+          ai_score: null,
+          ai_score_date: null,
+          ai_insights: null,
+          ai_next_best_action: null,
+        }
+        await createLead.mutateAsync(leadData as Omit<LeadDB, 'id' | 'date_entered' | 'date_modified'>)
         // Navigate to leads list instead of detail page to see if it appears
         navigate('/leads')
       }

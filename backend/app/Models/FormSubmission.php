@@ -16,12 +16,14 @@ class FormSubmission extends BaseModel
         'ip_address',
         'user_agent',
         'referrer',
-        'created_at'
+        'date_entered',
+        'deleted'
     ];
     
     protected $casts = [
-        'data' => 'array',
-        'created_at' => 'datetime'
+        'data' => 'json',
+        'date_entered' => 'datetime',
+        'deleted' => 'integer'
     ];
     
     public $timestamps = false;

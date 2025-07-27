@@ -16,30 +16,25 @@ class Call extends BaseModel
         'duration_hours',
         'duration_minutes',
         'date_start',
-        'date_end',
         'parent_type',
         'parent_id',
         'status',
         'direction',
         'description',
-        'reminder_time'
+        'date_entered',
+        'date_modified',
+        'deleted'
     ];
     
     protected $casts = [
         'date_start' => 'datetime',
-        'date_end' => 'datetime',
         'duration_hours' => 'integer',
         'duration_minutes' => 'integer',
         'date_entered' => 'datetime',
-        'date_modified' => 'datetime'
+        'date_modified' => 'datetime',
+        'deleted' => 'integer'
     ];
     
-    protected $appends = ['duration_total_minutes'];
-    
-    public function getDurationTotalMinutesAttribute(): int
-    {
-        return ($this->duration_hours * 60) + $this->duration_minutes;
-    }
     
     public function assignedUser(): BelongsTo
     {
@@ -63,7 +58,7 @@ class Call extends BaseModel
             case 'Opportunities':
                 return $this->belongsTo(Opportunity::class, 'parent_id');
             case 'Cases':
-                return $this->belongsTo(Case::class, 'parent_id');
+                return $this->belongsTo(\App\Models\SupportCase::class, 'parent_id');
             default:
                 return null;
         }

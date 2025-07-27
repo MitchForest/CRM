@@ -6,7 +6,7 @@ use App\Models\User;
 use App\Models\ApiRefreshToken;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
-use Illuminate\Support\Str;
+// Removed Laravel helper
 
 class AuthService
 {
@@ -49,7 +49,7 @@ class AuthService
         $tokens = $this->generateTokens($user);
         
         // Update last login
-        $user->update(['last_login' => now()]);
+        $user->update(['last_login' => (new \DateTime())->format('Y-m-d H:i:s')]);
         
         return [
             'user' => $this->formatUserData($user),
@@ -166,13 +166,13 @@ class AuthService
      */
     private function generateRefreshToken(User $user): string
     {
-        $token = Str::random(64);
+        $token = bin2hex(random_bytes(32));
         
         // Store refresh token
         ApiRefreshToken::create([
             'user_id' => $user->id,
             'token' => $token,
-            'expires_at' => now()->addSeconds($this->refreshTokenLifetime),
+            'expires_at' => (new \DateTime())->modify("+{$this->refreshTokenLifetime} seconds")->format('Y-m-d H:i:s'),
             'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null,
             'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? null
         ]);
@@ -253,7 +253,7 @@ class AuthService
         }
         
         // Generate reset token
-        $resetToken = Str::random(64);
+        $resetToken = bin2hex(random_bytes(32));
         
         // Store token (you'd need a password_resets table)
         // For now, just log it

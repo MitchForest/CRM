@@ -5,11 +5,11 @@ import type { CallDB, MeetingDB, TaskDB, NoteDB } from '@/types/database.types'
 import type { QueryParams, ListResponse, ApiResponse, BaseActivity, ActivityType } from '@/types/api.types'
 import { getErrorMessage } from '@/lib/error-utils'
 
-// Extended types that include BaseActivity fields
-type ExtendedCall = CallDB & Pick<BaseActivity, 'date_entered' | 'date_modified'>
-type ExtendedMeeting = MeetingDB & Pick<BaseActivity, 'date_entered' | 'date_modified'>
-type ExtendedTask = TaskDB & Pick<BaseActivity, 'date_entered' | 'date_modified'>
-type ExtendedNote = NoteDB & Pick<BaseActivity, 'status' | 'date_entered' | 'date_modified'>
+// Extended types - just use the DB types directly
+type ExtendedCall = CallDB
+type ExtendedMeeting = MeetingDB
+type ExtendedTask = TaskDB
+type ExtendedNote = NoteDB
 
 interface ActivityApiMethods<T> {
   getAll: (params?: QueryParams) => Promise<ListResponse<T>>;
@@ -127,7 +127,7 @@ function createActivityHooks<T extends { id?: string }, BaseT = Record<string, u
 }
 
 // Call hooks
-const callHooks = createActivityHooks<ExtendedCall, CallDB>('calls', 'Call', {
+const callHooks = createActivityHooks<ExtendedCall, CallDB>('calls', 'call', {
   getAll: apiClient.getCalls.bind(apiClient),
   getOne: apiClient.getCall.bind(apiClient),
   create: apiClient.createCall.bind(apiClient),
@@ -142,7 +142,7 @@ export const useUpdateCall = callHooks.useUpdate
 export const useDeleteCall = callHooks.useDelete
 
 // Meeting hooks
-const meetingHooks = createActivityHooks<ExtendedMeeting, MeetingDB>('meetings', 'Meeting', {
+const meetingHooks = createActivityHooks<ExtendedMeeting, MeetingDB>('meetings', 'meeting', {
   getAll: apiClient.getMeetings.bind(apiClient),
   getOne: apiClient.getMeeting.bind(apiClient),
   create: apiClient.createMeeting.bind(apiClient),
@@ -157,12 +157,12 @@ export const useUpdateMeeting = meetingHooks.useUpdate
 export const useDeleteMeeting = meetingHooks.useDelete
 
 // Task hooks
-const taskHooks = createActivityHooks<ExtendedTask, TaskDB>('tasks', 'Task', {
+const taskHooks = createActivityHooks<ExtendedTask, TaskDB>('tasks', 'task', {
   getAll: apiClient.getTasks.bind(apiClient),
   getOne: apiClient.getTask.bind(apiClient),
   create: apiClient.createTask.bind(apiClient),
   update: apiClient.updateTask.bind(apiClient),
-  delete: apiClient.deleteCall.bind(apiClient), // Fix: there's no deleteTask method
+  delete: apiClient.deleteTask.bind(apiClient),
 })
 
 export const useTasks = taskHooks.useGetAll
@@ -210,7 +210,7 @@ export function useUpcomingActivities(limit = 10) {
           id: c.id || '',
           name: c.name,
           status: c.status || '',
-          type: 'Call' as ActivityType,
+          type: 'call' as ActivityType,
           date_entered: '',
           date_modified: '',
           parent_type: c.parent_type,
@@ -221,7 +221,7 @@ export function useUpcomingActivities(limit = 10) {
           id: m.id || '',
           name: m.name,
           status: m.status || '',
-          type: 'Meeting' as ActivityType,
+          type: 'meeting' as ActivityType,
           date_entered: '',
           date_modified: '',
           parent_type: m.parent_type,
@@ -232,7 +232,7 @@ export function useUpcomingActivities(limit = 10) {
           id: t.id || '',
           name: t.name,
           status: t.status || '',
-          type: 'Task' as ActivityType,
+          type: 'task' as ActivityType,
           date_entered: '',
           date_modified: '',
           parent_type: t.parent_type,
@@ -265,7 +265,7 @@ export function useOverdueTasks() {
       // Client-side filtering for now
       return {
         ...response,
-        data: response.data.filter(task => {
+        data: response.data.filter(t => {
           if (!t.date_due) return false
           if (t.status === 'Completed') return false
           return new Date(t.date_due) < new Date()
@@ -316,7 +316,7 @@ export function useActivityMetrics() {
           id: c.id || '',
           name: c.name,
           status: c.status || '',
-          type: 'Call' as ActivityType,
+          type: 'call' as ActivityType,
           date_entered: '',
           date_modified: '',
           parent_type: c.parent_type,
@@ -327,7 +327,7 @@ export function useActivityMetrics() {
           id: m.id || '',
           name: m.name,
           status: m.status || '',
-          type: 'Meeting' as ActivityType,
+          type: 'meeting' as ActivityType,
           date_entered: '',
           date_modified: '',
           parent_type: m.parent_type,
@@ -358,10 +358,10 @@ export function useActivitiesByParent(parent_type: string, parent_id: string) {
       ]
       
       const [callsResponse, meetingsResponse, tasksResponse, notesResponse] = await Promise.all([
-        apiClient.getCalls({ limit: 50, filters }),
-        apiClient.getMeetings({ limit: 50, filters }),
-        apiClient.getTasks({ limit: 50, filters }),
-        apiClient.getNotes({ limit: 50, filters }),
+        apiClient.getCalls({ limit: 50, filter: filters }),
+        apiClient.getMeetings({ limit: 50, filter: filters }),
+        apiClient.getTasks({ limit: 50, filter: filters }),
+        apiClient.getNotes({ limit: 50, filter: filters }),
       ])
 
       // Combine all activities into a single array with type tag

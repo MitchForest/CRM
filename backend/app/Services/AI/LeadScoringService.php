@@ -34,7 +34,7 @@ class LeadScoringService
             'score' => $score,
             'factors' => $factors,
             'model_version' => '1.0',
-            'scored_at' => now()
+            'scored_at' => (new \DateTime())->format('Y-m-d H:i:s')
         ]);
         
         return $leadScore;
@@ -246,7 +246,7 @@ class LeadScoringService
         
         // Recent activity
         $lastActivity = $lead->sessions()->latest('started_at')->first();
-        if ($lastActivity && $lastActivity->started_at->isAfter(now()->subDays(7))) {
+        if ($lastActivity && strtotime($lastActivity->started_at) > strtotime('-7 days')) {
             $intentScore += 0.2;
             $signals[] = 'Recent activity';
         }
@@ -280,7 +280,7 @@ class LeadScoringService
             
             return [
                 'analysis' => $response,
-                'generated_at' => now()
+                'generated_at' => (new \DateTime())->format('Y-m-d H:i:s')
             ];
         } catch (\Exception $e) {
             return [

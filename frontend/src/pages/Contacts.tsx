@@ -14,7 +14,7 @@ import {
 import { DataTable } from '@/components/ui/data-table'
 import { useContacts } from '@/hooks/use-contacts'
 import { formatDate } from '@/lib/utils'
-import type { Contact } from '@/types/api.generated'
+import type { ContactDB } from '@/types/database.types'
 import { Skeleton } from '@/components/ui/skeleton'
 
 // Define columns for the contacts table

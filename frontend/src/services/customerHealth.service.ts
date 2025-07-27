@@ -3,7 +3,7 @@ import type {
   HealthScore, 
   HealthDashboard,
   HealthMetric
-} from '@/types/phase3.types';
+} from '@/types/api.types';
 
 class CustomerHealthService {
   /**

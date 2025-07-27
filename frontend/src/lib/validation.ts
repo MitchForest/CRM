@@ -81,41 +81,41 @@ export const accountSchema = z.object({
   name: z.string()
     .min(1, messages.required('Account name'))
     .max(100, messages.max('Account name', 100)),
-  phone: optionalPhone(),
+  phone_office: optionalPhone(),
   website: optionalUrl(),
   industry: z.string()
     .max(100, messages.max('Industry', 100))
     .optional(),
-  annualRevenue: z.string().optional(),
+  annual_revenue: z.string().optional(),
   employees: z.string().optional(),
-  billingStreet: z.string()
+  billing_address_street: z.string()
     .max(255, messages.max('Street', 255))
     .optional(),
-  billingCity: z.string()
+  billing_address_city: z.string()
     .max(100, messages.max('City', 100))
     .optional(),
-  billingState: z.string()
+  billing_address_state: z.string()
     .max(100, messages.max('State/Province', 100))
     .optional(),
-  billingPostalCode: z.string()
+  billing_address_postalcode: z.string()
     .max(20, messages.max('Postal code', 20))
     .optional(),
-  billingCountry: z.string()
+  billing_address_country: z.string()
     .max(100, messages.max('Country', 100))
     .optional(),
-  shippingStreet: z.string()
+  shipping_address_street: z.string()
     .max(255, messages.max('Street', 255))
     .optional(),
-  shippingCity: z.string()
+  shipping_address_city: z.string()
     .max(100, messages.max('City', 100))
     .optional(),
-  shippingState: z.string()
+  shipping_address_state: z.string()
     .max(100, messages.max('State/Province', 100))
     .optional(),
-  shippingPostalCode: z.string()
+  shipping_address_postalcode: z.string()
     .max(20, messages.max('Postal code', 20))
     .optional(),
-  shippingCountry: z.string()
+  shipping_address_country: z.string()
     .max(100, messages.max('Country', 100))
     .optional(),
   description: z.string()
@@ -248,15 +248,15 @@ export const userSchema = z.object({
     .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
   confirmPassword: z.string()
     .min(1, messages.required('Confirm password')),
-  firstName: z.string()
+  first_name: z.string()
     .min(1, messages.required('First name'))
     .max(50, messages.max('First name', 50)),
-  lastName: z.string()
+  last_name: z.string()
     .min(1, messages.required('Last name'))
     .max(50, messages.max('Last name', 50)),
   role: z.enum(['Admin', 'User', 'Manager']),
   phone: optionalPhone(),
-  isActive: z.boolean().default(true),
+  is_active: z.boolean().default(true),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],

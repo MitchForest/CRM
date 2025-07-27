@@ -178,7 +178,7 @@ export function OpportunityDetailPage() {
                       <p className="text-sm font-medium text-muted-foreground">Assigned To</p>
                       <p className="flex items-center gap-2">
                         <User className="h-4 w-4" />
-                        {opportunity.assigned_user_name || 'Unassigned'}
+                        {opportunity.assigned_user_id || 'Unassigned'}
                       </p>
                     </div>
                   </div>

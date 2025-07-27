@@ -5,9 +5,9 @@ namespace App\Services\CRM;
 use App\Models\Lead;
 use App\Models\Contact;
 use App\Models\Opportunity;
-use App\Models\Case;
+use App\Models\SupportCase;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Capsule\Manager as DB;
 
 class DashboardService
 {
@@ -50,7 +50,7 @@ class DashboardService
             'leads' => [
                 'total' => Lead::where('assigned_user_id', $userId)->count(),
                 'new_this_week' => Lead::where('assigned_user_id', $userId)
-                    ->where('date_entered', '>=', now()->startOfWeek())
+                    ->where('date_entered', '>=', (new \DateTime('monday this week'))->format('Y-m-d'))
                     ->count(),
                 'hot_leads' => Lead::where('assigned_user_id', $userId)
                     ->highScore()
@@ -64,7 +64,7 @@ class DashboardService
                     ->whereNotIn('sales_stage', ['Closed Won', 'Closed Lost'])
                     ->sum('amount'),
                 'closing_this_month' => Opportunity::where('assigned_user_id', $userId)
-                    ->whereBetween('date_closed', [now()->startOfMonth(), now()->endOfMonth()])
+                    ->whereBetween('date_closed', [(new \DateTime('first day of this month'))->format('Y-m-d'), (new \DateTime('last day of this month'))->format('Y-m-d')])
                     ->whereNotIn('sales_stage', ['Closed Won', 'Closed Lost'])
                     ->count()
             ],
@@ -73,17 +73,17 @@ class DashboardService
                 'at_risk' => Contact::where('assigned_user_id', $userId)
                     ->whereHas('healthScores', function ($q) {
                         $q->where('risk_level', 'high')
-                          ->where('calculated_at', '>=', now()->subDays(7));
+                          ->where('calculated_at', '>=', (new \DateTime())->modify('-7 days')->format('Y-m-d H:i:s'));
                     })
                     ->count()
             ],
             'cases' => [
-                'open' => Case::where('assigned_user_id', $userId)
+                'open' => SupportCase::where('assigned_user_id', $userId)
                     ->where('status', '!=', 'closed')
                     ->count(),
-                'overdue' => Case::where('assigned_user_id', $userId)
+                'overdue' => SupportCase::where('assigned_user_id', $userId)
                     ->where('status', '!=', 'closed')
-                    ->where('date_entered', '<', now()->subDays(3))
+                    ->where('date_entered', '<', (new \DateTime())->modify('-3 days')->format('Y-m-d'))
                     ->count()
             ]
         ];
@@ -129,7 +129,7 @@ class DashboardService
         }
         
         // Sort by timestamp and limit
-        return collect($activities)
+        return array_values(array_slice($activities, 0, 10))
             ->sortByDesc('timestamp')
             ->take(10)
             ->values()
@@ -167,7 +167,7 @@ class DashboardService
     {
         return \App\Models\Task::where('assigned_user_id', $userId)
             ->where('status', '!=', 'completed')
-            ->where('date_due', '>=', now())
+            ->where('date_due', '>=', (new \DateTime())->format('Y-m-d H:i:s'))
             ->orderBy('date_due')
             ->limit(5)
             ->get(['id', 'name', 'date_due', 'priority', 'parent_type', 'parent_id'])
@@ -208,8 +208,8 @@ class DashboardService
      */
     private function getUserPerformance(string $userId): array
     {
-        $thisMonth = now()->startOfMonth();
-        $lastMonth = now()->subMonth()->startOfMonth();
+        $thisMonth = new \DateTime('first day of this month');
+        $lastMonth = new \DateTime('first day of last month');
         
         return [
             'leads_converted' => Lead::where('assigned_user_id', $userId)
@@ -275,8 +275,8 @@ class DashboardService
      */
     private function getRevenueMetrics(): array
     {
-        $currentQuarter = now()->quarter;
-        $currentYear = now()->year;
+        $currentQuarter = ceil((int)(new \DateTime())->format('n') / 3);
+        $currentYear = (int)(new \DateTime())->format('Y');
         
         return [
             'mrr' => $this->calculateMRR(),
@@ -303,7 +303,7 @@ class DashboardService
         $trends = [];
         
         for ($i = $days; $i >= 0; $i--) {
-            $date = now()->subDays($i);
+            $date = (new \DateTime())->modify("-{$i} days");
             $trends[] = [
                 'date' => $date->format('Y-m-d'),
                 'leads' => Lead::whereDate('date_entered', $date)->count(),
@@ -404,7 +404,7 @@ class DashboardService
         // For now, estimate from closed opportunities
         return Opportunity::where('sales_stage', 'Closed Won')
             ->where('opportunity_type', 'subscription')
-            ->whereMonth('date_closed', now()->month)
+            ->whereMonth('date_closed', (new \DateTime())->format('n'))
             ->sum('amount');
     }
     
@@ -422,7 +422,7 @@ class DashboardService
     private function getRevenueByMonth(): array
     {
         return Opportunity::where('sales_stage', 'Closed Won')
-            ->where('date_closed', '>=', now()->subMonths(12))
+            ->where('date_closed', '>=', (new \DateTime())->modify('-12 months')->format('Y-m-d'))
             ->get()
             ->groupBy(function ($opp) {
                 return $opp->date_closed->format('Y-m');

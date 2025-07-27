@@ -9,7 +9,7 @@ use App\Models\FormSubmission;
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
 use App\Models\Contact;
-use App\Models\Case;
+use App\Models\SupportCase;
 use App\Models\Meeting;
 use App\Services\AI\OpenAIService;
 use App\Services\AI\LeadScoringService;
@@ -482,7 +482,7 @@ class AIController extends Controller
         DB::beginTransaction();
         
         try {
-            $case = new Case();
+            $case = new SupportCase();
             $case->case_number = $this->generateCaseNumber();
             $case->name = $data['summary'] ?? 'Support request from AI chat';
             $case->status = 'Open';
@@ -896,7 +896,7 @@ class AIController extends Controller
     
     private function generateCaseNumber(): string
     {
-        $lastCase = Case::orderBy('case_number', 'DESC')->first();
+        $lastCase = SupportCase::orderBy('case_number', 'DESC')->first();
         
         if ($lastCase && preg_match('/CASE-(\d+)/', $lastCase->case_number, $matches)) {
             $lastNumber = (int)$matches[1];

@@ -11,9 +11,12 @@ class Contact extends BaseModel
     protected $table = 'contacts';
     
     protected $fillable = [
+        'date_entered',
+        'date_modified',
         'created_by',
         'modified_user_id',
         'assigned_user_id',
+        'deleted',
         'salutation',
         'first_name',
         'last_name',
@@ -21,7 +24,7 @@ class Contact extends BaseModel
         'department',
         'phone_work',
         'phone_mobile',
-        'email1',                   // NOT 'email' - consistent with Lead
+        'email1',
         'primary_address_street',
         'primary_address_city',
         'primary_address_state',
@@ -29,7 +32,6 @@ class Contact extends BaseModel
         'primary_address_country',
         'description',
         'lead_source',
-        'account_id',
         'lifetime_value',
         'engagement_score',
         'last_activity_date'
@@ -39,22 +41,11 @@ class Contact extends BaseModel
         'date_entered' => 'datetime',
         'date_modified' => 'datetime',
         'last_activity_date' => 'datetime',
-        'lifetime_value' => 'decimal:2',
+        'lifetime_value' => 'float',
         'engagement_score' => 'integer',
-        'deleted' => 'boolean'
+        'deleted' => 'integer'
     ];
     
-    protected $appends = ['full_name', 'health_score'];
-    
-    public function getFullNameAttribute(): string
-    {
-        return trim("{$this->first_name} {$this->last_name}");
-    }
-    
-    public function getHealthScoreAttribute(): ?float
-    {
-        return $this->healthScores()->latest()->first()?->score;
-    }
     
     public function assignedUser(): BelongsTo
     {
@@ -68,7 +59,7 @@ class Contact extends BaseModel
     
     public function cases(): HasMany
     {
-        return $this->hasMany(\App\Models\Case::class, 'contact_id');
+        return $this->hasMany(\App\Models\SupportCase::class, 'contact_id');
     }
     
     public function opportunities(): BelongsToMany

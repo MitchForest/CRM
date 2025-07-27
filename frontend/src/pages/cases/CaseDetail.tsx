@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useCase, useResolveCase } from '@/hooks/use-cases'
 import { useNotes, useCreateNote } from '@/hooks/use-activities'
 import { formatDateTime } from '@/lib/utils'
-import type { Note } from '@/types/api.generated'
+import type { NoteDB } from '@/types/database.types'
 import { PriorityBadge } from '@/components/ui/priority-badge'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -54,11 +54,15 @@ export function CaseDetail() {
       await createNote.mutateAsync({
         name: `Note for Case #${caseItem.case_number || caseItem.id.slice(0, 8)}`,
         description: newNote,
-        parentType: 'Cases',
-        parentId: id,
+        parent_type: 'Cases',
+        parent_id: id,
         status: 'Active',
-        dateEntered: '',
-        dateModified: ''
+        date_entered: null,
+        date_modified: null,
+        created_by: null,
+        modified_user_id: null,
+        assigned_user_id: null,
+        deleted: 0
       })
       setNewNote('')
       toast.success('Your note has been added to the case.')
@@ -98,7 +102,7 @@ export function CaseDetail() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-semibold">Case #{caseItem.caseNumber}</h1>
+            <h1 className="text-2xl font-semibold">Case #{caseItem.case_number}</h1>
             <p className="text-muted-foreground">{caseItem.name}</p>
           </div>
         </div>
@@ -124,7 +128,7 @@ export function CaseDetail() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Status</p>
-                  <Badge className={getStatusColor(caseItem.status)}>
+                  <Badge className={getStatusColor(caseItem.status || '')}>
                     {caseItem.status}
                   </Badge>
                 </div>
@@ -138,7 +142,7 @@ export function CaseDetail() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Created</p>
-                  <p>{formatDateTime(caseItem.createdAt || '')}</p>
+                  <p>{formatDateTime(caseItem.date_entered || '')}</p>
                 </div>
               </div>
 
@@ -211,12 +215,12 @@ export function CaseDetail() {
               </Card>
 
               <div className="mt-4 space-y-4">
-                {notes?.data.filter((note: Note) => note.parentId === id).map((note: Note) => (
+                {notes?.data.filter((note: NoteDB) => note.parent_id === id).map((note: NoteDB) => (
                   <Card key={note.id}>
                     <CardContent className="pt-6">
                       <div className="flex items-start justify-between mb-2">
                         <div className="text-sm text-muted-foreground">
-                          System • {formatDateTime(caseItem.updatedAt || caseItem.createdAt || '')}
+                          System • {formatDateTime(caseItem.date_modified || caseItem.date_entered || '')}
                         </div>
                       </div>
                       <p className="whitespace-pre-wrap">{note.description}</p>
@@ -238,7 +242,7 @@ export function CaseDetail() {
               <CardTitle>Account Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {caseItem.contactId ? (
+              {caseItem.contact_id ? (
                 <>
                   <p className="font-medium">Account Name</p>
                   <Button variant="outline" size="sm" className="w-full" asChild>
@@ -256,11 +260,11 @@ export function CaseDetail() {
               <CardTitle>Contact Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {caseItem.contactId ? (
+              {caseItem.contact_id ? (
                 <>
-                  <p className="font-medium">{caseItem.contactName}</p>
+                  <p className="font-medium">Contact</p>
                   <Button variant="outline" size="sm" className="w-full" asChild>
-                    <Link to={`/contacts/${caseItem.contactId}`}>View Contact</Link>
+                    <Link to={`/contacts/${caseItem.contact_id}`}>View Contact</Link>
                   </Button>
                 </>
               ) : (
@@ -274,7 +278,7 @@ export function CaseDetail() {
               <CardTitle>Assigned To</CardTitle>
             </CardHeader>
             <CardContent>
-              <p>{caseItem.assignedUserName || 'Unassigned'}</p>
+              <p>{caseItem.assigned_user_id || 'Unassigned'}</p>
             </CardContent>
           </Card>
         </div>

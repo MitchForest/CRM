@@ -37,17 +37,17 @@ import {
   Pie,
   Cell
 } from 'recharts'
-import type { WebsiteSession } from '@/types'
+import type { WebsiteSession } from '@/types/api.types'
 
 interface VisitorMetrics {
-  totalVisitors: number
-  activeVisitors: number
-  avgSessionDuration: number
-  avgPagesPerSession: number
-  topPages: Array<{ url: string; views: number; avgTime: number }>
-  deviceTypes: Array<{ type: string; count: number; percentage: number }>
+  total_visitors: number
+  active_visitors: number
+  avg_session_duration: number
+  avg_pages_per_session: number
+  top_pages: Array<{ url: string; views: number; avg_time: number }>
+  device_types: Array<{ type: string; count: number; percentage: number }>
   referrers: Array<{ source: string; count: number }>
-  hourlyTraffic: Array<{ hour: string; visitors: number }>
+  hourly_traffic: Array<{ hour: string; visitors: number }>
 }
 
 export function ActivityTrackingDashboard() {
@@ -116,7 +116,7 @@ export function ActivityTrackingDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics?.totalVisitors || 0}</div>
+            <div className="text-2xl font-bold">{metrics?.total_visitors || 0}</div>
             <p className="text-xs text-muted-foreground mt-1">
               In selected period
             </p>
@@ -132,7 +132,7 @@ export function ActivityTrackingDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {metrics?.activeVisitors || 0}
+              {metrics?.active_visitors || 0}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Currently browsing
@@ -149,7 +149,7 @@ export function ActivityTrackingDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {Math.round((metrics?.avgSessionDuration || 0) / 60)}m
+              {Math.round((metrics?.avg_session_duration || 0) / 60)}m
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Per session
@@ -166,7 +166,7 @@ export function ActivityTrackingDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {metrics?.avgPagesPerSession?.toFixed(1) || '0.0'}
+              {metrics?.avg_pages_per_session?.toFixed(1) || '0.0'}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Average engagement
@@ -280,7 +280,7 @@ export function ActivityTrackingDashboard() {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={metrics?.hourlyTraffic || []}>
+                  <LineChart data={metrics?.hourly_traffic || []}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="hour" />
                     <YAxis />
@@ -304,7 +304,7 @@ export function ActivityTrackingDashboard() {
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
-                      data={metrics?.deviceTypes || []}
+                      data={metrics?.device_types || []}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
@@ -313,7 +313,7 @@ export function ActivityTrackingDashboard() {
                       fill="#8884d8"
                       dataKey="count"
                     >
-                      {metrics?.deviceTypes?.map((_, index) => (
+                      {metrics?.device_types?.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={deviceColors[index % deviceColors.length]} />
                       ))}
                     </Pie>
@@ -321,7 +321,7 @@ export function ActivityTrackingDashboard() {
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="flex flex-wrap gap-2 mt-4">
-                  {metrics?.deviceTypes?.map((device, index) => (
+                  {metrics?.device_types?.map((device, index) => (
                     <div key={device.type} className="flex items-center gap-2">
                       <div 
                         className="w-3 h-3 rounded" 
@@ -343,7 +343,7 @@ export function ActivityTrackingDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {metrics?.topPages?.map((page, index) => (
+                {metrics?.top_pages?.map((page, index) => (
                   <div key={page.url} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-medium text-muted-foreground w-6">
@@ -352,7 +352,7 @@ export function ActivityTrackingDashboard() {
                       <div>
                         <p className="font-medium">{page.url}</p>
                         <p className="text-sm text-muted-foreground">
-                          Avg time: {Math.round(page.avgTime / 60)}m {page.avgTime % 60}s
+                          Avg time: {Math.round(page.avg_time / 60)}m {page.avg_time % 60}s
                         </p>
                       </div>
                     </div>

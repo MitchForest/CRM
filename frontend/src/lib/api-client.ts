@@ -296,7 +296,7 @@ class ApiClient {
           page: 1,
           limit: 10,
           totalPages: 1,
-          totalCount: response.data.data?.length || 0
+          total: response.data.data?.length || 0
         }
       }
     } catch {
@@ -307,9 +307,7 @@ class ApiClient {
           page: 1,
           limit: 10,
           totalPages: 0,
-          totalCount: 0,
-          hasNext: false,
-          hasPrevious: false
+          total: 0
         }
       }
     }
@@ -368,7 +366,7 @@ class ApiClient {
           page: 1,
           limit: 10,
           totalPages: 1,
-          totalCount: response.data.data?.length || 0
+          total: response.data.data?.length || 0
         }
       }
     } catch {
@@ -379,9 +377,7 @@ class ApiClient {
           page: 1,
           limit: 10,
           totalPages: 0,
-          totalCount: 0,
-          hasNext: false,
-          hasPrevious: false
+          total: 0
         }
       }
     }
@@ -441,7 +437,7 @@ class ApiClient {
           page: 1,
           limit: 10,
           totalPages: 1,
-          totalCount: response.data.data?.length || 0
+          total: response.data.data?.length || 0
         }
       }
     } catch {
@@ -452,9 +448,7 @@ class ApiClient {
           page: 1,
           limit: 10,
           totalPages: 0,
-          totalCount: 0,
-          hasNext: false,
-          hasPrevious: false
+          total: 0
         }
       }
     }
@@ -576,7 +570,7 @@ class ApiClient {
           page: 1,
           limit: 10,
           totalPages: 1,
-          totalCount: response.data.data?.length || 0
+          total: response.data.data?.length || 0
         }
       }
     } catch {
@@ -587,9 +581,7 @@ class ApiClient {
           page: 1,
           limit: 10,
           totalPages: 0,
-          totalCount: 0,
-          hasNext: false,
-          hasPrevious: false
+          total: 0
         }
       }
     }
@@ -622,6 +614,15 @@ class ApiClient {
     }
   }
 
+  async deleteTask(id: string): Promise<ApiResponse<void>> {
+    try {
+      await this.customClient.delete(`/tasks/${id}`)
+      return { success: true }
+    } catch {
+      return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
+    }
+  }
+
   // Opportunity methods
   async getOpportunities(params?: QueryParams): Promise<ListResponse<OpportunityDB>> {
     try {
@@ -639,7 +640,7 @@ class ApiClient {
           page: 1,
           limit: 10,
           totalPages: 1,
-          totalCount: response.data.data?.length || 0
+          total: response.data.data?.length || 0
         }
       }
     } catch {
@@ -650,9 +651,7 @@ class ApiClient {
           page: 1,
           limit: 10,
           totalPages: 0,
-          totalCount: 0,
-          hasNext: false,
-          hasPrevious: false
+          total: 0
         }
       }
     }
@@ -758,7 +757,7 @@ class ApiClient {
           page: 1,
           limit: 10,
           totalPages: 1,
-          totalCount: response.data.data?.length || 0
+          total: response.data.data?.length || 0
         }
       }
     } catch {
@@ -769,9 +768,7 @@ class ApiClient {
           page: 1,
           limit: 10,
           totalPages: 0,
-          totalCount: 0,
-          hasNext: false,
-          hasPrevious: false
+          total: 0
         }
       }
     }
@@ -830,7 +827,7 @@ class ApiClient {
           page: 1,
           limit: 10,
           totalPages: 1,
-          totalCount: response.data.data?.length || 0
+          total: response.data.data?.length || 0
         }
       }
     } catch {
@@ -841,9 +838,7 @@ class ApiClient {
           page: 1,
           limit: 10,
           totalPages: 0,
-          totalCount: 0,
-          hasNext: false,
-          hasPrevious: false
+          total: 0
         }
       }
     }
@@ -902,7 +897,7 @@ class ApiClient {
           page: 1,
           limit: 10,
           totalPages: 1,
-          totalCount: response.data.data?.length || 0
+          total: response.data.data?.length || 0
         }
       }
     } catch {
@@ -913,9 +908,7 @@ class ApiClient {
           page: 1,
           limit: 10,
           totalPages: 0,
-          totalCount: 0,
-          hasNext: false,
-          hasPrevious: false
+          total: 0
         }
       }
     }
@@ -976,7 +969,7 @@ class ApiClient {
           page: 1,
           limit: 10,
           totalPages: 1,
-          totalCount: response.data.data?.length || 0
+          total: response.data.data?.length || 0
         }
       }
     } catch {
@@ -987,9 +980,7 @@ class ApiClient {
           page: 1,
           limit: 10,
           totalPages: 0,
-          totalCount: 0,
-          hasNext: false,
-          hasPrevious: false
+          total: 0
         }
       }
     }
@@ -1155,21 +1146,16 @@ class ApiClient {
   }
 
   // Legacy method for backward compatibility
-  async getDashboardStats(): Promise<ApiResponse<{
-    totalLeads: number
-    totalAccounts: number
-    newLeadsToday: number
-    pipelineValue: number
-  }>> {
+  async getDashboardStats(): Promise<ApiResponse<DashboardMetrics>> {
     const response = await this.getDashboardMetrics()
     if (!response.success || !response.data) {
       return {
         success: false,
         data: {
-          totalLeads: 0,
-          totalAccounts: 0,
-          newLeadsToday: 0,
-          pipelineValue: 0
+          total_leads: 0,
+          total_accounts: 0,
+          new_leads_today: 0,
+          pipeline_value: 0
         }
       }
     }
@@ -1177,10 +1163,10 @@ class ApiClient {
     return {
       success: true,
       data: {
-        totalLeads: response.data.totalLeads,
-        totalAccounts: response.data.totalAccounts,
-        newLeadsToday: response.data.newLeadsToday,
-        pipelineValue: response.data.pipelineValue
+        total_leads: response.data.total_leads,
+        total_accounts: response.data.total_accounts,
+        new_leads_today: response.data.new_leads_today,
+        pipeline_value: response.data.pipeline_value
       }
     }
   }

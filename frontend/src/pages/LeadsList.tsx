@@ -13,7 +13,7 @@ import { useLeads } from '@/hooks/use-leads'
 import { formatDate } from '@/lib/utils'
 import { usePermissions } from '@/hooks/use-permissions'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
-import type { Lead } from '@/types/api.generated'
+import type { LeadDB } from '@/types/database.types'
 import type { ColumnDef } from '@tanstack/react-table'
 
 const statusColors = {

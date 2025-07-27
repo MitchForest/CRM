@@ -9,6 +9,12 @@ use Firebase\JWT\Key;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
+/**
+ * @OA\Tag(
+ *     name="Authentication",
+ *     description="User authentication endpoints"
+ * )
+ */
 class AuthController extends Controller
 {
     private string $jwtKey;
@@ -20,6 +26,45 @@ class AuthController extends Controller
         $this->jwtKey = $_ENV['JWT_SECRET'] ?? 'your-secret-key';
     }
     
+    /**
+     * @OA\Post(
+     *     path="/api/auth/login",
+     *     tags={"Authentication"},
+     *     summary="User login",
+     *     description="Authenticate with email/username and password",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"password"},
+     *             @OA\Property(property="email", type="string", format="email", example="admin@example.com"),
+     *             @OA\Property(property="username", type="string", example="admin"),
+     *             @OA\Property(property="password", type="string", format="password", example="password123")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Successful authentication",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="access_token", type="string"),
+     *             @OA\Property(property="refresh_token", type="string"),
+     *             @OA\Property(
+     *                 property="user",
+     *                 type="object",
+     *                 @OA\Property(property="id", type="string", format="uuid"),
+     *                 @OA\Property(property="user_name", type="string"),
+     *                 @OA\Property(property="email1", type="string"),
+     *                 @OA\Property(property="first_name", type="string"),
+     *                 @OA\Property(property="last_name", type="string")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Invalid credentials",
+     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     *     )
+     * )
+     */
     public function login(Request $request, Response $response, array $args): Response
     {
         $data = $this->validate($request, [
@@ -72,14 +117,14 @@ class AuthController extends Controller
         $this->storeRefreshToken($user->id, $refreshToken);
         
         return $this->json($response, [
-            'accessToken' => $token,
-            'refreshToken' => $refreshToken,
+            'access_token' => $token,
+            'refresh_token' => $refreshToken,
             'user' => [
                 'id' => $user->id,
-                'username' => $user->user_name,
-                'email' => $user->email1 ?? '',
-                'firstName' => $user->first_name ?? '',
-                'lastName' => $user->last_name ?? ''
+                'user_name' => $user->user_name,
+                'email1' => $user->email1 ?? '',
+                'first_name' => $user->first_name ?? '',
+                'last_name' => $user->last_name ?? ''
             ]
         ]);
     }
@@ -87,10 +132,10 @@ class AuthController extends Controller
     public function refresh(Request $request, Response $response, array $args): Response
     {
         $data = $this->validate($request, [
-            'refreshToken' => 'required|string'
+            'refresh_token' => 'required|string'
         ]);
         
-        $refreshToken = $data['refreshToken'];
+        $refreshToken = $data['refresh_token'];
         
         try {
             $payload = JWT::decode($refreshToken, new Key($this->jwtKey, $this->jwtAlgorithm));
@@ -125,7 +170,7 @@ class AuthController extends Controller
             $newToken = JWT::encode($newPayload, $this->jwtKey, $this->jwtAlgorithm);
             
             return $this->json($response, [
-                'accessToken' => $newToken
+                'access_token' => $newToken
             ]);
             
         } catch (\Exception $e) {
@@ -168,14 +213,14 @@ class AuthController extends Controller
         
         return $this->json($response, [
             'id' => $user->id,
-            'username' => $user->user_name,
-            'firstName' => $user->first_name,
-            'lastName' => $user->last_name,
-            'email' => $user->email1 ?? '',
+            'user_name' => $user->user_name,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'email1' => $user->email1 ?? '',
             'title' => $user->title,
             'department' => $user->department,
-            'phoneWork' => $user->phone_work,
-            'phoneMobile' => $user->phone_mobile
+            'phone_work' => $user->phone_work,
+            'phone_mobile' => $user->phone_mobile
         ]);
     }
     
@@ -188,12 +233,12 @@ class AuthController extends Controller
         }
         
         $data = $this->validate($request, [
-            'firstName' => 'sometimes|string|max:255',
-            'lastName' => 'sometimes|string|max:255',
+            'first_name' => 'sometimes|string|max:255',
+            'last_name' => 'sometimes|string|max:255',
             'title' => 'sometimes|string|max:255',
             'department' => 'sometimes|string|max:255',
-            'phoneWork' => 'sometimes|string|max:50',
-            'phoneMobile' => 'sometimes|string|max:50'
+            'phone_work' => 'sometimes|string|max:50',
+            'phone_mobile' => 'sometimes|string|max:50'
         ]);
         
         $user = User::find($userId);
@@ -202,23 +247,9 @@ class AuthController extends Controller
             return $this->error($response, 'User not found', 404);
         }
         
-        // Map camelCase to snake_case fields
-        $fieldMapping = [
-            'firstName' => 'first_name',
-            'lastName' => 'last_name',
-            'phoneWork' => 'phone_work',
-            'phoneMobile' => 'phone_mobile'
-        ];
-        
+        // Update fields directly - no mapping needed
         $updates = [];
-        foreach ($fieldMapping as $inputField => $dbField) {
-            if (isset($data[$inputField])) {
-                $updates[$dbField] = $data[$inputField];
-            }
-        }
-        
-        // Direct fields
-        foreach (['title', 'department'] as $field) {
+        foreach (['first_name', 'last_name', 'title', 'department', 'phone_work', 'phone_mobile'] as $field) {
             if (isset($data[$field])) {
                 $updates[$field] = $data[$field];
             }

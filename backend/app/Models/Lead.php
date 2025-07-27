@@ -10,17 +10,20 @@ class Lead extends BaseModel
     protected $table = 'leads';
     
     protected $fillable = [
+        'date_entered',
+        'date_modified',
         'created_by',
         'modified_user_id',
         'assigned_user_id',
+        'deleted',
         'salutation',
         'first_name',
         'last_name',
         'title',
         'department',
-        'phone_work',               // NOT 'phone'
-        'phone_mobile',             // NOT 'phone'
-        'email1',                   // NOT 'email'
+        'phone_work',
+        'phone_mobile',
+        'email1',
         'primary_address_street',
         'primary_address_city',
         'primary_address_state',
@@ -28,19 +31,15 @@ class Lead extends BaseModel
         'primary_address_country',
         'status',
         'status_description',
-        'lead_source',              // NOT 'source'
+        'lead_source',
         'lead_source_description',
         'description',
-        'account_name',             // NOT 'company'
+        'account_name',
         'website',
         'ai_score',
         'ai_score_date',
         'ai_insights',
-        'ai_next_best_action',
-        'converted',
-        'converted_contact_id',
-        'converted_account_id',
-        'converted_opportunity_id'
+        'ai_next_best_action'
     ];
     
     protected $casts = [
@@ -48,21 +47,10 @@ class Lead extends BaseModel
         'date_modified' => 'datetime',
         'ai_score_date' => 'datetime',
         'ai_insights' => 'json',
-        'converted' => 'boolean',
-        'deleted' => 'boolean'
+        'deleted' => 'integer',
+        'ai_score' => 'integer'
     ];
     
-    protected $appends = ['full_name', 'latest_score'];
-    
-    public function getFullNameAttribute(): string
-    {
-        return trim("{$this->first_name} {$this->last_name}");
-    }
-    
-    public function getLatestScoreAttribute(): ?float
-    {
-        return $this->scores()->latest('scored_at')->first()?->score;
-    }
     
     // Relationships
     public function assignedUser(): BelongsTo

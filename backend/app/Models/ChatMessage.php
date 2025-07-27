@@ -10,15 +10,15 @@ class ChatMessage extends BaseModel
     
     protected $fillable = [
         'conversation_id',
-        'message_type',
+        'role',
         'content',
         'metadata',
-        'created_at'
+        'date_entered'
     ];
     
     protected $casts = [
-        'metadata' => 'array',
-        'created_at' => 'datetime'
+        'metadata' => 'json',
+        'date_entered' => 'datetime'
     ];
     
     public $timestamps = false;
@@ -30,16 +30,16 @@ class ChatMessage extends BaseModel
     
     public function isUserMessage(): bool
     {
-        return $this->message_type === 'user';
+        return $this->role === 'user';
     }
     
     public function isAssistantMessage(): bool
     {
-        return $this->message_type === 'assistant';
+        return $this->role === 'assistant';
     }
     
     public function isSystemMessage(): bool
     {
-        return $this->message_type === 'system';
+        return $this->role === 'system';
     }
 }

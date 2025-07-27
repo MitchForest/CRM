@@ -50,10 +50,10 @@ export interface LoginResponse {
 
 // Dashboard metrics types based on actual backend response
 export interface DashboardMetrics {
-  totalLeads: number;
-  totalAccounts: number;
-  newLeadsToday: number;
-  pipelineValue: number;
+  total_leads: number;
+  total_accounts: number;
+  new_leads_today: number;
+  pipeline_value: number;
 }
 
 // Pipeline data based on actual backend response
@@ -64,32 +64,26 @@ export interface PipelineData {
 }
 
 export interface ActivityMetrics {
-  recentActivities: Array<{
+  calls_today: number;
+  meetings_today: number;
+  tasks_overdue: number;
+  upcoming_activities?: Array<{
     id: string;
-    type: 'call' | 'meeting' | 'task' | 'note';
-    subject: string;
-    date: string;
-    relatedTo: string;
-    relatedType: string;
-  }>;
-  upcomingTasks: Array<{
-    id: string;
-    subject: string;
-    dueDate: string;
-    priority: string;
+    name: string;
+    type: 'Call' | 'Meeting' | 'Task' | 'Note';
+    date_start: string;
+    related_to: string;
   }>;
 }
 
 export interface CaseMetrics {
-  byStatus: Record<string, number>;
-  byPriority: Record<string, number>;
-  recentCases: Array<{
-    id: string;
-    caseNumber: string;
-    subject: string;
-    status: string;
+  open_cases: number;
+  closed_this_month: number;
+  high_priority: number;
+  avg_resolution_days: number;
+  cases_by_priority?: Array<{
     priority: string;
-    createdAt: string;
+    count: number;
   }>;
 }
 
@@ -100,14 +94,15 @@ export interface BaseActivity {
   id: string;
   type: ActivityType;
   subject?: string;
-  name?: string;
-  description?: string;
+  name?: string | null;
+  description?: string | null;
   date?: string;
   date_start?: string;
   date_entered?: string;
+  date_modified?: string;
   status?: string;
-  parent_type?: string;
-  parent_id?: string;
+  parent_type?: string | null;
+  parent_id?: string | null;
   assigned_user_id?: string;
 }
 
@@ -122,6 +117,8 @@ export interface KBCategory {
   description?: string;
   parent_id?: string;
   articles?: KBArticle[];
+  icon?: string;
+  article_count?: number;
 }
 
 export interface KBArticle {
@@ -134,6 +131,18 @@ export interface KBArticle {
   helpful_count: number;
   created_at: string;
   updated_at: string;
+  // Additional fields used by components
+  category_name?: string;
+  author_name?: string;
+  date_modified?: string;
+  date_created?: string;
+  tags?: string[];
+  helpful_yes?: number;
+  helpful_no?: number;
+  slug?: string;
+  excerpt?: string;
+  is_public?: boolean;
+  is_featured?: boolean;
 }
 
 // Form builder types (Phase 3)
@@ -149,11 +158,12 @@ export interface Form {
   };
   created_at: string;
   updated_at: string;
+  submissions_count?: number;
 }
 
 export interface FormField {
   id: string;
-  type: 'text' | 'email' | 'tel' | 'textarea' | 'select' | 'checkbox' | 'radio';
+  type: 'text' | 'email' | 'tel' | 'textarea' | 'select' | 'checkbox' | 'radio' | 'number' | 'date';
   name: string;
   label: string;
   placeholder?: string;
@@ -165,8 +175,10 @@ export interface FormField {
 // Chat types (Phase 3)
 export interface ChatMessage {
   id: string;
-  message: string;
-  sender: 'user' | 'bot';
+  message?: string;
+  content?: string;
+  sender?: 'user' | 'bot';
+  role?: 'user' | 'assistant';
   timestamp: string;
   metadata?: Record<string, any>;
 }
@@ -174,13 +186,12 @@ export interface ChatMessage {
 // AI Scoring types (Phase 3)
 export interface AIScoreResult {
   score: number;
-  factors: Array<{
-    name: string;
-    value: number;
-    weight: number;
-  }>;
-  recommendations: string[];
-  lastUpdated: string;
+  confidence: number;
+  factors: Record<string, any>;
+  insights?: string[];
+  recommended_actions?: string[];
+  created_at?: string;
+  last_updated?: string;
 }
 
 export interface AIScoreHistory {
@@ -208,6 +219,9 @@ export interface KBSearchResult {
   relevance_score: number;
   category: string;
   url?: string;
+  // Additional fields used by components
+  article?: KBArticle;
+  similarity?: number;
 }
 
 // Website tracking types
@@ -215,16 +229,24 @@ export interface WebsiteSession {
   id: string;
   visitor_id: string;
   session_id: string;
-  started_at: string;
+  lead_id?: string;
+  started_at?: string;
   ended_at?: string;
-  page_count: number;
-  total_duration: number;
-  pages: Array<{
+  date_created: string;
+  page_count?: number;
+  total_duration?: number;
+  total_time?: number;
+  pages_viewed?: Array<{
     url: string;
     title: string;
     visited_at: string;
     duration: number;
   }>;
+  location?: {
+    city: string;
+    country: string;
+  };
+  referrer?: string;
 }
 
 // Customer health types
@@ -240,4 +262,51 @@ export interface CustomerHealthScore {
   };
   trend: 'improving' | 'stable' | 'declining';
   last_calculated: string;
+}
+
+// Additional types needed by services
+export interface FormSubmission {
+  id: string;
+  form_id: string;
+  data: Record<string, any>;
+  submitted_at: string;
+  lead_id?: string;
+  contact_id?: string;
+}
+
+export interface HealthScore {
+  score: number;
+  factors: Record<string, number>;
+  trend: string;
+  last_calculated: string;
+}
+
+export interface HealthDashboard {
+  overall_score: number;
+  accounts_at_risk: number;
+  improving_accounts: number;
+  stable_accounts: number;
+  metrics: HealthMetric[];
+}
+
+export interface HealthMetric {
+  name: string;
+  value: number;
+  trend: string;
+  change: number;
+}
+
+export interface ActivityHeatmap {
+  data: Array<{
+    hour: number;
+    day: number;
+    count: number;
+  }>;
+  max_count: number;
+}
+
+export interface TrackingEvent {
+  type: string;
+  data: Record<string, any>;
+  timestamp: string;
 }

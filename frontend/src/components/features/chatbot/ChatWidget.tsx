@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { aiService } from '@/services/ai.service';
 import { activityTrackingService } from '@/services/activityTracking.service';
 import ReactMarkdown from 'react-markdown';
-import type { ChatMessage } from '@/types/phase3.types';
+import type { ChatMessage } from '@/types/api.types';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -185,10 +185,9 @@ export function ChatWidget({
 
       // Track engagement
       activityTrackingService.trackEvent({
-        event: 'chat_message_sent',
-        properties: { conversation_id: response.conversation_id },
-        timestamp: new Date().toISOString(),
-        visitor_id: activityTrackingService.getVisitorId() || 'anonymous'
+        type: 'chat_message_sent',
+        data: { conversation_id: response.conversation_id, visitor_id: activityTrackingService.getVisitorId() || 'anonymous' },
+        timestamp: new Date().toISOString()
       });
     } catch (error) {
       console.error('Chat error:', error);
@@ -238,9 +237,9 @@ export function ChatWidget({
               onClick={() => {
                 setIsOpen(true);
                 activityTrackingService.trackEvent({
-                  event: 'chat_opened',
-                  timestamp: new Date().toISOString(),
-                  visitor_id: activityTrackingService.getVisitorId() || 'anonymous'
+                  type: 'chat_opened',
+                  data: { visitor_id: activityTrackingService.getVisitorId() || 'anonymous' },
+                  timestamp: new Date().toISOString()
                 });
               }}
               className="h-14 w-14 rounded-full shadow-lg"
@@ -311,10 +310,9 @@ export function ChatWidget({
                     onClick={() => {
                       setIsOpen(false);
                       activityTrackingService.trackEvent({
-                        event: 'chat_closed',
-                        properties: conversationId ? { conversation_id: conversationId } : {},
-                        timestamp: new Date().toISOString(),
-                        visitor_id: activityTrackingService.getVisitorId() || 'anonymous'
+                        type: 'chat_closed',
+                        data: conversationId ? { conversation_id: conversationId, visitor_id: activityTrackingService.getVisitorId() || 'anonymous' } : { visitor_id: activityTrackingService.getVisitorId() || 'anonymous' },
+                        timestamp: new Date().toISOString()
                       });
                     }}
                     className="h-8 w-8 text-white hover:bg-white/20"
@@ -369,7 +367,7 @@ export function ChatWidget({
                             {/* Suggested Actions */}
                             {message.metadata?.suggested_actions && (
                               <div className="flex flex-wrap gap-1 mt-2">
-                                {message.metadata.suggested_actions.map((action, index) => (
+                                {message.metadata.suggested_actions.map((action: any, index: any) => (
                                   <Badge
                                     key={index}
                                     variant="secondary"

@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import type { Opportunity } from '@/types/api.generated'
+import type { OpportunityDB } from '@/types/database.types'
 import { cn } from '@/lib/utils'
 
 // Stage colors
@@ -81,7 +81,7 @@ export function OpportunitiesTable({ opportunities }: OpportunitiesTableProps) {
                   {opportunity.name}
                 </Link>
               </TableCell>
-              <TableCell>{opportunity.account_name || '-'}</TableCell>
+              <TableCell>{opportunity.account_id || '-'}</TableCell>
               <TableCell>
                 <Badge 
                   variant="outline" 
@@ -104,8 +104,8 @@ export function OpportunitiesTable({ opportunities }: OpportunitiesTableProps) {
                   {opportunity.probability}%
                 </span>
               </TableCell>
-              <TableCell>{opportunity.date_closed ? formatDate(opportunity.date_closed) : '-'}</TableCell>
-              <TableCell>{opportunity.assigned_user_name || '-'}</TableCell>
+              <TableCell>{opportunity.date_closed ? formatDate(opportunity.date_closed.toString()) : '-'}</TableCell>
+              <TableCell>{opportunity.assigned_user_id || '-'}</TableCell>
               <TableCell className="text-right">
                 <Button variant="ghost" size="sm" asChild>
                   <Link to={`/opportunities/${opportunity.id}`}>

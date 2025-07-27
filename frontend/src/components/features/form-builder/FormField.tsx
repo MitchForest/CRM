@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { FormField as FormFieldType } from '@/types/phase3.types';
+import type { FormField as FormFieldType } from '@/types/api.types';
 import { cn } from '@/lib/utils';
 
 interface FormFieldProps {

@@ -44,15 +44,13 @@ class OpportunitiesController extends Controller
             return $this->formatOpportunity($opp);
         });
         
-        return response()->json([
+        return $this->json($response, [
             'data' => $data,
             'pagination' => [
                 'page' => $opportunities->currentPage(),
-                'pageSize' => $opportunities->perPage(),
-                'totalPages' => $opportunities->lastPage(),
-                'totalCount' => $opportunities->total(),
-                'hasNext' => $opportunities->hasMorePages(),
-                'hasPrevious' => $opportunities->currentPage() > 1
+                'limit' => $opportunities->perPage(),
+                'total' => $opportunities->total(),
+                'total_pages' => $opportunities->lastPage()
             ]
         ]);
     }
@@ -115,17 +113,14 @@ class OpportunitiesController extends Controller
             
             DB::commit();
             
-            return response()->json([
+            return $this->json($response, [
                 'data' => ['id' => $opportunity->id],
                 'message' => 'Opportunity created successfully'
             ], 201);
             
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'error' => 'Failed to create opportunity: ' . $e->getMessage()
-            ], 500);
+            return $this->error($response, 'Failed to create opportunity: ' . $e->getMessage(), 500);
         }
     }
     
@@ -276,22 +271,21 @@ class OpportunitiesController extends Controller
             'id' => $opportunity->id,
             'name' => $opportunity->name,
             'amount' => (float)$opportunity->amount,
-            'currency' => $opportunity->currency_id ?? 'USD',
-            'salesStage' => $opportunity->sales_stage,
+            'currency_id' => $opportunity->currency_id ?? 'USD',
+            'sales_stage' => $opportunity->sales_stage,
             'probability' => (int)$opportunity->probability,
-            'closeDate' => $opportunity->date_closed,
-            'opportunityType' => $opportunity->opportunity_type,
-            'leadSource' => $opportunity->lead_source,
-            'nextStep' => $opportunity->next_step,
+            'date_closed' => $opportunity->date_closed,
+            'opportunity_type' => $opportunity->opportunity_type,
+            'lead_source' => $opportunity->lead_source,
+            'next_step' => $opportunity->next_step,
             'description' => $opportunity->description,
-            'accountId' => $opportunity->account_id,
-            'accountName' => $opportunity->account_name,
-            'assignedUserId' => $opportunity->assigned_user_id,
-            'assignedUserName' => $opportunity->assignedUser?->full_name,
-            'dateEntered' => $opportunity->date_entered?->toIso8601String(),
-            'dateModified' => $opportunity->date_modified?->toIso8601String(),
-            'createdBy' => $opportunity->created_by,
-            'modifiedUserId' => $opportunity->modified_user_id
+            'account_id' => $opportunity->account_id,
+            'account_name' => $opportunity->account_name,
+            'assigned_user_id' => $opportunity->assigned_user_id,
+            'date_entered' => $opportunity->date_entered?->toIso8601String(),
+            'date_modified' => $opportunity->date_modified?->toIso8601String(),
+            'created_by' => $opportunity->created_by,
+            'modified_user_id' => $opportunity->modified_user_id
         ];
     }
 }

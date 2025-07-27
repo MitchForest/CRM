@@ -49,7 +49,7 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { FormField } from '@/components/features/form-builder/FormField';
 import { formBuilderService } from '@/services/formBuilder.service';
-import type { Form, FormField as FormFieldType } from '@/types/phase3.types';
+import type { Form, FormField as FormFieldType } from '@/types/api.types';
 
 const fieldTypes = [
   { type: 'text', label: 'Text Input', icon: Type },
@@ -93,17 +93,13 @@ export function FormBuilderPage() {
       setFormName(existingForm.name);
       setFormDescription(existingForm.description || '');
       setFields(existingForm.fields);
-      setSubmitButtonText(existingForm.settings.submit_button_text);
-      setSuccessMessage(existingForm.settings.success_message);
-      setRedirectUrl(existingForm.settings.redirect_url || '');
-      setNotificationEmail(existingForm.settings.notification_email || '');
-      const formTheme = existingForm.settings.styling?.theme;
-      if (formTheme === 'light' || formTheme === 'dark') {
-        setTheme(formTheme);
-      } else {
-        setTheme('light');
-      }
-      setPrimaryColor(existingForm.settings.styling?.primary_color || '#3b82f6');
+      setSubmitButtonText(existingForm.settings.submitButtonText || 'Submit');
+      setSuccessMessage(existingForm.settings.successMessage || 'Thank you for your submission!');
+      setRedirectUrl(existingForm.settings.redirectUrl || '');
+      // These fields might be added in the future but aren't in the current type
+      setNotificationEmail('');
+      setTheme('light');
+      setPrimaryColor('#3b82f6');
     }
   }, [existingForm]);
 
@@ -197,15 +193,9 @@ export function FormBuilderPage() {
       description: formDescription,
       fields,
       settings: {
-        submit_button_text: submitButtonText,
-        success_message: successMessage,
-        redirect_url: redirectUrl,
-        notification_email: notificationEmail,
-        styling: {
-          theme,
-          primary_color: primaryColor,
-          font_family: 'system-ui'
-        }
+        submitButtonText: submitButtonText,
+        successMessage: successMessage,
+        redirectUrl: redirectUrl
       }
     };
 

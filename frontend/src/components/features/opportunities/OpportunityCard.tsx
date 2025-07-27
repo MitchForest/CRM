@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Building2, Calendar, DollarSign } from 'lucide-react'
-import type { Opportunity } from '@/types/api.generated'
+import type { OpportunityDB } from '@/types/database.types'
 import { cn } from '@/lib/utils'
 
 interface OpportunityCardProps {
@@ -84,10 +84,10 @@ export function OpportunityCard({ opportunity }: OpportunityCardProps) {
           >
             <h4 className="font-medium line-clamp-1">{opportunity.name}</h4>
             
-            {opportunity.account_name && (
+            {opportunity.account_id && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Building2 className="h-3 w-3" />
-                <span className="line-clamp-1">{opportunity.account_name}</span>
+                <span className="line-clamp-1">{opportunity.account_id}</span>
               </div>
             )}
 
@@ -105,7 +105,7 @@ export function OpportunityCard({ opportunity }: OpportunityCardProps) {
 
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Calendar className="h-3 w-3" />
-              <span>Close: {formatDate(opportunity.date_closed || '')}</span>
+              <span>Close: {opportunity.date_closed ? formatDate(opportunity.date_closed.toString()) : 'Not set'}</span>
             </div>
 
             {opportunity.next_step && (

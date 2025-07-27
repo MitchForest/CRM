@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Lead;
 use App\Models\Account;
 use App\Models\Opportunity;
-use App\Models\Case;
+use App\Models\SupportCase;
 use App\Models\Call;
 use App\Models\Meeting;
 use App\Models\Task;
@@ -34,12 +34,12 @@ class DashboardController extends Controller
         try {
             $today = date('Y-m-d');
             $metrics = [
-                'totalLeads' => Lead::where('deleted', 0)->count(),
-                'totalAccounts' => Account::where('deleted', 0)->count(),
-                'newLeadsToday' => Lead::where('deleted', 0)
+                'total_leads' => Lead::where('deleted', 0)->count(),
+                'total_accounts' => Account::where('deleted', 0)->count(),
+                'new_leads_today' => Lead::where('deleted', 0)
                     ->whereDate('date_entered', $today)
                     ->count(),
-                'pipelineValue' => Opportunity::where('deleted', 0)
+                'pipeline_value' => Opportunity::where('deleted', 0)
                     ->whereNotIn('sales_stage', ['Closed Won', 'Closed Lost'])
                     ->sum('amount')
             ];
@@ -119,13 +119,13 @@ class DashboardController extends Controller
             $now = date('Y-m-d H:i:s');
             
             $metrics = [
-                'callsToday' => Call::where('deleted', 0)
+                'calls_today' => Call::where('deleted', 0)
                     ->whereDate('date_start', $today)
                     ->count(),
-                'meetingsToday' => Meeting::where('deleted', 0)
+                'meetings_today' => Meeting::where('deleted', 0)
                     ->whereDate('date_start', $today)
                     ->count(),
-                'tasksOverdue' => Task::where('deleted', 0)
+                'tasks_overdue' => Task::where('deleted', 0)
                     ->where('status', '!=', 'Completed')
                     ->where('date_due', '<', $now)
                     ->count()
@@ -151,12 +151,12 @@ class DashboardController extends Controller
                         'id' => $call->id,
                         'name' => $call->name,
                         'type' => 'Call',
-                        'dateStart' => $call->date_start,
-                        'relatedTo' => $relatedTo
+                        'date_start' => $call->date_start,
+                        'related_to' => $relatedTo
                     ];
                 });
             
-            $metrics['upcomingActivities'] = $upcomingCalls;
+            $metrics['upcoming_activities'] = $upcomingCalls;
             
             return $this->json($response, ['data' => $metrics]);
             
@@ -179,13 +179,13 @@ class DashboardController extends Controller
                 ->map(function ($lead) {
                     return [
                         'id' => $lead->id,
-                        'name' => $lead->full_name,
-                        'email' => $lead->email1,
-                        'phone' => $lead->phone_work,
-                        'company' => $lead->account_name,
-                        'leadSource' => $lead->lead_source,
+                        'name' => trim($lead->first_name . ' ' . $lead->last_name),
+                        'email1' => $lead->email1,
+                        'phone_work' => $lead->phone_work,
+                        'account_name' => $lead->account_name,
+                        'lead_source' => $lead->lead_source,
                         'status' => $lead->status,
-                        'dateEntered' => $lead->date_entered
+                        'date_entered' => $lead->date_entered
                     ];
                 });
             
@@ -206,26 +206,26 @@ class DashboardController extends Controller
             $startOfMonth = date('Y-m-01 00:00:00');
             
             $metrics = [
-                'openCases' => Case::where('deleted', 0)
+                'open_cases' => SupportCase::where('deleted', 0)
                     ->where('status', 'like', 'Open_%')
                     ->count(),
-                'closedThisMonth' => Case::where('deleted', 0)
+                'closed_this_month' => SupportCase::where('deleted', 0)
                     ->where('status', 'like', 'Closed_%')
                     ->where('date_modified', '>=', $startOfMonth)
                     ->count(),
-                'highPriority' => Case::where('deleted', 0)
+                'high_priority' => SupportCase::where('deleted', 0)
                     ->where('priority', 'High')
                     ->where('status', 'like', 'Open_%')
                     ->count()
             ];
             
             // Get average resolution time
-            $avgResolution = Case::where('deleted', 0)
+            $avgResolution = SupportCase::where('deleted', 0)
                 ->where('status', 'like', 'Closed_%')
                 ->selectRaw('AVG(DATEDIFF(date_modified, date_entered)) as avg_days')
                 ->first();
             
-            $metrics['avgResolutionDays'] = round($avgResolution->avg_days ?? 0, 1);
+            $metrics['avg_resolution_days'] = round($avgResolution->avg_days ?? 0, 1);
             
             return $this->json($response, ['data' => $metrics]);
             

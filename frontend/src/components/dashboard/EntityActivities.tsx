@@ -24,7 +24,7 @@ export function EntityActivities({ entityType, limit = 10 }: EntityActivitiesPro
     queryFn: async () => {
       // Fetch all activity types and filter by parent type
       const filters = [
-        { field: 'parentType', operator: 'eq' as const, value: entityType }
+        { field: 'parent_type', operator: 'eq' as const, value: entityType }
       ];
       
       const [calls, meetings, tasks, notes] = await Promise.all([
@@ -75,9 +75,9 @@ export function EntityActivities({ entityType, limit = 10 }: EntityActivitiesPro
     }
   };
 
-  const getActivityUrl = (activity: { parentId?: string }) => {
-    if (!activity.parentId) return null;
-    return `/${entityType.toLowerCase()}s/${activity.parentId}`;
+  const getActivityUrl = (activity: { parent_id?: string | null }) => {
+    if (!activity.parent_id) return null;
+    return `/${entityType.toLowerCase()}s/${activity.parent_id}`;
   };
 
   return (
@@ -100,24 +100,24 @@ export function EntityActivities({ entityType, limit = 10 }: EntityActivitiesPro
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium truncate">{activity.name}</p>
-              {parentUrl && activity.parentType && (
+              {parentUrl && activity.parent_type && (
                 <Link 
                   to={parentUrl}
                   className="text-sm text-primary hover:underline"
                 >
-                  {activity.parentType}
+                  {activity.parent_type}
                 </Link>
               )}
               <p className="text-xs text-muted-foreground mt-1">
                 {formatDateTime(activity.date || '')}
-                {activity.assignedUserName && ` • ${activity.assignedUserName}`}
+                {activity.assigned_user_id && ` • User ${activity.assigned_user_id}`}
               </p>
             </div>
             {activity.type === 'task' && 'status' in activity && activity.status && (
               <span className={cn(
                 "px-2 py-1 text-xs rounded-full",
                 activity.status === 'Completed' ? "bg-green-100 text-green-700" :
-                ('dueDate' in activity && activity.dueDate && new Date(activity.dueDate) < new Date()) ? "bg-red-100 text-red-700" :
+                (activity.type === 'task' && 'date_due' in activity && activity.date_due && new Date(String(activity.date_due)) < new Date()) ? "bg-red-100 text-red-700" :
                 "bg-gray-100 text-gray-700"
               )}>
                 {activity.status}

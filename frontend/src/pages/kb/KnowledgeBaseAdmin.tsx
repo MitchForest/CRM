@@ -31,7 +31,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { knowledgeBaseService } from '@/services/knowledgeBase.service';
 import { formatDistanceToNow } from 'date-fns';
-import type { KBCategory, KBArticle } from '@/types/phase3.types';
+import type { KBCategory, KBArticle } from '@/types/api.types';
 
 export function KnowledgeBaseAdmin() {
   const navigate = useNavigate();

@@ -49,7 +49,7 @@ class Note extends BaseModel
             case 'Opportunities':
                 return $this->belongsTo(Opportunity::class, 'parent_id');
             case 'Cases':
-                return $this->belongsTo(Case::class, 'parent_id');
+                return $this->belongsTo(SupportCase::class, 'parent_id');
             default:
                 return null;
         }

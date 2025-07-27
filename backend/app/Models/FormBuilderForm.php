@@ -10,22 +10,26 @@ class FormBuilderForm extends BaseModel
     
     protected $fillable = [
         'name',
-        'form_id',
+        'description',
         'fields',
         'settings',
-        'status',
-        'embed_code',
-        'created_by'
+        'is_active',
+        'created_by',
+        'date_entered',
+        'date_modified',
+        'deleted'
     ];
     
     protected $casts = [
-        'fields' => 'array',
-        'settings' => 'array',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'fields' => 'json',
+        'settings' => 'json',
+        'is_active' => 'integer',
+        'date_entered' => 'datetime',
+        'date_modified' => 'datetime',
+        'deleted' => 'integer'
     ];
     
-    public $timestamps = true;
+    public $timestamps = false;
     
     public function submissions(): HasMany
     {

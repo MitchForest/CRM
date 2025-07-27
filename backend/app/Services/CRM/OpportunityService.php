@@ -4,8 +4,7 @@ namespace App\Services\CRM;
 
 use App\Models\Opportunity;
 use App\Models\User;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Capsule\Manager as DB;
 
 class OpportunityService
 {
@@ -139,12 +138,12 @@ class OpportunityService
      */
     public function getForecast(string $period = 'quarter'): array
     {
-        $startDate = now();
+        $startDate = new \DateTime();
         $endDate = match($period) {
-            'month' => now()->endOfMonth(),
-            'quarter' => now()->endOfQuarter(),
-            'year' => now()->endOfYear(),
-            default => now()->endOfQuarter()
+            'month' => new \DateTime('last day of this month'),
+            'quarter' => new \DateTime('last day of this quarter'),
+            'year' => new \DateTime('December 31'),
+            default => new \DateTime('last day of this quarter')
         };
         
         $opportunities = Opportunity::whereBetween('date_closed', [$startDate, $endDate])
@@ -256,7 +255,7 @@ class OpportunityService
                           $opp->calls()->latest()->first()?->date_entered ??
                           $opp->meetings()->latest()->first()?->date_entered;
             
-            if (!$lastActivity || $lastActivity->lt(now()->subDays(14))) {
+            if (!$lastActivity || $lastActivity < (new \DateTime())->modify('-14 days')) {
                 $opp->attention_reason = 'No activity in 14+ days';
                 return true;
             }

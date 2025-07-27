@@ -10,21 +10,37 @@ class ActivityTrackingVisitor extends BaseModel
     
     protected $fillable = [
         'visitor_id',
-        'user_agent',
-        'ip_address',
+        'lead_id',
+        'contact_id',
+        'first_visit',
+        'last_visit',
+        'visit_count',
+        'page_view_count',
+        'total_time_spent',
+        'source',
+        'medium',
+        'campaign',
+        'referrer',
+        'device_type',
+        'browser',
+        'os',
         'country',
-        'region',
         'city',
-        'referrer_url',
-        'first_page_url'
+        'date_entered',
+        'date_modified'
     ];
     
     protected $casts = [
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'first_visit' => 'datetime',
+        'last_visit' => 'datetime',
+        'visit_count' => 'integer',
+        'page_view_count' => 'integer',
+        'total_time_spent' => 'integer',
+        'date_entered' => 'datetime',
+        'date_modified' => 'datetime'
     ];
     
-    public $timestamps = true;
+    public $timestamps = false;
     
     public function sessions(): HasMany
     {

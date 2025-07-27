@@ -23,7 +23,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { knowledgeBaseService } from '@/services/knowledgeBase.service';
-import type { KBArticle } from '@/types/phase3.types';
+import type { KBArticle } from '@/types/api.types';
 
 export function ArticleEditor() {
   const { id } = useParams();
@@ -60,12 +60,12 @@ export function ArticleEditor() {
   useEffect(() => {
     if (article) {
       setTitle(article.title);
-      setSlug(article.slug);
+      setSlug(article.slug || '');
       setExcerpt(article.excerpt || '');
       setCategoryId(article.category_id || 'none');
       setTags(article.tags || []);
-      setIsPublic(article.is_public);
-      setIsFeatured(article.is_featured);
+      setIsPublic(article.is_public || false);
+      setIsFeatured(article.is_featured || false);
       setContent(article.content || '');
     }
   }, [article]);
@@ -344,11 +344,11 @@ export function ArticleEditor() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Created</span>
-                  <span>{new Date(article.date_created).toLocaleDateString()}</span>
+                  <span>{article.date_created ? new Date(article.date_created).toLocaleDateString() : 'Unknown'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Updated</span>
-                  <span>{new Date(article.date_modified).toLocaleDateString()}</span>
+                  <span>{article.date_modified ? new Date(article.date_modified).toLocaleDateString() : 'Unknown'}</span>
                 </div>
               </CardContent>
             </Card>

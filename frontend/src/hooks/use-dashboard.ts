@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
-import type { DashboardMetrics, ActivityMetrics } from '@/types/api.types'
+import type { ActivityMetrics } from '@/types/api.types'
 import { useAuthStore } from '@/stores/auth-store'
 
 // Get dashboard metrics from custom API
@@ -13,17 +13,8 @@ export function useDashboardMetrics() {
     queryFn: async () => {
       const response = await apiClient.getDashboardMetrics()
       if (response.success && response.data) {
-        // Transform snake_case to camelCase
-        const rawData = response.data as DashboardMetrics & Record<string, unknown>
-        return {
-          ...response,
-          data: {
-            totalLeads: rawData.totalLeads || 0,
-            totalAccounts: rawData.totalAccounts || 0,
-            newLeadsToday: rawData.newLeadsToday || 0,
-            pipelineValue: rawData.pipelineValue || 0,
-          }
-        }
+        // Return data as-is (already in the correct format)
+        return response.data
       }
       return response
     },
@@ -62,17 +53,8 @@ export function useActivityMetrics() {
     queryFn: async () => {
       const response = await apiClient.getActivityMetrics()
       if (response.success && response.data) {
-        // Transform snake_case to camelCase
-        const rawData = response.data as ActivityMetrics & Record<string, unknown>
-        return {
-          ...response,
-          data: {
-            callsToday: rawData.callsToday || 0,
-            meetingsToday: rawData.meetingsToday || 0,
-            tasksOverdue: rawData.tasksOverdue || 0,
-            upcomingActivities: rawData.upcomingActivities || [],
-          }
-        }
+        // Return data as-is
+        return response.data
       }
       return response
     },
@@ -89,34 +71,15 @@ export function useCaseMetrics() {
     queryFn: async () => {
       const response = await apiClient.getCaseMetrics()
       if (response.success && response.data) {
-        // Transform snake_case to camelCase
-        interface CaseMetricsRaw {
-          open_cases?: number;
-          openCases?: number;
-          critical_cases?: number;
-          criticalCases?: number;
-          avg_resolution_time?: number;
-          avgResolutionTime?: number;
-          cases_by_priority?: Array<{ priority: string; count: number }>;
-          casesByPriority?: Array<{ priority: string; count: number }>;
-        }
-        const rawData = response.data as CaseMetricsRaw
-        return {
-          ...response,
-          data: {
-            openCases: rawData.open_cases || rawData.openCases || 0,
-            criticalCases: rawData.critical_cases || rawData.criticalCases || 0,
-            avgResolutionTime: rawData.avg_resolution_time || rawData.avgResolutionTime || 0,
-            casesByPriority: rawData.cases_by_priority || rawData.casesByPriority || [],
-          }
-        }
+        // Return data as-is
+        return response.data
       }
       return response
     },
   })
 }
 
-// Get recent activity data
+// Get recent activities
 export function useRecentActivities() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   
@@ -124,29 +87,17 @@ export function useRecentActivities() {
     queryKey: ['dashboard-recent-activities'],
     enabled: isAuthenticated,
     queryFn: async () => {
-      // Get upcoming activities from the custom API
       const response = await apiClient.getActivityMetrics()
       if (!response.success || !response.data) return []
       
-      // Transform upcoming activities into the expected format
+      // Return upcoming activities transformed for dashboard
       const rawData = response.data as ActivityMetrics
-      interface Activity {
-        id: string;
-        type?: string;
-        name: string;
-        status?: string;
-        priority?: string;
-        date_start?: string;
-        dateEntered?: string;
-        date_entered?: string;
-      }
-      const activities = (rawData.upcomingActivities || []) as Activity[]
-      return activities.slice(0, 10).map((activity) => ({
+      return (rawData.upcoming_activities || []).slice(0, 10).map((activity) => ({
         id: activity.id,
-        type: activity.type || 'Task' as const,
+        type: activity.type,
         name: activity.name,
-        description: `${activity.status} - ${activity.priority || 'Normal'} priority`,
-        date: activity.date_start || activity.dateEntered || activity.date_entered,
+        description: `${activity.type} - ${activity.related_to}`,
+        date: activity.date_start,
         icon: activity.type === 'Call' ? 'Phone' : 
               activity.type === 'Meeting' ? 'Calendar' : 
               activity.type === 'Note' ? 'FileText' : 'CheckCircle2',

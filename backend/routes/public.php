@@ -131,4 +131,31 @@ return function (RouteCollectorProxy $api) {
         $schema->get('/field-mapping', [SchemaController::class, 'getFieldMapping'])
             ->setName('schema.field-mapping');
     });
+    
+    // OpenAPI documentation routes (frontend expects these)
+    $api->group('/api-docs', function (RouteCollectorProxy $docs) {
+        // Get OpenAPI JSON specification
+        $docs->get('/openapi.json', function ($request, $response) {
+            // Check if generated file exists
+            $openApiPath = __DIR__ . '/../openapi.yaml';
+            if (file_exists($openApiPath)) {
+                $yaml = file_get_contents($openApiPath);
+                $data = \Symfony\Component\Yaml\Yaml::parse($yaml);
+                $response->getBody()->write(json_encode($data));
+                return $response->withHeader('Content-Type', 'application/json');
+            }
+            
+            // Otherwise generate dynamically
+            $openapi = \OpenApi\Generator::scan([__DIR__ . '/../app/Http/Controllers']);
+            $response->getBody()->write($openapi->toJson());
+            return $response->withHeader('Content-Type', 'application/json');
+        })->setName('api-docs.openapi');
+        
+        // Swagger UI (optional but useful)
+        $docs->get('', function ($request, $response) {
+            $html = file_get_contents(__DIR__ . '/../public/api-docs/index.html');
+            $response->getBody()->write($html);
+            return $response->withHeader('Content-Type', 'text/html');
+        })->setName('api-docs.ui');
+    });
 };

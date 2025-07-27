@@ -30,6 +30,7 @@ import {
 import { useDashboardData } from '@/hooks/use-dashboard'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Link } from 'react-router-dom'
+import type { DashboardMetrics, ActivityMetrics, CaseMetrics, PipelineData } from '@/types/api.types'
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#8DD1E1']
 
@@ -102,22 +103,24 @@ export function DashboardPage() {
     )
   }
 
+  const metricsData = stats?.data || {}
   const dashboardData = {
-    totalLeads: stats?.data?.totalLeads || 0,
-    totalAccounts: stats?.data?.totalAccounts || 0,
-    newLeadsToday: stats?.data?.newLeadsToday || 0,
-    pipelineValue: stats?.data?.pipelineValue || 0,
+    total_leads: (metricsData as DashboardMetrics).total_leads || 0,
+    total_accounts: (metricsData as DashboardMetrics).total_accounts || 0,
+    new_leads_today: (metricsData as DashboardMetrics).new_leads_today || 0,
+    pipeline_value: (metricsData as DashboardMetrics).pipeline_value || 0,
   }
 
   // Calculate pipeline metrics
-  const totalPipelineValue = pipeline?.reduce((sum, stage) => {
+  const pipelineArray = pipeline?.data || []
+  const totalPipelineValue = Array.isArray(pipelineArray) ? pipelineArray.reduce((sum: number, stage: PipelineData) => {
     if (stage.stage !== 'Lost') {
       return sum + stage.value
     }
     return sum
-  }, 0) || 0
+  }, 0) : 0
 
-  const wonValue = pipeline?.find(s => s.stage === 'Won')?.value || 0
+  const wonValue = Array.isArray(pipelineArray) ? (pipelineArray as PipelineData[]).find((s) => s.stage === 'Won')?.value || 0 : 0
 
   return (
     <div className="space-y-6">
@@ -130,21 +133,21 @@ export function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Total Leads"
-          value={dashboardData.totalLeads}
+          value={dashboardData.total_leads}
           icon={Target}
           color="text-blue-600"
           trend={{ value: 12, isPositive: true }}
         />
         <MetricCard
           title="Total Accounts"
-          value={dashboardData.totalAccounts}
+          value={dashboardData.total_accounts}
           icon={Building2}
           color="text-green-600"
           trend={{ value: 5, isPositive: true }}
         />
         <MetricCard
           title="New Leads Today"
-          value={dashboardData.newLeadsToday}
+          value={dashboardData.new_leads_today}
           icon={Users}
           color="text-purple-600"
           trend={{ value: 8, isPositive: true }}
@@ -162,25 +165,25 @@ export function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <MetricCard
           title="Today's Calls"
-          value={activityMetrics?.data?.callsToday || 0}
+          value={(activityMetrics?.data as ActivityMetrics)?.calls_today || 0}
           icon={Phone}
           color="text-blue-600"
         />
         <MetricCard
           title="Today's Meetings"
-          value={activityMetrics?.data?.meetingsToday || 0}
+          value={(activityMetrics?.data as ActivityMetrics)?.meetings_today || 0}
           icon={Calendar}
           color="text-green-600"
         />
         <MetricCard
           title="Overdue Tasks"
-          value={activityMetrics?.data?.tasksOverdue || 0}
+          value={(activityMetrics?.data as ActivityMetrics)?.tasks_overdue || 0}
           icon={CheckSquare}
           color="text-red-600"
         />
         <MetricCard
           title="Open Cases"
-          value={caseMetrics?.data?.openCases || 0}
+          value={(caseMetrics?.data as CaseMetrics)?.open_cases || 0}
           icon={AlertCircle}
           color="text-orange-600"
         />
@@ -194,9 +197,9 @@ export function DashboardPage() {
             <CardTitle>Sales Pipeline</CardTitle>
           </CardHeader>
           <CardContent>
-            {pipeline && pipeline.length > 0 ? (
+            {pipelineArray && Array.isArray(pipelineArray) && pipelineArray.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={pipeline.filter(s => s.stage !== 'Lost' && s.stage !== 'Won')}>
+                <BarChart data={pipelineArray.filter((s: any) => s.stage !== 'Lost' && s.stage !== 'Won')}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="stage" angle={-45} textAnchor="end" height={80} />
                   <YAxis tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} />
@@ -218,20 +221,24 @@ export function DashboardPage() {
             <CardTitle>Cases by Priority</CardTitle>
           </CardHeader>
           <CardContent>
-            {caseMetrics?.data?.data?.casesByPriority && Array.isArray(caseMetrics.data.data.casesByPriority) && caseMetrics.data.data.casesByPriority.length > 0 ? (
+            {caseMetrics?.data && (caseMetrics.data as CaseMetrics).open_cases > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={caseMetrics.data.data.casesByPriority}
+                    data={[
+                      { name: 'Open', value: (caseMetrics.data as CaseMetrics).open_cases },
+                      { name: 'High Priority', value: (caseMetrics.data as CaseMetrics).high_priority },
+                      { name: 'Closed This Month', value: (caseMetrics.data as CaseMetrics).closed_this_month }
+                    ]}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ priority, count }) => `${priority}: ${count}`}
+                    label={({ name, value }) => `${name}: ${value}`}
                     outerRadius={80}
                     fill="#8884d8"
-                    dataKey="count"
+                    dataKey="value"
                   >
-                    {caseMetrics.data.data.casesByPriority.map((_: unknown, index: number) => (
+                    {[0, 1, 2].map((index: number) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -320,7 +327,7 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
-              {pipeline?.data && pipeline.data.length > 0 ? 
+              {pipelineArray && Array.isArray(pipelineArray) && pipelineArray.length > 0 ? 
                 `${Math.round((wonValue / (totalPipelineValue + wonValue)) * 100)}%` : 
                 'N/A'
               }
@@ -337,8 +344,8 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
-              {caseMetrics?.data?.data?.avgResolutionTime && typeof caseMetrics.data.data.avgResolutionTime === 'number' ? 
-                `${caseMetrics.data.data.avgResolutionTime.toFixed(1)} days` : 
+              {caseMetrics?.data && (caseMetrics.data as CaseMetrics).avg_resolution_days ? 
+                `${(caseMetrics.data as CaseMetrics).avg_resolution_days.toFixed(1)} days` : 
                 'N/A'
               }
             </div>
@@ -354,7 +361,7 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-red-600">
-              {caseMetrics?.data?.data?.criticalCases || 0}
+              {caseMetrics?.data && (caseMetrics.data as CaseMetrics).high_priority || 0}
             </div>
             <p className="text-sm text-muted-foreground mt-1">
               Require immediate attention

@@ -4,11 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Document;
 use App\Models\DocumentRevision;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Illuminate\Database\Capsule\Manager as DB;
 
 class DocumentController extends Controller
 {
@@ -16,32 +14,31 @@ class DocumentController extends Controller
      * List documents
      * GET /api/crm/documents
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, Response $response, array $args): Response
     {
-        $request->validate([
-            'page' => 'sometimes|integer|min:1',
-            'limit' => 'sometimes|integer|min:1|max:100',
-            'parent_type' => 'sometimes|string',
-            'parent_id' => 'sometimes|string',
-            'category' => 'sometimes|string',
-            'search' => 'sometimes|string'
-        ]);
+        $params = $request->getQueryParams();
+        $page = intval($params['page'] ?? 1);
+        $limit = intval($params['limit'] ?? 20);
+        
+        if ($limit < 1 || $limit > 100) {
+            return $this->error($response, 'Limit must be between 1 and 100', 400);
+        }
         
         $query = Document::with(['latestRevision', 'assignedUser'])
             ->where('deleted', 0);
         
         // Apply filters
-        if ($request->has('parent_type') && $request->has('parent_id')) {
-            $query->where('parent_type', $request->input('parent_type'))
-                  ->where('parent_id', $request->input('parent_id'));
+        if (isset($params['parent_type']) && isset($params['parent_id'])) {
+            $query->where('parent_type', $params['parent_type'])
+                  ->where('parent_id', $params['parent_id']);
         }
         
-        if ($request->has('category')) {
-            $query->where('category_id', $request->input('category'));
+        if (isset($params['category'])) {
+            $query->where('category_id', $params['category']);
         }
         
-        if ($request->has('search')) {
-            $search = $request->input('search');
+        if (isset($params['search'])) {
+            $search = $params['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('document_name', 'like', "%{$search}%")
                   ->orWhere('description', 'like', "%{$search}%");
@@ -52,16 +49,15 @@ class DocumentController extends Controller
         $query->orderBy('date_entered', 'desc');
         
         // Paginate
-        $limit = $request->input('limit', 20);
-        $documents = $query->paginate($limit);
+        $documents = $query->paginate($limit, ['*'], 'page', $page);
         
-        return response()->json([
+        return $this->json($response, [
             'data' => $documents->items(),
             'pagination' => [
                 'page' => $documents->currentPage(),
                 'limit' => $documents->perPage(),
                 'total' => $documents->total(),
-                'totalPages' => $documents->lastPage()
+                'total_pages' => $documents->lastPage()
             ]
         ]);
     }
@@ -70,67 +66,90 @@ class DocumentController extends Controller
      * Get document details
      * GET /api/crm/documents/{id}
      */
-    public function show(Request $request, string $id): JsonResponse
+    public function show(Request $request, Response $response, array $args): Response
     {
+        $id = $args['id'];
         $document = Document::with(['latestRevision', 'revisions', 'assignedUser'])
             ->where('deleted', 0)
             ->find($id);
         
         if (!$document) {
-            return response()->json(['error' => 'Document not found'], 404);
+            return $this->error($response, 'Document not found', 404);
         }
         
-        return response()->json(['data' => $document]);
+        return $this->json($response, ['data' => $document]);
     }
     
     /**
      * Upload new document
      * POST /api/crm/documents
      */
-    public function store(Request $request): JsonResponse
+    public function upload(Request $request, Response $response, array $args): Response
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'sometimes|string',
-            'category_id' => 'sometimes|string',
-            'parent_type' => 'sometimes|string',
-            'parent_id' => 'sometimes|string',
-            'file' => 'required|file|max:10240' // 10MB max
-        ]);
+        $data = $request->getParsedBody();
+        $uploadedFiles = $request->getUploadedFiles();
+        
+        // Validate required fields
+        if (empty($data['name'])) {
+            return $this->error($response, 'Name is required', 400);
+        }
+        
+        if (empty($uploadedFiles['file'])) {
+            return $this->error($response, 'File is required', 400);
+        }
+        
+        $file = $uploadedFiles['file'];
+        
+        // Validate file upload
+        if ($file->getError() !== UPLOAD_ERR_OK) {
+            return $this->error($response, 'File upload failed', 400);
+        }
+        
+        // Check file size (10MB max)
+        if ($file->getSize() > 10 * 1024 * 1024) {
+            return $this->error($response, 'File size exceeds 10MB limit', 400);
+        }
         
         DB::beginTransaction();
         
         try {
+            $userId = $request->getAttribute('user_id');
+            
             // Create document record
-            $document = Document::create([
-                'document_name' => $request->input('name'),
-                'description' => $request->input('description'),
-                'category_id' => $request->input('category_id'),
-                'parent_type' => $request->input('parent_type'),
-                'parent_id' => $request->input('parent_id'),
-                'assigned_user_id' => $request->user()->id,
-                'status_id' => 'Active'
-            ]);
+            $document = new Document();
+            $document->document_name = $data['name'];
+            $document->description = $data['description'] ?? '';
+            $document->category_id = $data['category_id'] ?? null;
+            $document->parent_type = $data['parent_type'] ?? null;
+            $document->parent_id = $data['parent_id'] ?? null;
+            $document->assigned_user_id = $userId;
+            $document->status_id = 'Active';
+            $document->save();
             
             // Handle file upload
-            $file = $request->file('file');
             $revisionId = \Ramsey\Uuid\Uuid::uuid4()->toString();
+            $uploadDir = $_ENV['UPLOAD_DIR'] ?? 'uploads';
+            $uploadPath = storage_path("app/{$uploadDir}");
             
-            // Store file with revision ID as filename
-            $uploadDir = env('UPLOAD_DIR', 'uploads');
-            $file->storeAs($uploadDir, $revisionId);
+            // Create directory if it doesn't exist
+            if (!is_dir($uploadPath)) {
+                mkdir($uploadPath, 0755, true);
+            }
+            
+            // Move uploaded file
+            $file->moveTo("{$uploadPath}/{$revisionId}");
             
             // Create document revision
-            $revision = DocumentRevision::create([
-                'id' => $revisionId,
-                'document_id' => $document->id,
-                'filename' => $file->getClientOriginalName(),
-                'file_ext' => $file->getClientOriginalExtension(),
-                'file_mime_type' => $file->getMimeType(),
-                'file_size' => $file->getSize(),
-                'revision' => '1',
-                'created_by' => $request->user()->id
-            ]);
+            $revision = new DocumentRevision();
+            $revision->id = $revisionId;
+            $revision->document_id = $document->id;
+            $revision->filename = $file->getClientFilename();
+            $revision->file_ext = pathinfo($file->getClientFilename(), PATHINFO_EXTENSION);
+            $revision->file_mime_type = $file->getClientMediaType();
+            $revision->file_size = $file->getSize();
+            $revision->revision = '1';
+            $revision->created_by = $userId;
+            $revision->save();
             
             // Update document with latest revision
             $document->document_revision_id = $revision->id;
@@ -138,49 +157,114 @@ class DocumentController extends Controller
             
             DB::commit();
             
-            return response()->json([
+            return $this->json($response, [
                 'data' => $document->load('latestRevision'),
                 'message' => 'Document uploaded successfully'
             ], 201);
             
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'error' => 'Failed to upload document',
-                'message' => $e->getMessage()
-            ], 500);
+            return $this->error($response, 'Failed to upload document: ' . $e->getMessage(), 500);
         }
+    }
+    
+    /**
+     * Get document by ID (alias for show)
+     * GET /api/crm/documents/{id}
+     */
+    public function getDocument(Request $request, Response $response, array $args): Response
+    {
+        return $this->show($request, $response, $args);
+    }
+    
+    /**
+     * Delete document
+     * DELETE /api/crm/documents/{id}
+     */
+    public function deleteDocument(Request $request, Response $response, array $args): Response
+    {
+        $id = $args['id'];
+        $document = Document::where('deleted', 0)->find($id);
+        
+        if (!$document) {
+            return $this->error($response, 'Document not found', 404);
+        }
+        
+        $document->deleted = 1;
+        $document->save();
+        
+        return $this->json($response, ['message' => 'Document deleted successfully']);
+    }
+    
+    /**
+     * Download document
+     * GET /api/crm/documents/{id}/download
+     */
+    public function downloadDocument(Request $request, Response $response, array $args): Response
+    {
+        $id = $args['id'];
+        $document = Document::with('latestRevision')
+            ->where('deleted', 0)
+            ->find($id);
+        
+        if (!$document || !$document->latestRevision) {
+            return $this->error($response, 'Document not found', 404);
+        }
+        
+        $revision = $document->latestRevision;
+        $uploadDir = $_ENV['UPLOAD_DIR'] ?? 'uploads';
+        $filePath = storage_path("app/{$uploadDir}/{$revision->id}");
+        
+        if (!file_exists($filePath)) {
+            return $this->error($response, 'File not found on disk', 404);
+        }
+        
+        // Set headers for download
+        $response = $response
+            ->withHeader('Content-Type', $revision->file_mime_type)
+            ->withHeader('Content-Disposition', 'attachment; filename="' . $revision->filename . '"')
+            ->withHeader('Content-Length', $revision->file_size);
+        
+        // Stream file content
+        $stream = fopen($filePath, 'r');
+        if ($stream === false) {
+            return $this->error($response, 'Failed to read file', 500);
+        }
+        
+        $response->getBody()->write(stream_get_contents($stream));
+        fclose($stream);
+        
+        return $response;
     }
     
     /**
      * Update document metadata
      * PUT /api/crm/documents/{id}
      */
-    public function update(Request $request, string $id): JsonResponse
+    public function update(Request $request, Response $response, array $args): Response
     {
+        $id = $args['id'];
         $document = Document::where('deleted', 0)->find($id);
         
         if (!$document) {
-            return response()->json(['error' => 'Document not found'], 404);
+            return $this->error($response, 'Document not found', 404);
         }
         
-        $request->validate([
+        $data = $this->validate($request, [
             'name' => 'sometimes|string|max:255',
             'description' => 'sometimes|string',
             'category_id' => 'sometimes|string',
             'status_id' => 'sometimes|string'
         ]);
         
-        $document->fill([
-            'document_name' => $request->input('name', $document->document_name),
-            'description' => $request->input('description', $document->description),
-            'category_id' => $request->input('category_id', $document->category_id),
-            'status_id' => $request->input('status_id', $document->status_id)
-        ]);
+        if (isset($data['name'])) $document->document_name = $data['name'];
+        if (isset($data['description'])) $document->description = $data['description'];
+        if (isset($data['category_id'])) $document->category_id = $data['category_id'];
+        if (isset($data['status_id'])) $document->status_id = $data['status_id'];
         
         $document->save();
         
-        return response()->json([
+        return $this->json($response, [
             'data' => $document->load('latestRevision'),
             'message' => 'Document updated successfully'
         ]);
@@ -190,21 +274,38 @@ class DocumentController extends Controller
      * Upload new revision
      * POST /api/crm/documents/{id}/revisions
      */
-    public function uploadRevision(Request $request, string $id): JsonResponse
+    public function uploadRevision(Request $request, Response $response, array $args): Response
     {
+        $id = $args['id'];
         $document = Document::where('deleted', 0)->find($id);
         
         if (!$document) {
-            return response()->json(['error' => 'Document not found'], 404);
+            return $this->error($response, 'Document not found', 404);
         }
         
-        $request->validate([
-            'file' => 'required|file|max:10240' // 10MB max
-        ]);
+        $uploadedFiles = $request->getUploadedFiles();
+        
+        if (empty($uploadedFiles['file'])) {
+            return $this->error($response, 'File is required', 400);
+        }
+        
+        $file = $uploadedFiles['file'];
+        
+        // Validate file upload
+        if ($file->getError() !== UPLOAD_ERR_OK) {
+            return $this->error($response, 'File upload failed', 400);
+        }
+        
+        // Check file size (10MB max)
+        if ($file->getSize() > 10 * 1024 * 1024) {
+            return $this->error($response, 'File size exceeds 10MB limit', 400);
+        }
         
         DB::beginTransaction();
         
         try {
+            $userId = $request->getAttribute('user_id');
+            
             // Get current revision number
             $currentRevision = DocumentRevision::where('document_id', $id)
                 ->orderBy('revision', 'desc')
@@ -213,24 +314,24 @@ class DocumentController extends Controller
             $newRevisionNumber = $currentRevision ? ((int)$currentRevision->revision + 1) : 1;
             
             // Handle file upload
-            $file = $request->file('file');
             $revisionId = \Ramsey\Uuid\Uuid::uuid4()->toString();
+            $uploadDir = $_ENV['UPLOAD_DIR'] ?? 'uploads';
+            $uploadPath = storage_path("app/{$uploadDir}");
             
-            // Store file
-            $uploadDir = env('UPLOAD_DIR', 'uploads');
-            $file->storeAs($uploadDir, $revisionId);
+            // Move uploaded file
+            $file->moveTo("{$uploadPath}/{$revisionId}");
             
             // Create new revision
-            $revision = DocumentRevision::create([
-                'id' => $revisionId,
-                'document_id' => $document->id,
-                'filename' => $file->getClientOriginalName(),
-                'file_ext' => $file->getClientOriginalExtension(),
-                'file_mime_type' => $file->getMimeType(),
-                'file_size' => $file->getSize(),
-                'revision' => (string)$newRevisionNumber,
-                'created_by' => $request->user()->id
-            ]);
+            $revision = new DocumentRevision();
+            $revision->id = $revisionId;
+            $revision->document_id = $document->id;
+            $revision->filename = $file->getClientFilename();
+            $revision->file_ext = pathinfo($file->getClientFilename(), PATHINFO_EXTENSION);
+            $revision->file_mime_type = $file->getClientMediaType();
+            $revision->file_size = $file->getSize();
+            $revision->revision = (string)$newRevisionNumber;
+            $revision->created_by = $userId;
+            $revision->save();
             
             // Update document with latest revision
             $document->document_revision_id = $revision->id;
@@ -238,72 +339,30 @@ class DocumentController extends Controller
             
             DB::commit();
             
-            return response()->json([
+            return $this->json($response, [
                 'data' => $revision,
                 'message' => 'New revision uploaded successfully'
             ], 201);
             
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'error' => 'Failed to upload revision',
-                'message' => $e->getMessage()
-            ], 500);
+            return $this->error($response, 'Failed to upload revision: ' . $e->getMessage(), 500);
         }
     }
     
     /**
-     * Download document
-     * GET /api/crm/documents/{id}/download
-     */
-    public function download(Request $request, string $id): StreamedResponse
-    {
-        $document = Document::with('latestRevision')
-            ->where('deleted', 0)
-            ->find($id);
-        
-        if (!$document || !$document->latestRevision) {
-            abort(404, 'Document not found');
-        }
-        
-        $revision = $document->latestRevision;
-        $uploadDir = env('UPLOAD_DIR', 'uploads');
-        $filePath = storage_path("app/{$uploadDir}/{$revision->id}");
-        
-        if (!file_exists($filePath)) {
-            abort(404, 'File not found on disk');
-        }
-        
-        return response()->stream(
-            function () use ($filePath) {
-                $stream = fopen($filePath, 'r');
-                fpassthru($stream);
-                fclose($stream);
-            },
-            200,
-            [
-                'Content-Type' => $revision->file_mime_type,
-                'Content-Disposition' => 'attachment; filename="' . $revision->filename . '"',
-                'Content-Length' => $revision->file_size
-            ]
-        );
-    }
-    
-    /**
-     * Delete document
+     * Delete document (alias for destroy)
      * DELETE /api/crm/documents/{id}
      */
-    public function destroy(Request $request, string $id): JsonResponse
+    public function destroy(Request $request, Response $response, array $args): Response
     {
-        $document = Document::where('deleted', 0)->find($id);
-        
-        if (!$document) {
-            return response()->json(['error' => 'Document not found'], 404);
-        }
-        
-        $document->deleted = 1;
-        $document->save();
-        
-        return response()->json(['message' => 'Document deleted successfully']);
+        return $this->deleteDocument($request, $response, $args);
+    }
+}
+
+// Helper function for storage_path if not exists
+if (!function_exists('storage_path')) {
+    function storage_path($path = '') {
+        return dirname(dirname(dirname(__DIR__))) . '/storage' . ($path ? '/' . $path : '');
     }
 }

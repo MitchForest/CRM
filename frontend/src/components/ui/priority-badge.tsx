@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import type { CasePriority, CasePriorityLabel } from "@/types/phase2.types"
+import type { CasePriority, CasePriorityLabel } from "@/types/api.types"
 
 interface PriorityBadgeProps {
   priority: CasePriority | CasePriorityLabel | 'High' | 'Medium' | 'Low'

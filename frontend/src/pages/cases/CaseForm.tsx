@@ -38,7 +38,7 @@ export function CaseForm() {
   const isEdit = Boolean(id)
 
   const { data: caseData, isLoading: isLoadingCase } = useCase(id || '')
-  const { data: contacts } = useContacts({ pageSize: 100 })
+  const { data: contacts } = useContacts({ limit: 100 })
   
   const createCase = useCreateCase()
   const updateCase = useUpdateCase(id || '')
@@ -65,14 +65,14 @@ export function CaseForm() {
   useEffect(() => {
     if (caseData?.data && isEdit) {
       reset({
-        name: caseData.data.name,
+        name: caseData.data.name || '',
         status: caseData.data.status || 'new',
         priority: caseData.data.priority as 'P1' | 'P2' | 'P3' || 'P3',
         type: caseData.data.type || 'question',
-        contact_id: caseData.data.contact_id,
-        account_id: caseData.data.account_id,
-        description: caseData.data.description,
-        resolution: caseData.data.resolution,
+        contact_id: caseData.data.contact_id || undefined,
+        account_id: caseData.data.account_id || undefined,
+        description: caseData.data.description || undefined,
+        resolution: caseData.data.resolution || undefined,
       })
     }
   }, [caseData, isEdit, reset])
@@ -82,7 +82,21 @@ export function CaseForm() {
       if (isEdit && id) {
         await updateCase.mutateAsync(data)
       } else {
-        await createCase.mutateAsync(data)
+        const caseData = {
+          created_by: null,
+          modified_user_id: null,
+          assigned_user_id: null,
+          case_number: Date.now(), // Temporary case number, backend should override
+          name: data.name,
+          account_id: data.account_id || null,
+          contact_id: data.contact_id || null,
+          status: data.status,
+          priority: data.priority,
+          type: data.type,
+          description: data.description || null,
+          resolution: data.resolution || null,
+        }
+        await createCase.mutateAsync(caseData)
       }
       
       navigate('/cases')

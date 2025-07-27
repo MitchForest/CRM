@@ -84,15 +84,15 @@ class AnalyticsController extends Controller
             
             return $this->json($response, [
                 'summary' => [
-                    'totalOpportunities' => $opportunities->count,
-                    'totalValue' => (float)$opportunities->total_value,
-                    'wonDeals' => $wonOpportunities->count,
-                    'wonValue' => (float)$wonOpportunities->total_value,
-                    'lostDeals' => $lostOpportunities->count,
-                    'lostValue' => (float)$lostOpportunities->total_value,
-                    'winRate' => $winRate,
-                    'averageDealSize' => $avgDealSize,
-                    'salesVelocity' => $salesVelocity
+                    'total_opportunities' => $opportunities->count,
+                    'total_value' => (float)$opportunities->total_value,
+                    'won_deals' => $wonOpportunities->count,
+                    'won_value' => (float)$wonOpportunities->total_value,
+                    'lost_deals' => $lostOpportunities->count,
+                    'lost_value' => (float)$lostOpportunities->total_value,
+                    'win_rate' => $winRate,
+                    'average_deal_size' => $avgDealSize,
+                    'sales_velocity' => $salesVelocity
                 ],
                 'pipeline' => $pipelineByStage,
                 'trends' => $this->getSalesTrends($dateFrom, $dateTo),
@@ -172,15 +172,15 @@ class AnalyticsController extends Controller
             
             return $this->json($response, [
                 'summary' => [
-                    'totalLeads' => $totalLeads,
-                    'convertedLeads' => $convertedLeads,
-                    'qualifiedLeads' => $qualifiedLeads,
-                    'conversionRate' => $conversionRate,
-                    'qualificationRate' => $qualificationRate,
-                    'averageResponseTime' => $avgResponseTime
+                    'total_leads' => $totalLeads,
+                    'converted_leads' => $convertedLeads,
+                    'qualified_leads' => $qualifiedLeads,
+                    'conversion_rate' => $conversionRate,
+                    'qualification_rate' => $qualificationRate,
+                    'average_response_time' => $avgResponseTime
                 ],
-                'byStatus' => $leadsByStatus,
-                'bySource' => $leadsBySource,
+                'by_status' => $leadsByStatus,
+                'by_source' => $leadsBySource,
                 'trends' => $this->getLeadTrends($dateFrom, $dateTo),
                 'period' => [
                     'from' => $dateFrom,
@@ -267,22 +267,22 @@ class AnalyticsController extends Controller
                     return [
                         'id' => $user->id,
                         'name' => $user->first_name . ' ' . $user->last_name,
-                        'activityCount' => $user->activity_count
+                        'activity_count' => $user->activity_count
                     ];
                 });
             
             return $this->json($response, [
                 'summary' => [
-                    'totalActivities' => $totalActivities,
+                    'total_activities' => $totalActivities,
                     'calls' => $callsCount,
                     'meetings' => $meetingsCount,
                     'tasks' => $tasksCount,
                     'notes' => $notesCount
                 ],
-                'taskMetrics' => [
+                'task_metrics' => [
                     'completed' => $completedTasks,
                     'pending' => $pendingTasks,
-                    'completionRate' => $tasksCount > 0 ? round(($completedTasks / $tasksCount) * 100, 2) : 0
+                    'completion_rate' => $tasksCount > 0 ? round(($completedTasks / $tasksCount) * 100, 2) : 0
                 ],
                 'overdue' => [
                     'tasks' => $overdueTasks,
@@ -290,7 +290,7 @@ class AnalyticsController extends Controller
                     'meetings' => $overdueMeetings,
                     'total' => $overdueTasks + $overdueCalls + $overdueMeetings
                 ],
-                'byUser' => $activitiesByUser,
+                'by_user' => $activitiesByUser,
                 'trends' => $this->getActivityTrends($dateFrom, $dateTo),
                 'period' => [
                     'from' => $dateFrom,
@@ -363,16 +363,16 @@ class AnalyticsController extends Controller
             return $this->json($response, [
                 'funnel' => $funnel,
                 'rates' => [
-                    'leadToOpportunity' => $totalLeads > 0 ? round(($convertedToOpp / $totalLeads) * 100, 2) : 0,
-                    'opportunityToWon' => $totalOpps > 0 ? round(($wonOpps / $totalOpps) * 100, 2) : 0,
-                    'overallConversion' => $totalLeads > 0 ? round(($wonOpps / $totalLeads) * 100, 2) : 0
+                    'lead_to_opportunity' => $totalLeads > 0 ? round(($convertedToOpp / $totalLeads) * 100, 2) : 0,
+                    'opportunity_to_won' => $totalOpps > 0 ? round(($wonOpps / $totalOpps) * 100, 2) : 0,
+                    'overall_conversion' => $totalLeads > 0 ? round(($wonOpps / $totalLeads) * 100, 2) : 0
                 ],
                 'timing' => [
-                    'averageLeadToOpportunity' => $avgLeadToOppTime,
-                    'averageOpportunityToWon' => $avgOppToWonTime,
-                    'totalSalesCycle' => $avgLeadToOppTime + $avgOppToWonTime
+                    'average_lead_to_opportunity' => $avgLeadToOppTime,
+                    'average_opportunity_to_won' => $avgOppToWonTime,
+                    'total_sales_cycle' => $avgLeadToOppTime + $avgOppToWonTime
                 ],
-                'bySource' => $conversionBySource,
+                'by_source' => $conversionBySource,
                 'period' => [
                     'from' => $dateFrom,
                     'to' => $dateTo
@@ -442,14 +442,14 @@ class AnalyticsController extends Controller
                         'id' => $user->id,
                         'name' => $user->first_name . ' ' . $user->last_name,
                         'metrics' => [
-                            'leadsAssigned' => $leadsAssigned,
+                            'leads_assigned' => $leadsAssigned,
                             'opportunities' => $oppsData->count,
-                            'opportunityValue' => (float)$oppsData->total_value,
-                            'wonDeals' => $wonData->count,
-                            'wonValue' => (float)$wonData->total_value,
-                            'winRate' => $oppsData->count > 0 ? round(($wonData->count / $oppsData->count) * 100, 2) : 0,
+                            'opportunity_value' => (float)$oppsData->total_value,
+                            'won_deals' => $wonData->count,
+                            'won_value' => (float)$wonData->total_value,
+                            'win_rate' => $oppsData->count > 0 ? round(($wonData->count / $oppsData->count) * 100, 2) : 0,
                             'activities' => $activitiesCount,
-                            'casesResolved' => $casesResolved
+                            'cases_resolved' => $casesResolved
                         ]
                     ];
                 })
@@ -461,13 +461,13 @@ class AnalyticsController extends Controller
             
             // Calculate team totals
             $teamTotals = [
-                'totalLeads' => $teamMetrics->sum('metrics.leadsAssigned'),
-                'totalOpportunities' => $teamMetrics->sum('metrics.opportunities'),
-                'totalOpportunityValue' => $teamMetrics->sum('metrics.opportunityValue'),
-                'totalWonDeals' => $teamMetrics->sum('metrics.wonDeals'),
-                'totalWonValue' => $teamMetrics->sum('metrics.wonValue'),
-                'totalActivities' => $teamMetrics->sum('metrics.activities'),
-                'totalCasesResolved' => $teamMetrics->sum('metrics.casesResolved')
+                'total_leads' => $teamMetrics->sum('metrics.leadsAssigned'),
+                'total_opportunities' => $teamMetrics->sum('metrics.opportunities'),
+                'total_opportunity_value' => $teamMetrics->sum('metrics.opportunityValue'),
+                'total_won_deals' => $teamMetrics->sum('metrics.wonDeals'),
+                'total_won_value' => $teamMetrics->sum('metrics.wonValue'),
+                'total_activities' => $teamMetrics->sum('metrics.activities'),
+                'total_cases_resolved' => $teamMetrics->sum('metrics.casesResolved')
             ];
             
             // Get top performers
@@ -478,10 +478,10 @@ class AnalyticsController extends Controller
             return $this->json($response, [
                 'team' => $teamMetrics,
                 'totals' => $teamTotals,
-                'topPerformers' => [
-                    'byRevenue' => $topByRevenue,
-                    'byDeals' => $topByDeals,
-                    'byActivities' => $topByActivities
+                'top_performers' => [
+                    'by_revenue' => $topByRevenue,
+                    'by_deals' => $topByDeals,
+                    'by_activities' => $topByActivities
                 ],
                 'period' => [
                     'from' => $dateFrom,
