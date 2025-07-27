@@ -1,4 +1,4 @@
-// Generated from database schema on 2025-07-27T17:48:04.840Z
+// Generated from database schema on 2025-07-27T21:19:48.794Z
 
 import { z } from 'zod';
 
@@ -70,6 +70,7 @@ export const ContactCreateSchema = z.object({
   created_by: z.string().max(36).optional(),
   modified_user_id: z.string().max(36).optional(),
   assigned_user_id: z.string().max(36).optional(),
+  account_id: z.string().max(36).optional(),
   salutation: z.enum(["Mr.", "Ms.", "Mrs.", "Dr.", "Prof."]).optional(),
   first_name: z.string().max(100).optional(),
   last_name: z.string().max(100).optional(),
@@ -96,6 +97,7 @@ export const ContactUpdateSchema = z.object({
   created_by: z.string().max(36).optional(),
   modified_user_id: z.string().max(36).optional(),
   assigned_user_id: z.string().max(36).optional(),
+  account_id: z.string().max(36).optional(),
   salutation: z.enum(["Mr.", "Ms.", "Mrs.", "Dr.", "Prof."]).optional(),
   first_name: z.string().max(100).optional(),
   last_name: z.string().max(100).optional(),
@@ -316,6 +318,7 @@ export const CallCreateSchema = z.object({
   direction: z.string().max(100).optional(),
   parent_type: z.string().max(100).optional(),
   parent_id: z.string().max(36).optional(),
+  contact_id: z.string().max(36).optional(),
   description: z.string().max(65535).optional(),
 });
 
@@ -333,6 +336,7 @@ export const CallUpdateSchema = z.object({
   direction: z.string().max(100).optional(),
   parent_type: z.string().max(100).optional(),
   parent_id: z.string().max(36).optional(),
+  contact_id: z.string().max(36).optional(),
   description: z.string().max(65535).optional(),
 });
 
@@ -351,6 +355,7 @@ export const MeetingCreateSchema = z.object({
   status: z.string().max(100).optional(),
   parent_type: z.string().max(100).optional(),
   parent_id: z.string().max(36).optional(),
+  contact_id: z.string().max(36).optional(),
   description: z.string().max(65535).optional(),
 });
 
@@ -369,6 +374,7 @@ export const MeetingUpdateSchema = z.object({
   status: z.string().max(100).optional(),
   parent_type: z.string().max(100).optional(),
   parent_id: z.string().max(36).optional(),
+  contact_id: z.string().max(36).optional(),
   description: z.string().max(65535).optional(),
 });
 

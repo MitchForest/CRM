@@ -11,6 +11,7 @@ use App\Models\Note;
 use App\Models\SupportCase;
 use App\Models\CustomerHealthScore;
 use App\Models\Opportunity;
+use App\Models\Lead; // Added for getTimeline
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Illuminate\Database\Capsule\Manager as DB;
@@ -517,6 +518,149 @@ class ContactsController extends Controller
                 'nextReviewDate' => $healthScore->next_review_date?->toIso8601String()
             ]
         ]);
+    }
+
+    /**
+     * Get unified timeline for contact including lead history
+     */
+    public function getTimeline(Request $request, Response $response, array $args): Response
+    {
+        $id = $args['id'];
+        $contact = Contact::where('deleted', 0)->find($id);
+        
+        if (!$contact) {
+            return $this->error($response, 'Contact not found', 404);
+        }
+        
+        $params = $request->getQueryParams();
+        $limit = intval($params['limit'] ?? 50);
+        $offset = intval($params['offset'] ?? 0);
+        
+        $timeline = [];
+        
+        // Find the original lead if this contact was converted
+        $originalLead = Lead::where('deleted', 0)
+            ->where('email1', $contact->email1)
+            ->where('status', 'converted')
+            ->first();
+            
+        if ($originalLead) {
+            // Get all activities from the lead phase
+            $leadActivities = $this->getLeadActivities($originalLead, $limit, $offset);
+            foreach ($leadActivities as &$activity) {
+                $activity['phase'] = 'lead';
+                $activity['original_entity'] = 'Lead';
+                $activity['original_entity_id'] = $originalLead->id;
+            }
+            $timeline = array_merge($timeline, $leadActivities);
+        }
+        
+        // Get contact activities
+        $contactActivities = $this->getContactActivities($contact, $limit, $offset);
+        foreach ($contactActivities as &$activity) {
+            $activity['phase'] = 'contact';
+        }
+        $timeline = array_merge($timeline, $contactActivities);
+        
+        // Sort by timestamp descending
+        usort($timeline, function($a, $b) {
+            return strtotime($b['timestamp']) - strtotime($a['timestamp']);
+        });
+        
+        // Apply pagination
+        $timeline = array_slice($timeline, $offset, $limit);
+        
+        return $this->json($response, [
+            'data' => [
+                'contact_id' => $id,
+                'original_lead_id' => $originalLead ? $originalLead->id : null,
+                'timeline' => $timeline,
+                'pagination' => [
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'has_more' => count($timeline) === $limit
+                ]
+            ]
+        ]);
+    }
+    
+    private function getLeadActivities($lead, $limit, $offset): array
+    {
+        $activities = [];
+        
+        // Get web activity
+        $visitors = \App\Models\ActivityTrackingVisitor::where('lead_id', $lead->id)->get();
+        foreach ($visitors as $visitor) {
+            $sessions = \App\Models\ActivityTrackingSession::where('visitor_id', $visitor->visitor_id)
+                ->orderBy('started_at', 'desc')
+                ->get();
+                
+            foreach ($sessions as $session) {
+                $activities[] = [
+                    'type' => 'web_session',
+                    'title' => 'Website Visit',
+                    'description' => "Visited website, viewed {$session->page_views} pages",
+                    'timestamp' => $session->started_at,
+                    'metadata' => [
+                        'session_id' => $session->session_id,
+                        'page_views' => $session->page_views
+                    ]
+                ];
+            }
+        }
+        
+        // Get CRM activities
+        $calls = Call::where('parent_type', 'Leads')
+            ->where('parent_id', $lead->id)
+            ->where('deleted', 0)
+            ->get();
+            
+        foreach ($calls as $call) {
+            $activities[] = [
+                'type' => 'call',
+                'title' => $call->name,
+                'description' => $call->description,
+                'timestamp' => $call->date_start ?? $call->date_entered,
+                'metadata' => [
+                    'direction' => $call->direction,
+                    'status' => $call->status,
+                    'duration' => $call->duration_minutes
+                ]
+            ];
+        }
+        
+        // Add other activity types (meetings, tasks, notes)...
+        
+        return $activities;
+    }
+    
+    private function getContactActivities($contact, $limit, $offset): array
+    {
+        $activities = [];
+        
+        // Get CRM activities
+        $calls = Call::where('parent_type', 'Contacts')
+            ->where('parent_id', $contact->id)
+            ->where('deleted', 0)
+            ->get();
+            
+        foreach ($calls as $call) {
+            $activities[] = [
+                'type' => 'call',
+                'title' => $call->name,
+                'description' => $call->description,
+                'timestamp' => $call->date_start ?? $call->date_entered,
+                'metadata' => [
+                    'direction' => $call->direction,
+                    'status' => $call->status,
+                    'duration' => $call->duration_minutes
+                ]
+            ];
+        }
+        
+        // Add other activity types...
+        
+        return $activities;
     }
     
     private function formatContact(Contact $contact): array

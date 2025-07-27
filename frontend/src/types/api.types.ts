@@ -329,12 +329,15 @@ export interface TimelineActivity {
   id?: string;
   type: 'web_session' | 'page_view' | 'form_submission' | 'chat_conversation' | 
         'call' | 'meeting' | 'note' | 'task' | 'score_change' | 'demo_scheduled' |
-        'session_start' | 'chat_message' | 'lead_score_change' | 'email';
+        'session_start' | 'chat_message' | 'lead_score_change' | 'email' | 'lead_converted';
   title?: string;
   description?: string;
   timestamp: string;
   icon?: string;
   data?: Record<string, any>;
+  phase?: 'lead' | 'contact' | 'opportunity';
+  original_entity?: string;
+  original_entity_id?: string;
   metadata?: Record<string, any>;
   user_name?: string;
 }

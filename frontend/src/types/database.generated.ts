@@ -1,4 +1,4 @@
-// Generated from database schema on 2025-07-27 17:48:04
+// Generated from database schema on 2025-07-27 21:19:48
 
 export interface LeadDB {
   id: string;
@@ -49,6 +49,7 @@ export interface ContactDB {
   created_by: string | null;
   modified_user_id: string | null;
   assigned_user_id: string | null;
+  account_id: string | null;
   deleted: number | null;
   salutation: string | null;
   first_name: string | null;
@@ -71,7 +72,7 @@ export interface ContactDB {
 }
 
 export type ContactCreateRequest = Pick<ContactDB,
-  'created_by' | 'modified_user_id' | 'assigned_user_id' | 'salutation' | 'first_name' | 'last_name' | 'title' | 'department' | 'phone_work' | 'phone_mobile' | 'email1' | 'primary_address_street' | 'primary_address_city' | 'primary_address_state' | 'primary_address_postalcode' | 'primary_address_country' | 'description' | 'lead_source' | 'lifetime_value' | 'engagement_score' | 'last_activity_date'
+  'created_by' | 'modified_user_id' | 'assigned_user_id' | 'account_id' | 'salutation' | 'first_name' | 'last_name' | 'title' | 'department' | 'phone_work' | 'phone_mobile' | 'email1' | 'primary_address_street' | 'primary_address_city' | 'primary_address_state' | 'primary_address_postalcode' | 'primary_address_country' | 'description' | 'lead_source' | 'lifetime_value' | 'engagement_score' | 'last_activity_date'
 >;
 
 export type ContactUpdateRequest = Partial<ContactCreateRequest>;
@@ -237,11 +238,12 @@ export interface CallDB {
   direction: string | null;
   parent_type: string | null;
   parent_id: string | null;
+  contact_id: string | null;
   description: string | null;
 }
 
 export type CallCreateRequest = Pick<CallDB,
-  'created_by' | 'modified_user_id' | 'assigned_user_id' | 'name' | 'duration_hours' | 'duration_minutes' | 'date_start' | 'status' | 'direction' | 'parent_type' | 'parent_id' | 'description'
+  'created_by' | 'modified_user_id' | 'assigned_user_id' | 'name' | 'duration_hours' | 'duration_minutes' | 'date_start' | 'status' | 'direction' | 'parent_type' | 'parent_id' | 'contact_id' | 'description'
 >;
 
 export type CallUpdateRequest = Partial<CallCreateRequest>;
@@ -265,11 +267,12 @@ export interface MeetingDB {
   status: string | null;
   parent_type: string | null;
   parent_id: string | null;
+  contact_id: string | null;
   description: string | null;
 }
 
 export type MeetingCreateRequest = Pick<MeetingDB,
-  'created_by' | 'modified_user_id' | 'assigned_user_id' | 'name' | 'location' | 'duration_hours' | 'duration_minutes' | 'date_start' | 'date_end' | 'status' | 'parent_type' | 'parent_id' | 'description'
+  'created_by' | 'modified_user_id' | 'assigned_user_id' | 'name' | 'location' | 'duration_hours' | 'duration_minutes' | 'date_start' | 'date_end' | 'status' | 'parent_type' | 'parent_id' | 'contact_id' | 'description'
 >;
 
 export type MeetingUpdateRequest = Partial<MeetingCreateRequest>;

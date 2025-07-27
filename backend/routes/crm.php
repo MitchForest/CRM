@@ -48,6 +48,7 @@ return function (RouteCollectorProxy $api) {
             $contacts->delete('/{id}', [ContactsController::class, 'delete']);
             $contacts->get('/{id}/unified-view', [ContactsController::class, 'unifiedView']);
             $contacts->get('/{id}/health-score', [ContactsController::class, 'getHealthScore']);
+            $contacts->get('/{id}/timeline', [ContactsController::class, 'getTimeline']);
         });
         
         // Opportunities Routes

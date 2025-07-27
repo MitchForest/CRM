@@ -18,8 +18,7 @@
     "test:coverage": "vitest run --coverage",
     "generate:types": "tsx scripts/generate-types.ts",
     "generate:api-client": "tsx scripts/generate-api-client.ts",
-    "generate:all": "npm run generate:types && npm run generate:api-client",
-    "prebuild": "npm run generate:all"
+    "generate:all": "npm run generate:types && npm run generate:api-client"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

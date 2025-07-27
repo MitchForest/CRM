@@ -589,10 +589,6 @@ class LeadsController extends Controller
         DB::beginTransaction();
         
         try {
-            // Mark lead as converted
-            $lead->status = 'converted';
-            $lead->save();
-            
             // Create contact from lead
             $contact = Contact::create([
                 'first_name' => $lead->first_name,
@@ -606,8 +602,18 @@ class LeadsController extends Controller
                 'primary_address_postalcode' => $lead->primary_address_postalcode,
                 'primary_address_country' => $lead->primary_address_country,
                 'description' => $lead->description,
-                'lead_source' => 'conversion',
+                'lead_source' => $lead->lead_source,
                 'assigned_user_id' => $lead->assigned_user_id
+            ]);
+            
+            // Mark lead as converted
+            $lead->status = 'converted';
+            $lead->save();
+            
+            // Log conversion activity
+            $this->logActivity($lead->id, 'lead_converted', [
+                'contact_id' => $contact->id,
+                'converted_at' => now()->toIso8601String()
             ]);
             
             DB::commit();

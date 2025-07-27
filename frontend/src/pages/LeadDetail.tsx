@@ -1,17 +1,22 @@
 import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Mail, Phone, Edit, Trash2, UserPlus } from 'lucide-react'
+import { ArrowLeft, Mail, Phone, Edit, Trash2, UserPlus, CheckSquare, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useLead, useConvertLead, useDeleteLead } from '@/hooks/use-leads'
 import { formatDateTime } from '@/lib/utils'
-import { ActivityTimeline } from '@/components/activities/ActivityTimeline'
 import { LeadActivityTimeline } from '@/components/activities/LeadActivityTimeline'
 import { useActivitiesByParent } from '@/hooks/use-activities'
+import { apiClient } from '@/lib/api-client'
+import { toast } from 'sonner'
 
 const statusColors = {
   New: 'bg-blue-100 text-blue-700',
@@ -25,6 +30,33 @@ export function LeadDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [showConvertDialog, setShowConvertDialog] = useState(false)
+  const [showEmailDialog, setShowEmailDialog] = useState(false)
+  const [showCallDialog, setShowCallDialog] = useState(false)
+  const [showTaskDialog, setShowTaskDialog] = useState(false)
+  const [showMeetingDialog, setShowMeetingDialog] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // Form states
+  const [emailForm, setEmailForm] = useState({ subject: '', body: '' })
+  const [callForm, setCallForm] = useState({ 
+    direction: 'outbound', 
+    status: 'completed',
+    duration_minutes: 15,
+    description: '' 
+  })
+  const [taskForm, setTaskForm] = useState({ 
+    name: '', 
+    description: '',
+    priority: 'medium',
+    due_date: new Date().toISOString().split('T')[0]
+  })
+  const [meetingForm, setMeetingForm] = useState({ 
+    name: '', 
+    description: '',
+    date_start: new Date().toISOString().split('T')[0],
+    time_start: '09:00',
+    duration_hours: 1
+  })
 
   const { data: leadData, isLoading: leadLoading } = useLead(id!)
   const { data: activities } = useActivitiesByParent('Lead', id!)
@@ -45,6 +77,124 @@ export function LeadDetailPage() {
 
     await deleteLead.mutateAsync(id)
     navigate('/leads')
+  }
+
+  const handleSendEmail = async () => {
+    if (!emailForm.subject || !emailForm.body) {
+      toast.error('Please fill in all fields')
+      return
+    }
+    
+    setIsSubmitting(true)
+    try {
+      // For now, just log the email as a note
+      await apiClient.createNote({
+        name: `Email: ${emailForm.subject}`,
+        description: `Subject: ${emailForm.subject}\n\nBody:\n${emailForm.body}\n\nSent at: ${new Date().toLocaleString()}`,
+        parent_type: 'Leads',
+        parent_id: id!
+      })
+      
+      toast.success('Email logged successfully')
+      setShowEmailDialog(false)
+      setEmailForm({ subject: '', body: '' })
+      // Refresh the timeline
+      window.location.reload()
+    } catch (error) {
+      toast.error('Failed to log email')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleLogCall = async () => {
+    if (!callForm.description) {
+      toast.error('Please add call notes')
+      return
+    }
+    
+    setIsSubmitting(true)
+    try {
+      await apiClient.createCall({
+        name: `Call with ${lead?.first_name} ${lead?.last_name}`,
+        direction: callForm.direction,
+        status: callForm.status,
+        duration_minutes: callForm.duration_minutes,
+        description: callForm.description,
+        parent_type: 'Leads',
+        parent_id: id!,
+        date_start: new Date().toISOString()
+      })
+      
+      toast.success('Call logged successfully')
+      setShowCallDialog(false)
+      setCallForm({ direction: 'outbound', status: 'completed', duration_minutes: 15, description: '' })
+      window.location.reload()
+    } catch (error) {
+      toast.error('Failed to log call')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleCreateTask = async () => {
+    if (!taskForm.name) {
+      toast.error('Please enter a task name')
+      return
+    }
+    
+    setIsSubmitting(true)
+    try {
+      await apiClient.createTask({
+        name: taskForm.name,
+        description: taskForm.description,
+        priority: taskForm.priority,
+        status: 'Not Started',
+        date_due: taskForm.due_date,
+        parent_type: 'Leads',
+        parent_id: id!
+      })
+      
+      toast.success('Task created successfully')
+      setShowTaskDialog(false)
+      setTaskForm({ name: '', description: '', priority: 'medium', due_date: new Date().toISOString().split('T')[0] })
+      window.location.reload()
+    } catch (error) {
+      toast.error('Failed to create task')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleScheduleMeeting = async () => {
+    if (!meetingForm.name) {
+      toast.error('Please enter a meeting subject')
+      return
+    }
+    
+    setIsSubmitting(true)
+    try {
+      const dateTime = `${meetingForm.date_start}T${meetingForm.time_start}:00`
+      await apiClient.createMeeting({
+        name: meetingForm.name,
+        description: meetingForm.description,
+        status: 'Planned',
+        date_start: dateTime,
+        duration_hours: meetingForm.duration_hours,
+        duration_minutes: 0,
+        parent_type: 'Leads',
+        parent_id: id!
+      })
+      
+      toast.success('Meeting scheduled successfully')
+      setShowMeetingDialog(false)
+      setMeetingForm({ name: '', description: '', date_start: new Date().toISOString().split('T')[0], time_start: '09:00', duration_hours: 1 })
+      window.location.reload()
+    } catch (error) {
+      toast.error('Failed to schedule meeting')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (leadLoading) {
@@ -241,18 +391,20 @@ export function LeadDetailPage() {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button className="w-full" size="sm">
+              <Button className="w-full" size="sm" onClick={() => setShowEmailDialog(true)}>
                 <Mail className="mr-2 h-4 w-4" />
                 Send Email
               </Button>
-              <Button className="w-full" size="sm" variant="outline">
+              <Button className="w-full" size="sm" variant="outline" onClick={() => setShowCallDialog(true)}>
                 <Phone className="mr-2 h-4 w-4" />
                 Log Call
               </Button>
-              <Button className="w-full" size="sm" variant="outline">
+              <Button className="w-full" size="sm" variant="outline" onClick={() => setShowTaskDialog(true)}>
+                <CheckSquare className="mr-2 h-4 w-4" />
                 Create Task
               </Button>
-              <Button className="w-full" size="sm" variant="outline">
+              <Button className="w-full" size="sm" variant="outline" onClick={() => setShowMeetingDialog(true)}>
+                <Calendar className="mr-2 h-4 w-4" />
                 Schedule Meeting
               </Button>
             </CardContent>
@@ -296,6 +448,242 @@ export function LeadDetailPage() {
             </Button>
             <Button onClick={handleConvert} disabled={convertLead.isPending}>
               {convertLead.isPending ? 'Converting...' : 'Convert Lead'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Dialog */}
+      <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Email</DialogTitle>
+            <DialogDescription>
+              Log an email sent to {lead?.first_name} {lead?.last_name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="email-subject">Subject</Label>
+              <Input
+                id="email-subject"
+                value={emailForm.subject}
+                onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })}
+                placeholder="Email subject..."
+              />
+            </div>
+            <div>
+              <Label htmlFor="email-body">Message</Label>
+              <Textarea
+                id="email-body"
+                value={emailForm.body}
+                onChange={(e) => setEmailForm({ ...emailForm, body: e.target.value })}
+                placeholder="Email content..."
+                rows={6}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEmailDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSendEmail} disabled={isSubmitting}>
+              {isSubmitting ? 'Sending...' : 'Send Email'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Call Dialog */}
+      <Dialog open={showCallDialog} onOpenChange={setShowCallDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Log Call</DialogTitle>
+            <DialogDescription>
+              Record a call with {lead?.first_name} {lead?.last_name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="call-direction">Direction</Label>
+                <Select value={callForm.direction} onValueChange={(value) => setCallForm({ ...callForm, direction: value })}>
+                  <SelectTrigger id="call-direction">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="inbound">Inbound</SelectItem>
+                    <SelectItem value="outbound">Outbound</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="call-duration">Duration (minutes)</Label>
+                <Input
+                  id="call-duration"
+                  type="number"
+                  value={callForm.duration_minutes}
+                  onChange={(e) => setCallForm({ ...callForm, duration_minutes: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="call-notes">Call Notes</Label>
+              <Textarea
+                id="call-notes"
+                value={callForm.description}
+                onChange={(e) => setCallForm({ ...callForm, description: e.target.value })}
+                placeholder="What was discussed..."
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCallDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleLogCall} disabled={isSubmitting}>
+              {isSubmitting ? 'Logging...' : 'Log Call'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Task Dialog */}
+      <Dialog open={showTaskDialog} onOpenChange={setShowTaskDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Task</DialogTitle>
+            <DialogDescription>
+              Add a new task for {lead?.first_name} {lead?.last_name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="task-name">Task Name</Label>
+              <Input
+                id="task-name"
+                value={taskForm.name}
+                onChange={(e) => setTaskForm({ ...taskForm, name: e.target.value })}
+                placeholder="Follow up on proposal..."
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="task-priority">Priority</Label>
+                <Select value={taskForm.priority} onValueChange={(value) => setTaskForm({ ...taskForm, priority: value })}>
+                  <SelectTrigger id="task-priority">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="task-due">Due Date</Label>
+                <Input
+                  id="task-due"
+                  type="date"
+                  value={taskForm.due_date}
+                  onChange={(e) => setTaskForm({ ...taskForm, due_date: e.target.value })}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="task-description">Description</Label>
+              <Textarea
+                id="task-description"
+                value={taskForm.description}
+                onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })}
+                placeholder="Task details..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTaskDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateTask} disabled={isSubmitting}>
+              {isSubmitting ? 'Creating...' : 'Create Task'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Meeting Dialog */}
+      <Dialog open={showMeetingDialog} onOpenChange={setShowMeetingDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Schedule Meeting</DialogTitle>
+            <DialogDescription>
+              Schedule a meeting with {lead?.first_name} {lead?.last_name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="meeting-subject">Subject</Label>
+              <Input
+                id="meeting-subject"
+                value={meetingForm.name}
+                onChange={(e) => setMeetingForm({ ...meetingForm, name: e.target.value })}
+                placeholder="Product demo..."
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="col-span-2">
+                <Label htmlFor="meeting-date">Date</Label>
+                <Input
+                  id="meeting-date"
+                  type="date"
+                  value={meetingForm.date_start}
+                  onChange={(e) => setMeetingForm({ ...meetingForm, date_start: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="meeting-time">Time</Label>
+                <Input
+                  id="meeting-time"
+                  type="time"
+                  value={meetingForm.time_start}
+                  onChange={(e) => setMeetingForm({ ...meetingForm, time_start: e.target.value })}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="meeting-duration">Duration (hours)</Label>
+              <Select value={meetingForm.duration_hours.toString()} onValueChange={(value) => setMeetingForm({ ...meetingForm, duration_hours: parseFloat(value) })}>
+                <SelectTrigger id="meeting-duration">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0.5">30 minutes</SelectItem>
+                  <SelectItem value="1">1 hour</SelectItem>
+                  <SelectItem value="1.5">1.5 hours</SelectItem>
+                  <SelectItem value="2">2 hours</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="meeting-description">Description</Label>
+              <Textarea
+                id="meeting-description"
+                value={meetingForm.description}
+                onChange={(e) => setMeetingForm({ ...meetingForm, description: e.target.value })}
+                placeholder="Meeting agenda..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowMeetingDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleScheduleMeeting} disabled={isSubmitting}>
+              {isSubmitting ? 'Scheduling...' : 'Schedule Meeting'}
             </Button>
           </DialogFooter>
         </DialogContent>
