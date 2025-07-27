@@ -58,7 +58,7 @@ class ChatConversation extends Model
     public function messages(): HasMany
     {
         return $this->hasMany(ChatMessage::class, 'conversation_id', 'conversation_id')
-            ->orderBy('created_at');
+            ->orderBy('date_entered');
     }
     
     public function getTotalMessagesAttribute(): int
@@ -68,9 +68,9 @@ class ChatConversation extends Model
     
     public function getDurationMinutesAttribute(): ?int
     {
-        if ($this->started_at && $this->ended_at) {
-            $start = new \DateTime($this->started_at);
-            $end = new \DateTime($this->ended_at);
+        if ($this->date_started && $this->date_ended) {
+            $start = new \DateTime($this->date_started);
+            $end = new \DateTime($this->date_ended);
             $diff = $end->getTimestamp() - $start->getTimestamp();
             return intval($diff / 60);
         }

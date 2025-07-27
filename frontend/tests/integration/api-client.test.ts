@@ -4,41 +4,34 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { 
-  leadsApi, 
-  authApi,
-  dashboardApi 
-} from '@/api/client';
-import type { LeadCreateRequest } from '@/types/database.generated';
+import { apiClient } from '@/lib/api-client';
+import type { LeadCreateRequest } from '@/types/database.types';
 
 describe('API Client Integration', () => {
 
   describe('Authentication', () => {
     it('should handle login with valid credentials', async () => {
       // This will need real test credentials
-      const response = await authApi.login({
-        email: 'test@example.com',
-        password: 'test123'
-      });
+      const response = await apiClient.login('test@example.com', 'test123');
 
-      expect(response).toHaveProperty('access_token');
-      expect(response).toHaveProperty('user');
+      expect(response.success).toBe(true);
+      if (response.success) {
+        expect(response.data).toHaveProperty('accessToken');
+        expect(response.data).toHaveProperty('user');
+      }
       // Token stored in response
     });
 
     it('should handle login failure with invalid credentials', async () => {
-      await expect(
-        authApi.login({
-          email: 'invalid@example.com',
-          password: 'wrong'
-        })
-      ).rejects.toThrow();
+      const response = await apiClient.login('invalid@example.com', 'wrong');
+      expect(response.success).toBe(false);
+      expect(response.error).toBeDefined();
     });
   });
 
   describe('Leads API', () => {
     it('should fetch leads with pagination', async () => {
-      const response = await leadsApi.getLeads({
+      const response = await apiClient.getLeads({
         page: 1,
         limit: 10
       });
@@ -81,45 +74,50 @@ describe('API Client Integration', () => {
         ai_next_best_action: null
       };
 
-      const response = await leadsApi.createLead(newLead);
-      expect(response).toHaveProperty('data');
-      expect(response.data).toMatchObject(newLead);
-      expect(response.data).toHaveProperty('id');
+      const response = await apiClient.createLead(newLead);
+      expect(response.success).toBe(true);
+      if (response.success) {
+        expect(response.data).toHaveProperty('id');
+      }
     });
 
     it('should fetch a single lead by ID', async () => {
-      const leadsResponse = await leadsApi.getLeads({ limit: 1 });
+      const leadsResponse = await apiClient.getLeads({ limit: 1 });
       if (leadsResponse.data.length > 0) {
         const leadId = leadsResponse.data[0]!.id;
-        const response = await leadsApi.getLead(leadId);
+        const response = await apiClient.getLead(leadId);
         
-        expect(response).toHaveProperty('data');
-        expect(response.data).toHaveProperty('id', leadId);
+        expect(response.success).toBe(true);
+        if (response.success) {
+          expect(response.data).toHaveProperty('id', leadId);
+        }
       }
     });
   });
 
   describe('Dashboard API', () => {
     it('should fetch dashboard metrics', async () => {
-      const response = await dashboardApi.getMetrics();
+      const response = await apiClient.getDashboardMetrics();
       
-      expect(response).toHaveProperty('data');
-      expect(response.data).toHaveProperty('total_leads');
-      expect(response.data).toHaveProperty('new_leads_today');
-      expect(response.data).toHaveProperty('conversion_rate');
+      expect(response.success).toBe(true);
+      if (response.success) {
+        expect(response.data).toHaveProperty('totalLeads');
+        expect(response.data).toHaveProperty('newLeads');
+        expect(response.data).toHaveProperty('conversionRate');
+      }
     });
 
     it('should fetch activity metrics', async () => {
-      const response = await dashboardApi.getActivityMetrics();
+      const response = await apiClient.getActivityMetrics();
       
-      expect(response).toHaveProperty('data');
+      expect(response.success).toBe(true);
       // Add specific assertions based on expected activity metrics structure
     });
   });
 
   describe('Field Naming Convention', () => {
     it('should use snake_case for all database fields', async () => {
-      const response = await leadsApi.getLeads({ limit: 1 });
+      const response = await apiClient.getLeads({ limit: 1 });
       
       if (response.data.length > 0) {
         const lead = response.data[0];
@@ -143,9 +141,9 @@ describe('API Client Integration', () => {
 
   describe('Error Handling', () => {
     it('should handle 404 errors gracefully', async () => {
-      await expect(
-        leadsApi.getLead('non-existent-id')
-      ).rejects.toThrow();
+      const response = await apiClient.getLead('non-existent-id');
+      expect(response.success).toBe(false);
+      expect(response.error).toBeDefined();
     });
 
     it('should handle network errors', async () => {

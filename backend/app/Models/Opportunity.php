@@ -61,7 +61,8 @@ class Opportunity extends BaseModel
     public function contacts(): BelongsToMany
     {
         return $this->belongsToMany(Contact::class, 'opportunities_contacts', 'opportunity_id', 'contact_id')
-            ->withTimestamps('date_entered', 'date_modified');
+            ->withPivot(['deleted', 'date_modified'])
+            ->wherePivot('deleted', 0);
     }
     
     public function tasks(): HasMany

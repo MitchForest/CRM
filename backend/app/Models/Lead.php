@@ -39,11 +39,7 @@ class Lead extends BaseModel
         'ai_score',
         'ai_score_date',
         'ai_insights',
-        'ai_next_best_action',
-        'converted',
-        'converted_contact_id',
-        'converted_account_id',
-        'converted_opportunity_id'
+        'ai_next_best_action'
     ];
     
     protected $casts = [
@@ -52,8 +48,7 @@ class Lead extends BaseModel
         'ai_score_date' => 'datetime',
         'ai_insights' => 'json',
         'deleted' => 'integer',
-        'ai_score' => 'integer',
-        'converted' => 'integer'
+        'ai_score' => 'integer'
     ];
     
     

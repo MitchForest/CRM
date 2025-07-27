@@ -199,7 +199,7 @@ export interface AIScoreResult {
 export interface AIScoreHistory {
   id: string;
   score: number;
-  scored_at: string;
+  date_scored: string;
   factors: Record<string, any>;
 }
 

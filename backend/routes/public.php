@@ -65,6 +65,14 @@ return function (RouteCollectorProxy $api) {
             // End session
             $track->post('/session/end', [ActivityTrackingController::class, 'endSession'])
                 ->setName('public.track.session.end');
+            
+            // Track page exit
+            $track->post('/page-exit', [ActivityTrackingController::class, 'trackPageExit'])
+                ->setName('public.track.page-exit');
+            
+            // Track conversion
+            $track->post('/conversion', [ActivityTrackingController::class, 'trackConversion'])
+                ->setName('public.track.conversion');
         });
         
         // Public Chat Endpoints

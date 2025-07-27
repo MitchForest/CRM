@@ -51,7 +51,7 @@ class ContactSeeder extends BaseSeeder
             // Create account
             $accountId = $this->generateUuid();
             $accountType = $this->getRandomByDistribution($this->accountTypes);
-            $signupDate = new \DateTime($lead->converted_date ?? $lead->date_entered);
+            $signupDate = new \DateTime($lead->date_entered);
             
             // Calculate MRR based on company size
             $accountSize = $this->getRandomByDistribution($this->accountSizes);
@@ -123,14 +123,12 @@ class ContactSeeder extends BaseSeeder
                 'deleted' => 0,
             ]);
             
-            // Update lead with conversion info
+            // Update lead status to converted
             DB::table('leads')
                 ->where('id', $leadId)
                 ->update([
-                    'converted' => 1,
-                    'converted_contact_id' => $contactId,
-                    'converted_account_id' => $accountId,
                     'status' => 'Converted',
+                    'date_modified' => (new \DateTime())->format('Y-m-d H:i:s')
                 ]);
             
             // Create 1-3 additional contacts per account

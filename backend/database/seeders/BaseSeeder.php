@@ -31,6 +31,19 @@ abstract class BaseSeeder
     {
         $start = new \DateTime($startDate);
         $end = new \DateTime($endDate);
+        
+        // If start is after end, swap them
+        if ($start->getTimestamp() > $end->getTimestamp()) {
+            $temp = $start;
+            $start = $end;
+            $end = $temp;
+        }
+        
+        // If they're the same, just return that date
+        if ($start->getTimestamp() == $end->getTimestamp()) {
+            return $start;
+        }
+        
         $randomTimestamp = mt_rand($start->getTimestamp(), $end->getTimestamp());
         return (new \DateTime())->setTimestamp($randomTimestamp);
     }

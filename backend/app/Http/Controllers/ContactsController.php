@@ -65,9 +65,10 @@ class ContactsController extends Controller
      */
     public function index(Request $request, Response $response, array $args): Response
     {
-        $params = $request->getQueryParams();
-        $query = Contact::with(['assignedUser'])
-            ->where('deleted', 0);
+        try {
+            $params = $request->getQueryParams();
+            $query = Contact::with(['assignedUser'])
+                ->where('deleted', 0);
         
         // Add search filter
         if (isset($params['search'])) {
@@ -75,13 +76,12 @@ class ContactsController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('first_name', 'like', "%$search%")
                   ->orWhere('last_name', 'like', "%$search%")
-                  ->orWhere('account_name', 'like', "%$search%")
                   ->orWhere('email1', 'like', "%$search%");
             });
         }
         
-        // Select display name
-        $query->selectRaw('*, CASE WHEN is_company = 1 THEN account_name ELSE CONCAT(first_name, " ", last_name) END as display_name');
+        // Select display name - just use concatenated name since there's no is_company field
+        $query->selectRaw('*, CONCAT(IFNULL(first_name, ""), " ", IFNULL(last_name, "")) as display_name');
         
         // Sorting
         $query->orderBy('date_entered', 'DESC');
@@ -121,6 +121,9 @@ class ContactsController extends Controller
                 'total_pages' => $contacts->lastPage()
             ]
         ]);
+        } catch (\Exception $e) {
+            return $this->error($response, 'Internal server error: ' . $e->getMessage(), 500);
+        }
     }
     
     public function unifiedView(Request $request, Response $response, array $args): Response

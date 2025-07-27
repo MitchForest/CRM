@@ -218,20 +218,29 @@ class OpportunitySeeder extends BaseSeeder
     private function generateOpportunityName(string $stage): string
     {
         $products = [
-            'TechFlow Pro - Annual',
-            'TechFlow Enterprise - 3 Year',
-            'TechFlow Team - Monthly',
-            'TechFlow Starter - Annual',
-            'TechFlow Plus Upgrade',
-            'TechFlow Add-on Package',
-            'TechFlow Professional Services',
-            'TechFlow Training Package',
+            'Pro',
+            'Enterprise',
+            'Team',
+            'Starter',
+            'Plus',
+            'Add-on',
+            'Services',
+            'Training',
         ];
         
         $product = $this->faker->randomElement($products);
         $company = $this->faker->company();
         
-        return "{$company} - {$product}";
+        // Truncate to fit within 50 character limit
+        $name = "{$company} - {$product}";
+        if (strlen($name) > 50) {
+            // Keep product, truncate company
+            $maxCompanyLength = 50 - strlen($product) - 3; // 3 for " - "
+            $company = substr($company, 0, $maxCompanyLength);
+            $name = "{$company} - {$product}";
+        }
+        
+        return $name;
     }
     
     private function generateOpportunityDescription(string $stage, float $amount): string

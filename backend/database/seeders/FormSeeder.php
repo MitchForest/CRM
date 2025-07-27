@@ -186,13 +186,12 @@ class FormSeeder extends BaseSeeder
             DB::table('form_builder_submissions')->insert([
                 'id' => $this->generateUuid(),
                 'form_id' => $demoFormId,
-                'form_data' => json_encode($formData),
+                'data' => json_encode($formData),
                 'lead_id' => $leadId,
                 'contact_id' => null,
                 'ip_address' => $this->faker->ipv4(),
                 'user_agent' => $this->faker->userAgent(),
                 'date_entered' => $submissionDate->format('Y-m-d H:i:s'),
-                'date_modified' => $submissionDate->format('Y-m-d H:i:s'),
                 'deleted' => 0,
             ]);
             $submissionCount++;
@@ -216,13 +215,12 @@ class FormSeeder extends BaseSeeder
             DB::table('form_builder_submissions')->insert([
                 'id' => $this->generateUuid(),
                 'form_id' => $contactFormId,
-                'form_data' => json_encode($formData),
+                'data' => json_encode($formData),
                 'lead_id' => $leadId,
                 'contact_id' => null,
                 'ip_address' => $this->faker->ipv4(),
                 'user_agent' => $this->faker->userAgent(),
                 'date_entered' => $submissionDate->format('Y-m-d H:i:s'),
-                'date_modified' => $submissionDate->format('Y-m-d H:i:s'),
                 'deleted' => 0,
             ]);
             $submissionCount++;
@@ -249,13 +247,12 @@ class FormSeeder extends BaseSeeder
             DB::table('form_builder_submissions')->insert([
                 'id' => $this->generateUuid(),
                 'form_id' => $supportFormId,
-                'form_data' => json_encode($formData),
+                'data' => json_encode($formData),
                 'lead_id' => null,
                 'contact_id' => $contactId,
                 'ip_address' => $this->faker->ipv4(),
                 'user_agent' => $this->faker->userAgent(),
                 'date_entered' => $submissionDate->format('Y-m-d H:i:s'),
-                'date_modified' => $submissionDate->format('Y-m-d H:i:s'),
                 'deleted' => 0,
             ]);
             $submissionCount++;
@@ -275,13 +272,12 @@ class FormSeeder extends BaseSeeder
             DB::table('form_builder_submissions')->insert([
                 'id' => $this->generateUuid(),
                 'form_id' => $newsletterFormId,
-                'form_data' => json_encode($formData),
+                'data' => json_encode($formData),
                 'lead_id' => null,
                 'contact_id' => null,
                 'ip_address' => $this->faker->ipv4(),
                 'user_agent' => $this->faker->userAgent(),
                 'date_entered' => $submissionDate->format('Y-m-d H:i:s'),
-                'date_modified' => $submissionDate->format('Y-m-d H:i:s'),
                 'deleted' => 0,
             ]);
             $submissionCount++;

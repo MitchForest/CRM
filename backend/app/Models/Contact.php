@@ -46,6 +46,12 @@ class Contact extends BaseModel
         'deleted' => 'integer'
     ];
     
+    protected $appends = ['full_name'];
+    
+    public function getFullNameAttribute(): string
+    {
+        return trim($this->first_name . ' ' . $this->last_name);
+    }
     
     public function assignedUser(): BelongsTo
     {
@@ -65,7 +71,8 @@ class Contact extends BaseModel
     public function opportunities(): BelongsToMany
     {
         return $this->belongsToMany(Opportunity::class, 'opportunities_contacts', 'contact_id', 'opportunity_id')
-            ->withTimestamps('date_entered', 'date_modified');
+            ->withPivot(['deleted', 'date_modified'])
+            ->wherePivot('deleted', 0);
     }
     
     public function activities(): HasMany

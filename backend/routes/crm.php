@@ -9,6 +9,7 @@ use App\Http\Controllers\ActivitiesController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AIController;
+use App\Http\Controllers\ActivityTrackingController;
 
 // CRM Routes (all require authentication)
 return function (RouteCollectorProxy $api) {
@@ -35,6 +36,7 @@ return function (RouteCollectorProxy $api) {
             $leads->get('/{id}/score-history', [AIController::class, 'getScoreHistory']);
             $leads->get('/{id}/timeline', [LeadsController::class, 'getTimeline']);
             $leads->post('/{id}/convert', [LeadsController::class, 'convert']);
+            $leads->get('/{id}/tracking', [ActivityTrackingController::class, 'getLeadTracking']);
         });
         
         // Contacts Routes

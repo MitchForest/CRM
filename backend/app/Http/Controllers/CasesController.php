@@ -15,9 +15,10 @@ class CasesController extends Controller
 {
     public function index(Request $request, Response $response, array $args): Response
     {
-        $params = $request->getQueryParams();
-        $query = SupportCase::with(['assignedUser', 'contacts'])
-            ->where('deleted', 0);
+        try {
+            $params = $request->getQueryParams();
+            $query = SupportCase::with(['assignedUser', 'contact'])
+                ->where('deleted', 0);
         
         // Apply filters
         if (isset($params['search'])) {
@@ -57,19 +58,19 @@ class CasesController extends Controller
         
         // Format response
         $data = $cases->map(function ($case) {
-            $contact = $case->contacts->first();
+            $contact = $case->contact;
             
             return [
                 'id' => $case->id,
-                'caseNumber' => $case->case_number,
+                'case_number' => $case->case_number,
                 'name' => $case->name,
                 'status' => $case->status,
                 'priority' => $case->priority,
                 'type' => $case->type,
                 'description' => $case->description,
                 'resolution' => $case->resolution,
-                'contactId' => $contact?->id,
-                'contactName' => $contact?->full_name,
+                'contact_id' => $contact?->id,
+                'contact_name' => $contact?->full_name,
                 'assigned_user_id' => $case->assigned_user_id,
                 'date_entered' => $case->date_entered?->toIso8601String(),
                 'date_modified' => $case->date_modified?->toIso8601String(),
@@ -87,6 +88,9 @@ class CasesController extends Controller
                 'total_pages' => $cases->lastPage()
             ]
         ]);
+        } catch (\Exception $e) {
+            return $this->error($response, 'Internal server error: ' . $e->getMessage(), 500);
+        }
     }
     
     public function show(Request $request, Response $response, array $args): Response

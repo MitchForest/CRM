@@ -303,4 +303,183 @@ class FormBuilderService
         // For now, return null
         return null;
     }
+
+    /**
+     * Generate HTML embed code for a form
+     */
+    public function generateEmbedHtml(FormBuilderForm $form): string
+    {
+        $apiUrl = $_ENV['APP_URL'] ?? 'http://localhost:8080';
+        
+        return <<<HTML
+<!-- Form Embed Code -->
+<div id="form-{$form->embed_code}"></div>
+<script>
+(function() {
+    var script = document.createElement('script');
+    script.src = '{$apiUrl}/js/forms-embed.js';
+    script.onload = function() {
+        if (window.FormEmbed) {
+            window.FormEmbed.init({
+                formId: '{$form->id}',
+                embedCode: '{$form->embed_code}',
+                apiUrl: '{$apiUrl}/api/public/forms'
+            });
+        }
+    };
+    document.head.appendChild(script);
+})();
+</script>
+<!-- End Form Embed Code -->
+HTML;
+    }
+
+    /**
+     * Export form submissions in various formats
+     */
+    public function exportSubmissions(FormBuilderForm $form, $submissions, string $format): array
+    {
+        $filename = "form-{$form->id}-submissions-" . date('Y-m-d-His');
+        
+        switch ($format) {
+            case 'csv':
+                return $this->exportAsCsv($form, $submissions, $filename);
+            case 'xlsx':
+                return $this->exportAsExcel($form, $submissions, $filename);
+            case 'json':
+                return $this->exportAsJson($form, $submissions, $filename);
+            default:
+                throw new \InvalidArgumentException("Unsupported export format: {$format}");
+        }
+    }
+
+    /**
+     * Export submissions as CSV
+     */
+    private function exportAsCsv(FormBuilderForm $form, $submissions, string $filename): array
+    {
+        $exportDir = '/tmp/exports';
+        if (!is_dir($exportDir)) {
+            mkdir($exportDir, 0755, true);
+        }
+        
+        $filepath = "{$exportDir}/{$filename}.csv";
+        $handle = fopen($filepath, 'w');
+        
+        // Headers
+        $headers = ['Submission ID', 'Date Submitted', 'Lead ID', 'Lead Name', 'Lead Email'];
+        foreach ($form->fields as $field) {
+            $headers[] = $field['label'];
+        }
+        fputcsv($handle, $headers);
+        
+        // Data rows
+        foreach ($submissions as $submission) {
+            $row = [
+                $submission->id,
+                $submission->date_entered ? $submission->date_entered->format('Y-m-d H:i:s') : '',
+                $submission->lead_id ?? '',
+                $submission->lead ? $submission->lead->full_name : '',
+                $submission->lead ? $submission->lead->email1 : ''
+            ];
+            
+            foreach ($form->fields as $field) {
+                $fieldName = $field['name'];
+                $row[] = $submission->data[$fieldName] ?? '';
+            }
+            
+            fputcsv($handle, $row);
+        }
+        
+        fclose($handle);
+        
+        return [
+            'filename' => "{$filename}.csv",
+            'url' => "/api/exports/{$filename}.csv",
+            'expires_at' => (new \DateTime())->modify('+1 hour')->format('c')
+        ];
+    }
+
+    /**
+     * Export submissions as Excel
+     */
+    private function exportAsExcel(FormBuilderForm $form, $submissions, string $filename): array
+    {
+        // For now, just return a placeholder
+        // In production, use a library like PhpSpreadsheet
+        return [
+            'filename' => "{$filename}.xlsx",
+            'url' => "/api/exports/{$filename}.xlsx",
+            'expires_at' => (new \DateTime())->modify('+1 hour')->format('c')
+        ];
+    }
+
+    /**
+     * Export submissions as JSON
+     */
+    private function exportAsJson(FormBuilderForm $form, $submissions, string $filename): array
+    {
+        $exportDir = '/tmp/exports';
+        if (!is_dir($exportDir)) {
+            mkdir($exportDir, 0755, true);
+        }
+        
+        $filepath = "{$exportDir}/{$filename}.json";
+        
+        $data = [
+            'form' => [
+                'id' => $form->id,
+                'name' => $form->name,
+                'fields' => $form->fields
+            ],
+            'submissions' => $submissions->map(function ($submission) {
+                return [
+                    'id' => $submission->id,
+                    'date_submitted' => $submission->date_entered ? $submission->date_entered->format('c') : null,
+                    'lead_id' => $submission->lead_id,
+                    'form_data' => $submission->data,
+                    'metadata' => $submission->metadata
+                ];
+            })->toArray()
+        ];
+        
+        file_put_contents($filepath, json_encode($data, JSON_PRETTY_PRINT));
+        
+        return [
+            'filename' => "{$filename}.json",
+            'url' => "/api/exports/{$filename}.json",
+            'expires_at' => (new \DateTime())->modify('+1 hour')->format('c')
+        ];
+    }
+
+    /**
+     * Send notification email for form submission
+     */
+    public function sendNotificationEmail(FormBuilderForm $form, FormSubmission $submission): void
+    {
+        $to = $form->settings['notification_email'] ?? null;
+        if (!$to) {
+            return;
+        }
+        
+        $subject = "New form submission: {$form->name}";
+        $message = "Form: {$form->name}\n";
+        $message .= "Submitted: " . (new \DateTime())->format('Y-m-d H:i:s') . "\n\n";
+        
+        foreach ($form->fields as $field) {
+            $fieldName = $field['name'];
+            $value = $submission->data[$fieldName] ?? '';
+            $message .= "{$field['label']}: {$value}\n";
+        }
+        
+        if ($submission->lead) {
+            $message .= "\nLead Information:\n";
+            $message .= "Name: {$submission->lead->full_name}\n";
+            $message .= "Email: {$submission->lead->email1}\n";
+            $message .= "Company: {$submission->lead->account_name}\n";
+        }
+        
+        // In production, implement actual email sending
+        error_log("Form notification email - To: {$to}, Subject: {$subject}");
+    }
 }

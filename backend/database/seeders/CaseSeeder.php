@@ -95,7 +95,6 @@ class CaseSeeder extends BaseSeeder
             
             $case = [
                 'id' => $caseId,
-                'case_number' => 'CASE-' . str_pad($i + 1000, 6, '0', STR_PAD_LEFT),
                 'name' => $this->generateCaseSubject($type),
                 'date_entered' => $createdDate->format('Y-m-d H:i:s'),
                 'date_modified' => $createdDate->format('Y-m-d H:i:s'),
@@ -107,7 +106,6 @@ class CaseSeeder extends BaseSeeder
                 'status' => $status,
                 'priority' => $priority,
                 'resolution' => $resolution,
-                'resolved_date' => $resolvedDate ? $resolvedDate->format('Y-m-d H:i:s') : null,
                 'description' => $this->generateCaseDescription($type, $priority),
                 'account_id' => $accountId,
             ];

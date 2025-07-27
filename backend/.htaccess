@@ -4,8 +4,8 @@ RewriteEngine On
 RewriteCond %{HTTP:Authorization} ^(.*)
 RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
 
-# Route API requests to api.php which handles PATH_INFO properly
-RewriteRule ^api/(.*)$ api.php [QSA,L]
+# Route all API requests to public/index.php
+RewriteRule ^api/(.*)$ public/index.php [QSA,L]
 
 # Default SuiteCRM rules
 RewriteBase /

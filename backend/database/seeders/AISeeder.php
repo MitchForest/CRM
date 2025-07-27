@@ -133,8 +133,6 @@ class AISeeder extends BaseSeeder
                     'score' => $score,
                     'factors' => json_encode($factors),
                     'date_scored' => $scoreDate->format('Y-m-d H:i:s'),
-                    'created_at' => $scoreDate->format('Y-m-d H:i:s'),
-                    'updated_at' => $scoreDate->format('Y-m-d H:i:s'),
                 ]);
                 
                 $previousScore = $score;
@@ -182,11 +180,9 @@ class AISeeder extends BaseSeeder
                 'contact_id' => null,
                 'visitor_id' => 'v_' . substr(md5($lead->email1), 0, 16),
                 'status' => 'completed',
-                'rating' => $this->randomProbability(80) ? mt_rand(4, 5) : mt_rand(3, 5),
-                'started_at' => $startTime->format('Y-m-d H:i:s'),
-                'ended_at' => (clone $startTime)->modify('+' . mt_rand(5, 20) . ' minutes')->format('Y-m-d H:i:s'),
-                'created_at' => $startTime->format('Y-m-d H:i:s'),
-                'updated_at' => $startTime->format('Y-m-d H:i:s'),
+                'date_started' => $startTime->format('Y-m-d H:i:s'),
+                'date_ended' => (clone $startTime)->modify('+' . mt_rand(5, 20) . ' minutes')->format('Y-m-d H:i:s'),
+                'date_modified' => $startTime->format('Y-m-d H:i:s'),
             ]);
             $conversationCount++;
             
@@ -208,11 +204,9 @@ class AISeeder extends BaseSeeder
                 'contact_id' => $contactId,
                 'visitor_id' => 'v_' . substr(md5($contact->email1), 0, 16),
                 'status' => 'completed',
-                'rating' => mt_rand(3, 5),
-                'started_at' => $startTime->format('Y-m-d H:i:s'),
-                'ended_at' => (clone $startTime)->modify('+' . mt_rand(5, 30) . ' minutes')->format('Y-m-d H:i:s'),
-                'created_at' => $startTime->format('Y-m-d H:i:s'),
-                'updated_at' => $startTime->format('Y-m-d H:i:s'),
+                'date_started' => $startTime->format('Y-m-d H:i:s'),
+                'date_ended' => (clone $startTime)->modify('+' . mt_rand(5, 30) . ' minutes')->format('Y-m-d H:i:s'),
+                'date_modified' => $startTime->format('Y-m-d H:i:s'),
             ]);
             $conversationCount++;
             
@@ -349,8 +343,7 @@ class AISeeder extends BaseSeeder
             'conversation_id' => $conversationId,
             'role' => 'assistant',
             'content' => 'Hello! I\'m here to help. What can I assist you with today?',
-            'created_at' => $currentTime->format('Y-m-d H:i:s'),
-            'updated_at' => $currentTime->format('Y-m-d H:i:s'),
+            'date_entered' => $currentTime->format('Y-m-d H:i:s'),
         ]);
         $messagesCreated++;
         
@@ -368,8 +361,7 @@ class AISeeder extends BaseSeeder
                 'conversation_id' => $conversationId,
                 'role' => 'user',
                 'content' => $question,
-                'created_at' => $currentTime->format('Y-m-d H:i:s'),
-                'updated_at' => $currentTime->format('Y-m-d H:i:s'),
+                'date_entered' => $currentTime->format('Y-m-d H:i:s'),
             ]);
             $messagesCreated++;
             
@@ -381,8 +373,7 @@ class AISeeder extends BaseSeeder
                 'conversation_id' => $conversationId,
                 'role' => 'assistant',
                 'content' => $this->faker->randomElement($responses),
-                'created_at' => $currentTime->format('Y-m-d H:i:s'),
-                'updated_at' => $currentTime->format('Y-m-d H:i:s'),
+                'date_entered' => $currentTime->format('Y-m-d H:i:s'),
             ]);
             $messagesCreated++;
             
@@ -396,8 +387,7 @@ class AISeeder extends BaseSeeder
                 'conversation_id' => $conversationId,
                 'role' => 'assistant',
                 'content' => 'Is there anything else I can help you with? Would you like to schedule a demo with our team?',
-                'created_at' => $currentTime->format('Y-m-d H:i:s'),
-                'updated_at' => $currentTime->format('Y-m-d H:i:s'),
+                'date_entered' => $currentTime->format('Y-m-d H:i:s'),
             ]);
             $messagesCreated++;
             
@@ -412,8 +402,7 @@ class AISeeder extends BaseSeeder
                 'content' => $interested ? 
                     'Yes, that would be great. How do we schedule a demo?' : 
                     'Not right now, but I\'ll keep you in mind. Thanks!',
-                'created_at' => $currentTime->format('Y-m-d H:i:s'),
-                'updated_at' => $currentTime->format('Y-m-d H:i:s'),
+                'date_entered' => $currentTime->format('Y-m-d H:i:s'),
             ]);
             $messagesCreated++;
             
@@ -424,8 +413,7 @@ class AISeeder extends BaseSeeder
                     'conversation_id' => $conversationId,
                     'role' => 'assistant',
                     'content' => 'Perfect! I\'ll have someone from our sales team reach out within the next 24 hours to schedule a demo. They\'ll email you at ' . $entity->email1 . '. Looking forward to showing you TechFlow!',
-                    'created_at' => $currentTime->format('Y-m-d H:i:s'),
-                    'updated_at' => $currentTime->format('Y-m-d H:i:s'),
+                    'date_entered' => $currentTime->format('Y-m-d H:i:s'),
                 ]);
                 $messagesCreated++;
             }

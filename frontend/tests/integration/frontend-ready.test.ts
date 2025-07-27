@@ -4,8 +4,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { leadsApi, contactsApi, dashboardApi } from '@/api/client';
-import type { LeadDB, LeadCreateRequest } from '@/types/database.generated';
+import { apiClient } from '@/lib/api-client';
+import type { LeadDB, LeadCreateRequest } from '@/types/database.types';
 
 // Mock the fetch globally
 global.fetch = vi.fn();
@@ -18,19 +18,19 @@ describe('Frontend Production Readiness', () => {
   describe('API Client Structure', () => {
     it('should have all required API methods', () => {
       // Verify API client has all methods
-      expect(leadsApi).toHaveProperty('getLeads');
-      expect(leadsApi).toHaveProperty('getLead');
-      expect(leadsApi).toHaveProperty('createLead');
-      expect(leadsApi).toHaveProperty('updateLead');
-      expect(leadsApi).toHaveProperty('deleteLead');
+      expect(apiClient).toHaveProperty('getLeads');
+      expect(apiClient).toHaveProperty('getLead');
+      expect(apiClient).toHaveProperty('createLead');
+      expect(apiClient).toHaveProperty('updateLead');
+      expect(apiClient).toHaveProperty('deleteLead');
 
-      expect(contactsApi).toHaveProperty('getContacts');
-      expect(contactsApi).toHaveProperty('getContact');
-      expect(contactsApi).toHaveProperty('createContact');
-      expect(contactsApi).toHaveProperty('updateContact');
+      expect(apiClient).toHaveProperty('getContacts');
+      expect(apiClient).toHaveProperty('getContact');
+      expect(apiClient).toHaveProperty('createContact');
+      expect(apiClient).toHaveProperty('updateContact');
 
-      expect(dashboardApi).toHaveProperty('getMetrics');
-      expect(dashboardApi).toHaveProperty('getActivityMetrics');
+      expect(apiClient).toHaveProperty('getDashboardMetrics');
+      expect(apiClient).toHaveProperty('getActivityMetrics');
     });
   });
 
@@ -46,7 +46,7 @@ describe('Frontend Production Readiness', () => {
         json: async () => mockResponse
       });
 
-      const result = await leadsApi.getLeads({ page: 1, limit: 20 });
+      const result = await apiClient.getLeads({ page: 1, limit: 20 });
 
       expect(fetch).toHaveBeenCalledWith(
         '/api/crm/leads?page=1&limit=20',
@@ -100,7 +100,7 @@ describe('Frontend Production Readiness', () => {
         json: async () => mockResponse
       });
 
-      const result = await leadsApi.createLead(newLead);
+      const result = await apiClient.createLead(newLead);
 
       expect(fetch).toHaveBeenCalledWith(
         '/api/crm/leads',
@@ -129,7 +129,7 @@ describe('Frontend Production Readiness', () => {
         json: async () => ({ data: [] })
       });
 
-      await leadsApi.getLeads();
+      await apiClient.getLeads();
 
       expect(fetch).toHaveBeenCalledWith(
         expect.any(String),
@@ -148,7 +148,7 @@ describe('Frontend Production Readiness', () => {
         json: async () => ({ message: 'Unauthorized' })
       });
 
-      await expect(leadsApi.getLeads()).rejects.toThrow('Unauthorized');
+      await expect(apiClient.getLeads()).rejects.toThrow('Unauthorized');
     });
   });
 
@@ -226,7 +226,7 @@ describe('Frontend Production Readiness', () => {
         })
       });
 
-      const response = await leadsApi.getLeads();
+      const response = await apiClient.getLeads();
 
       expect(response.data).toHaveLength(1);
       expect(response.data[0]).toHaveProperty('first_name', 'Lead');
@@ -251,7 +251,7 @@ describe('Frontend Production Readiness', () => {
         })
       });
 
-      const response = await leadsApi.getLead('123');
+      const response = await apiClient.getLead('123');
 
       expect(response.data).toHaveProperty('id', '123');
       expect(response.data).toHaveProperty('first_name', 'John');
@@ -272,7 +272,7 @@ export async function checkFrontendReadiness() {
 
   try {
     // Check if API client exists
-    await import('@/api/client');
+    await import('@/lib/api-client');
     checks.apiClient = true;
   } catch (e) {
     console.error('❌ API client not found');

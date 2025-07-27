@@ -5,8 +5,8 @@ use App\Http\Controllers\FormBuilderController;
 use App\Http\Controllers\KnowledgeBaseController;
 use App\Http\Controllers\ActivityTrackingController;
 use App\Http\Controllers\CustomerHealthController;
-use App\Http\Controllers\EmailController;
-use App\Http\Controllers\DocumentController;
+// use App\Http\Controllers\EmailController; // Commented out - no tables/models exist
+// use App\Http\Controllers\DocumentController; // Commented out - no tables/models exist
 use App\Http\Controllers\AIController;
 
 // Admin Routes (all require authentication)
@@ -63,22 +63,22 @@ return function (RouteCollectorProxy $api) {
             $health->get('/trends', [CustomerHealthController::class, 'getHealthTrends']);
         });
         
-        // Email Templates
-        $admin->group('/emails', function (RouteCollectorProxy $emails) {
-            $emails->get('/templates', [EmailController::class, 'getTemplates']);
-            $emails->post('/templates', [EmailController::class, 'createTemplate']);
-            $emails->put('/templates/{id}', [EmailController::class, 'updateTemplate']);
-            $emails->delete('/templates/{id}', [EmailController::class, 'deleteTemplate']);
-            $emails->post('/test', [EmailController::class, 'sendTestEmail']);
-        });
+        // Email Templates - COMMENTED OUT: No database tables or models exist
+        // $admin->group('/emails', function (RouteCollectorProxy $emails) {
+        //     $emails->get('/templates', [EmailController::class, 'getTemplates']);
+        //     $emails->post('/templates', [EmailController::class, 'createTemplate']);
+        //     $emails->put('/templates/{id}', [EmailController::class, 'updateTemplate']);
+        //     $emails->delete('/templates/{id}', [EmailController::class, 'deleteTemplate']);
+        //     $emails->post('/test', [EmailController::class, 'sendTestEmail']);
+        // });
         
-        // Document Management
-        $admin->group('/documents', function (RouteCollectorProxy $docs) {
-            $docs->post('/upload', [DocumentController::class, 'upload']);
-            $docs->get('/{id}', [DocumentController::class, 'getDocument']);
-            $docs->delete('/{id}', [DocumentController::class, 'deleteDocument']);
-            $docs->get('/{id}/download', [DocumentController::class, 'downloadDocument']);
-        });
+        // Document Management - COMMENTED OUT: No database tables or models exist
+        // $admin->group('/documents', function (RouteCollectorProxy $docs) {
+        //     $docs->post('/upload', [DocumentController::class, 'upload']);
+        //     $docs->get('/{id}', [DocumentController::class, 'getDocument']);
+        //     $docs->delete('/{id}', [DocumentController::class, 'deleteDocument']);
+        //     $docs->get('/{id}/download', [DocumentController::class, 'downloadDocument']);
+        // });
         
         // System Settings
         $admin->group('/settings', function (RouteCollectorProxy $settings) {

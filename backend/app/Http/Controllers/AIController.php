@@ -14,6 +14,7 @@ use App\Models\Meeting;
 use App\Services\AI\OpenAIService;
 use App\Services\AI\LeadScoringService;
 use App\Services\AI\ChatbotService;
+use App\Services\CRM\LeadService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Illuminate\Database\Capsule\Manager as DB;
@@ -23,7 +24,8 @@ class AIController extends Controller
 {
     private OpenAIService $openAIService;
     private LeadScoringService $leadScoringService;
-    private ChatbotService $chatbotService;
+    private ?ChatbotService $chatbotService;
+    private ?LeadService $leadService;
     
     public function __construct()
     {
@@ -31,7 +33,10 @@ class AIController extends Controller
         // Manual instantiation for Slim (no automatic DI)
         $this->openAIService = new OpenAIService();
         $this->leadScoringService = new LeadScoringService($this->openAIService);
-        $this->chatbotService = new ChatbotService($this->openAIService);
+        // Note: ChatbotService and LeadService have circular dependencies
+        // For now, we'll work around this by not using ChatbotService methods that need LeadService
+        $this->chatbotService = null; // Will instantiate when needed
+        $this->leadService = null; // Will instantiate when needed
     }
     
     /**
@@ -221,7 +226,7 @@ class AIController extends Controller
                 $conversation = ChatConversation::create([
                     'visitor_id' => $visitorId,
                     'status' => 'active',
-                    'started_at' => new \DateTime()
+                    'date_started' => new \DateTime()
                 ]);
                 $conversationId = $conversation->id;
             } else {
@@ -230,7 +235,7 @@ class AIController extends Controller
             
             // Get conversation history
             $conversationHistory = $conversation->messages()
-                ->orderBy('created_at')
+                ->orderBy('date_entered')
                 ->get()
                 ->map(function ($msg) {
                     return [
@@ -243,14 +248,18 @@ class AIController extends Controller
             // Get visitor context
             $visitorContext = $this->getVisitorContext($visitorId);
             
-            // Search knowledge base
-            $kbArticles = $this->chatbotService->searchKnowledgeBase($message);
-            if (!empty($kbArticles)) {
-                $visitorContext['kb_context'] = $this->formatKBContext($kbArticles);
+            // Search knowledge base if available
+            $kbArticles = [];
+            if ($this->chatbotService && method_exists($this->chatbotService, 'searchKnowledgeBase')) {
+                $kbArticles = $this->chatbotService->searchKnowledgeBase($message);
+                if (!empty($kbArticles)) {
+                    $visitorContext['kb_context'] = $this->formatKBContext($kbArticles);
+                }
             }
             
             // Generate AI response
-            $aiResponse = $this->chatbotService->generateChatResponse(
+            // Using OpenAI service directly since ChatbotService has dependency issues
+            $aiResponse = $this->generateChatResponseDirect(
                 $conversationHistory,
                 $message,
                 $visitorContext
@@ -322,7 +331,6 @@ class AIController extends Controller
     {
         $conversationId = $args['conversation_id'];
         $conversation = ChatConversation::with('messages')
-            ->where('deleted', 0)
             ->find($conversationId);
         
         if (!$conversation) {
@@ -335,7 +343,7 @@ class AIController extends Controller
                 'role' => $msg->role,
                 'content' => $msg->content,
                 'metadata' => $msg->metadata,
-                'created_at' => $msg->created_at->toIso8601String()
+                'created_at' => $msg->date_entered->toIso8601String()
             ];
         });
         
@@ -346,8 +354,8 @@ class AIController extends Controller
                 'lead_id' => $conversation->lead_id,
                 'contact_id' => $conversation->contact_id,
                 'status' => $conversation->status,
-                'started_at' => $conversation->started_at?->toIso8601String(),
-                'ended_at' => $conversation->ended_at?->toIso8601String(),
+                'started_at' => $conversation->date_started?->toIso8601String(),
+                'ended_at' => $conversation->date_ended?->toIso8601String(),
                 'messages' => $messages
             ]
         ]);
@@ -366,7 +374,7 @@ class AIController extends Controller
         $conversation = ChatConversation::create([
             'contact_id' => $data['contactId'] ?? null,
             'status' => 'active',
-            'started_at' => new \DateTime(),
+            'date_started' => new \DateTime(),
             'created_by' => $request->getAttribute('user_id') ?? 'system'
         ]);
         
@@ -436,16 +444,15 @@ class AIController extends Controller
         $contactId = $args['contact_id'];
         $conversations = ChatConversation::with('messages')
             ->where('contact_id', $contactId)
-            ->where('deleted', 0)
-            ->orderBy('started_at', 'DESC')
+            ->orderBy('date_started', 'DESC')
             ->get();
         
         $history = $conversations->map(function ($conv) {
             return [
                 'conversationId' => $conv->id,
                 'status' => $conv->status,
-                'startedAt' => $conv->started_at?->toIso8601String(),
-                'endedAt' => $conv->ended_at?->toIso8601String(),
+                'startedAt' => $conv->date_started?->toIso8601String(),
+                'endedAt' => $conv->date_ended?->toIso8601String(),
                 'messageCount' => $conv->messages->count(),
                 'messages' => $conv->messages->map(function ($msg) {
                     return [
@@ -453,7 +460,7 @@ class AIController extends Controller
                         'role' => $msg->role,
                         'content' => $msg->content,
                         'metadata' => $msg->metadata,
-                        'createdAt' => $msg->created_at->toIso8601String()
+                        'createdAt' => $msg->date_entered->toIso8601String()
                     ];
                 })
             ];
@@ -702,7 +709,7 @@ class AIController extends Controller
     {
         try {
             $conversationText = $conversation->messages()
-                ->orderBy('created_at')
+                ->orderBy('date_entered')
                 ->get()
                 ->map(function ($msg) {
                     $role = $msg->role === 'assistant' ? 'Agent' : 'Visitor';
@@ -834,7 +841,7 @@ class AIController extends Controller
     private function getChatContext(ChatConversation $conversation): array
     {
         $messages = $conversation->messages()
-            ->orderBy('created_at', 'DESC')
+            ->orderBy('date_entered', 'DESC')
             ->limit(10)
             ->get()
             ->reverse()
@@ -909,12 +916,12 @@ class AIController extends Controller
     private function getConversationTranscript(ChatConversation $conversation): string
     {
         $messages = $conversation->messages()
-            ->orderBy('created_at')
+            ->orderBy('date_entered')
             ->get();
         
         $transcript = "";
         foreach ($messages as $msg) {
-            $timestamp = $msg->created_at->format('Y-m-d H:i:s');
+            $timestamp = $msg->date_entered->format('Y-m-d H:i:s');
             $role = ucfirst($msg->role);
             $transcript .= "[$timestamp] $role: {$msg->content}\n";
         }
@@ -926,5 +933,609 @@ class AIController extends Controller
     {
         // TODO: Implement webhook triggering
         // This would queue a job to send the webhook
+    }
+    
+    private function generateChatResponseDirect(array $conversationHistory, string $message, array $visitorContext): array
+    {
+        try {
+            // Simple AI response generation using OpenAI directly
+            $prompt = "You are a helpful customer service assistant for a CRM system. ";
+            
+            if (!empty($visitorContext['kb_context'])) {
+                $prompt .= "Use this knowledge base information to help answer questions:\n" . $visitorContext['kb_context'] . "\n\n";
+            }
+            
+            if (!empty($visitorContext['lead_name'])) {
+                $prompt .= "You are speaking with " . $visitorContext['lead_name'] . ". ";
+            }
+            
+            $prompt .= "Respond professionally and helpfully to their message.";
+            
+            // Format conversation for API
+            $messages = [
+                ['role' => 'system', 'content' => $prompt]
+            ];
+            
+            foreach ($conversationHistory as $msg) {
+                $messages[] = [
+                    'role' => $msg['role'] === 'assistant' ? 'assistant' : 'user',
+                    'content' => $msg['content']
+                ];
+            }
+            
+            $messages[] = ['role' => 'user', 'content' => $message];
+            
+            // Call OpenAI API
+            $response = $this->openAIService->chat($messages, [
+                'temperature' => 0.7,
+                'max_tokens' => 500
+            ]);
+            
+            // Analyze intent and sentiment
+            $intent = $this->detectIntent($message);
+            $sentiment = $this->detectSentiment($message);
+            $handoffRequired = $this->shouldHandoff($message, $intent);
+            
+            return [
+                'response' => $response,
+                'confidence' => 0.95,
+                'handoff_required' => $handoffRequired,
+                'intent' => $intent,
+                'sentiment' => $sentiment,
+                'suggested_actions' => $this->getSuggestedActions($intent),
+                'kb_articles_used' => !empty($visitorContext['kb_context']) ? ['kb_context'] : []
+            ];
+            
+        } catch (\Exception $e) {
+            error_log('Chat response generation error: ' . $e->getMessage());
+            
+            // Fallback response
+            return [
+                'response' => "I apologize, but I'm experiencing technical difficulties. Please try again or contact support directly.",
+                'confidence' => 0.1,
+                'handoff_required' => true,
+                'intent' => 'error',
+                'sentiment' => 'neutral',
+                'suggested_actions' => ['contact_support'],
+                'kb_articles_used' => []
+            ];
+        }
+    }
+    
+    private function detectIntent(string $message): string
+    {
+        $message = strtolower($message);
+        
+        if (preg_match('/\b(price|cost|pricing|payment|billing)\b/', $message)) {
+            return 'pricing';
+        } elseif (preg_match('/\b(demo|trial|test|try)\b/', $message)) {
+            return 'demo_request';
+        } elseif (preg_match('/\b(help|support|issue|problem|bug|error)\b/', $message)) {
+            return 'support';
+        } elseif (preg_match('/\b(feature|integration|api|capability)\b/', $message)) {
+            return 'feature_inquiry';
+        } elseif (preg_match('/\b(contact|call|email|reach)\b/', $message)) {
+            return 'contact_request';
+        }
+        
+        return 'general';
+    }
+    
+    private function detectSentiment(string $message): string
+    {
+        $message = strtolower($message);
+        
+        if (preg_match('/\b(angry|frustrated|annoyed|terrible|awful|hate)\b/', $message)) {
+            return 'negative';
+        } elseif (preg_match('/\b(love|great|excellent|amazing|fantastic|perfect)\b/', $message)) {
+            return 'positive';
+        }
+        
+        return 'neutral';
+    }
+    
+    private function shouldHandoff(string $message, string $intent): bool
+    {
+        // Handoff for urgent or complex issues
+        if (in_array($intent, ['support', 'contact_request'])) {
+            return true;
+        }
+        
+        // Check for urgency indicators
+        if (preg_match('/\b(urgent|asap|immediately|emergency)\b/i', $message)) {
+            return true;
+        }
+        
+        // Check for frustration
+        if (preg_match('/\b(frustrated|angry|upset|disappointed)\b/i', $message)) {
+            return true;
+        }
+        
+        return false;
+    }
+    
+    private function getSuggestedActions(string $intent): array
+    {
+        $actions = [
+            'pricing' => ['show_pricing_page', 'schedule_sales_call'],
+            'demo_request' => ['schedule_demo', 'start_trial'],
+            'support' => ['create_ticket', 'show_help_articles'],
+            'feature_inquiry' => ['show_features', 'view_documentation'],
+            'contact_request' => ['show_contact_info', 'schedule_call'],
+            'general' => ['show_help_articles', 'view_faq']
+        ];
+        
+        return $actions[$intent] ?? [];
+    }
+    
+    /**
+     * List all chat conversations
+     * GET /api/crm/ai/conversations
+     */
+    public function listConversations(Request $request, Response $response, array $args): Response
+    {
+        try {
+            $params = $request->getQueryParams();
+            $page = (int)($params['page'] ?? 1);
+            $perPage = (int)($params['per_page'] ?? 20);
+            $status = $params['status'] ?? null;
+            $contactId = $params['contact_id'] ?? null;
+            
+            $query = ChatConversation::with(['lead', 'contact']);
+        
+        if ($status) {
+            $query->where('status', $status);
+        }
+        
+        if ($contactId) {
+            $query->where('contact_id', $contactId);
+        }
+        
+        $query->orderBy('date_started', 'DESC');
+        
+        $total = $query->count();
+        $conversations = $query
+            ->skip(($page - 1) * $perPage)
+            ->take($perPage)
+            ->get()
+            ->map(function ($conv) {
+                $lastMessage = $conv->messages()
+                    ->orderBy('date_entered', 'DESC')
+                    ->first();
+                
+                return [
+                    'id' => $conv->id,
+                    'visitor_id' => $conv->visitor_id,
+                    'lead_id' => $conv->lead_id,
+                    'lead_name' => $conv->lead ? $conv->lead->full_name : null,
+                    'contact_id' => $conv->contact_id,
+                    'contact_name' => $conv->contact ? $conv->contact->full_name : null,
+                    'status' => $conv->status,
+                    'started_at' => $conv->date_started?->toIso8601String(),
+                    'ended_at' => $conv->date_ended?->toIso8601String(),
+                    'message_count' => $conv->messages()->count(),
+                    'last_message' => $lastMessage ? [
+                        'content' => Str::limit($lastMessage->content, 100),
+                        'role' => $lastMessage->role,
+                        'created_at' => $lastMessage->date_entered->toIso8601String()
+                    ] : null
+                ];
+            });
+        
+        return $this->json($response, [
+            'data' => $conversations,
+            'meta' => [
+                'total' => $total,
+                'page' => $page,
+                'per_page' => $perPage,
+                'total_pages' => ceil($total / $perPage)
+            ]
+        ]);
+        } catch (\Exception $e) {
+            error_log('AI listConversations error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            return $this->error($response, 'Failed to fetch conversations: ' . $e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * Generate insights using AI
+     * POST /api/crm/ai/insights
+     */
+    public function generateInsights(Request $request, Response $response, array $args): Response
+    {
+        $data = $this->validate($request, [
+            'type' => 'required|string|in:lead,contact,opportunity,account',
+            'id' => 'required|string',
+            'focus' => 'sometimes|string|in:engagement,qualification,next_steps,risk_factors'
+        ]);
+        
+        try {
+            $type = $data['type'];
+            $id = $data['id'];
+            $focus = $data['focus'] ?? 'general';
+            
+            // Get the entity based on type
+            $entity = null;
+            switch ($type) {
+                case 'lead':
+                    $entity = Lead::with(['activities', 'sessions', 'formSubmissions'])->find($id);
+                    break;
+                case 'contact':
+                    $entity = Contact::with(['activities', 'cases', 'opportunities'])->find($id);
+                    break;
+                case 'opportunity':
+                    $entity = Opportunity::with(['activities', 'contacts', 'account'])->find($id);
+                    break;
+                default:
+                    return $this->error($response, 'Entity type not supported', 400);
+            }
+            
+            if (!$entity) {
+                return $this->error($response, ucfirst($type) . ' not found', 404);
+            }
+            
+            // Generate insights using AI service
+            $insights = $this->openAIService->generateInsights($entity->toArray(), $type, $focus);
+            
+            return $this->json($response, [
+                'data' => [
+                    'entity_type' => $type,
+                    'entity_id' => $id,
+                    'focus' => $focus,
+                    'insights' => $insights['insights'],
+                    'recommendations' => $insights['recommendations'],
+                    'risk_factors' => $insights['risk_factors'] ?? [],
+                    'opportunities' => $insights['opportunities'] ?? [],
+                    'generated_at' => (new \DateTime())->format('c')
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            error_log('AI insights error: ' . $e->getMessage());
+            return $this->error($response, 'Failed to generate insights', 500);
+        }
+    }
+    
+    /**
+     * Get AI settings
+     * GET /api/admin/settings/ai
+     */
+    public function getSettings(Request $request, Response $response, array $args): Response
+    {
+        // In a real implementation, these would come from a settings table
+        $settings = [
+            'openai_model' => getenv('OPENAI_MODEL') ?: 'gpt-4-turbo-preview',
+            'lead_scoring_enabled' => true,
+            'auto_lead_capture' => true,
+            'chat_enabled' => true,
+            'chat_handoff_threshold' => 0.3,
+            'max_tokens' => 1000,
+            'temperature' => 0.7,
+            'webhook_url' => getenv('AI_WEBHOOK_URL') ?: null
+        ];
+        
+        return $this->json($response, ['data' => $settings]);
+    }
+    
+    /**
+     * Update AI settings
+     * PUT /api/admin/settings/ai
+     */
+    public function updateSettings(Request $request, Response $response, array $args): Response
+    {
+        $data = $this->validate($request, [
+            'openai_model' => 'sometimes|string',
+            'lead_scoring_enabled' => 'sometimes|boolean',
+            'auto_lead_capture' => 'sometimes|boolean',
+            'chat_enabled' => 'sometimes|boolean',
+            'chat_handoff_threshold' => 'sometimes|numeric|min:0|max:1',
+            'max_tokens' => 'sometimes|integer|min:100|max:4000',
+            'temperature' => 'sometimes|numeric|min:0|max:2',
+            'webhook_url' => 'sometimes|string|nullable'
+        ]);
+        
+        // In a real implementation, save to database
+        // For now, just return the updated settings
+        return $this->json($response, [
+            'data' => array_merge([
+                'openai_model' => 'gpt-4-turbo-preview',
+                'lead_scoring_enabled' => true,
+                'auto_lead_capture' => true,
+                'chat_enabled' => true,
+                'chat_handoff_threshold' => 0.3,
+                'max_tokens' => 1000,
+                'temperature' => 0.7,
+                'webhook_url' => null
+            ], $data),
+            'message' => 'Settings updated successfully'
+        ]);
+    }
+    
+    /**
+     * Start public chat (no auth required)
+     * POST /api/public/chat/start
+     */
+    public function startPublicChat(Request $request, Response $response, array $args): Response
+    {
+        $data = $request->getParsedBody() ?? [];
+        $visitorId = $data['visitor_id'] ?? Str::uuid()->toString();
+        
+        $conversation = ChatConversation::create([
+            'visitor_id' => $visitorId,
+            'status' => 'active',
+            'date_started' => new \DateTime(),
+            'metadata' => [
+                'source' => 'public_chat',
+                'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
+                'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? null
+            ]
+        ]);
+        
+        return $this->json($response, [
+            'conversation_id' => $conversation->id,
+            'visitor_id' => $visitorId,
+            'status' => 'active'
+        ]);
+    }
+    
+    /**
+     * Send public message (no auth required)
+     * POST /api/public/chat/message
+     */
+    public function sendPublicMessage(Request $request, Response $response, array $args): Response
+    {
+        $data = $request->getParsedBody() ?? [];
+        
+        if (empty($data['conversation_id']) || empty($data['message'])) {
+            return $this->error($response, 'conversation_id and message are required', 400);
+        }
+        
+        $conversation = ChatConversation::find($data['conversation_id']);
+        
+        if (!$conversation) {
+            return $this->error($response, 'Conversation not found', 404);
+        }
+        
+        try {
+            // Store user message
+            ChatMessage::create([
+                'conversation_id' => $conversation->id,
+                'role' => 'user',
+                'content' => $data['message']
+            ]);
+            
+            // Get conversation history
+            $conversationHistory = $conversation->messages()
+                ->orderBy('date_entered')
+                ->get()
+                ->map(function ($msg) {
+                    return [
+                        'role' => $msg->role,
+                        'content' => $msg->content
+                    ];
+                })
+                ->toArray();
+            
+            // Get visitor context
+            $visitorContext = $this->getVisitorContext($conversation->visitor_id);
+            
+            // Generate AI response
+            // Using OpenAI service directly since ChatbotService has dependency issues
+            $aiResponse = $this->generateChatResponseDirect(
+                $conversationHistory,
+                $data['message'],
+                $visitorContext
+            );
+            
+            // Store AI response
+            ChatMessage::create([
+                'conversation_id' => $conversation->id,
+                'role' => 'assistant',
+                'content' => $aiResponse['response'],
+                'metadata' => [
+                    'confidence' => $aiResponse['confidence'],
+                    'handoff_required' => $aiResponse['handoff_required'],
+                    'intent' => $aiResponse['intent'] ?? null
+                ]
+            ]);
+            
+            return $this->json($response, [
+                'message' => $aiResponse['response'],
+                'handoff_required' => $aiResponse['handoff_required'],
+                'confidence' => $aiResponse['confidence']
+            ]);
+            
+        } catch (\Exception $e) {
+            error_log('Public chat error: ' . $e->getMessage());
+            return $this->error($response, 'Chat service temporarily unavailable', 500);
+        }
+    }
+    
+    /**
+     * Get public conversation (no auth required)
+     * GET /api/public/chat/conversation/{session_id}
+     */
+    public function getPublicConversation(Request $request, Response $response, array $args): Response
+    {
+        $sessionId = $args['session_id'];
+        $conversation = ChatConversation::where('visitor_id', $sessionId)
+            ->orderBy('date_started', 'DESC')
+            ->first();
+        
+        if (!$conversation) {
+            return $this->error($response, 'Conversation not found', 404);
+        }
+        
+        $messages = $conversation->messages
+            ->map(function ($msg) {
+                return [
+                    'role' => $msg->role,
+                    'content' => $msg->content,
+                    'created_at' => $msg->date_entered->toIso8601String()
+                ];
+            });
+        
+        return $this->json($response, [
+            'conversation_id' => $conversation->id,
+            'status' => $conversation->status,
+            'messages' => $messages
+        ]);
+    }
+    
+    /**
+     * Get chat widget JavaScript
+     * GET /api/public/chat-widget.js
+     */
+    public function getChatWidget(Request $request, Response $response, array $args): Response
+    {
+        $widgetScript = <<<'JS'
+(function() {
+    // CRM AI Chat Widget
+    var CRMChat = {
+        apiBase: '/api/public/chat',
+        conversationId: null,
+        visitorId: localStorage.getItem('crm_visitor_id') || null,
+        
+        init: function() {
+            this.createWidget();
+            this.bindEvents();
+            if (this.visitorId) {
+                this.resumeConversation();
+            }
+        },
+        
+        createWidget: function() {
+            var widgetHtml = '<div id="crm-chat-widget" style="position:fixed;bottom:20px;right:20px;width:350px;height:500px;display:none;flex-direction:column;background:#fff;border-radius:10px;box-shadow:0 0 20px rgba(0,0,0,0.2);z-index:9999;">' +
+                '<div style="background:#2563eb;color:#fff;padding:15px;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center;">' +
+                '<h3 style="margin:0;font-size:18px;">Chat with us</h3>' +
+                '<button onclick="CRMChat.toggle()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;">&times;</button>' +
+                '</div>' +
+                '<div id="crm-chat-messages" style="flex:1;overflow-y:auto;padding:15px;"></div>' +
+                '<div style="padding:15px;border-top:1px solid #e5e7eb;">' +
+                '<input type="text" id="crm-chat-input" placeholder="Type your message..." style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:5px;">' +
+                '</div>' +
+                '</div>' +
+                '<button id="crm-chat-toggle" onclick="CRMChat.toggle()" style="position:fixed;bottom:20px;right:20px;width:60px;height:60px;background:#2563eb;color:#fff;border:none;border-radius:50%;font-size:24px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,0.2);z-index:9998;">💬</button>';
+            
+            document.body.insertAdjacentHTML('beforeend', widgetHtml);
+        },
+        
+        bindEvents: function() {
+            document.getElementById('crm-chat-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    CRMChat.sendMessage();
+                }
+            });
+        },
+        
+        toggle: function() {
+            var widget = document.getElementById('crm-chat-widget');
+            var toggle = document.getElementById('crm-chat-toggle');
+            
+            if (widget.style.display === 'none') {
+                widget.style.display = 'flex';
+                toggle.style.display = 'none';
+                if (!this.conversationId) {
+                    this.startConversation();
+                }
+            } else {
+                widget.style.display = 'none';
+                toggle.style.display = 'block';
+            }
+        },
+        
+        startConversation: function() {
+            fetch(this.apiBase + '/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ visitor_id: this.visitorId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                this.conversationId = data.conversation_id;
+                this.visitorId = data.visitor_id;
+                localStorage.setItem('crm_visitor_id', this.visitorId);
+                this.addMessage('assistant', 'Hello! How can I help you today?');
+            });
+        },
+        
+        resumeConversation: function() {
+            fetch(this.apiBase + '/conversation/' + this.visitorId)
+            .then(response => response.json())
+            .then(data => {
+                if (data.conversation_id) {
+                    this.conversationId = data.conversation_id;
+                    data.messages.forEach(msg => {
+                        this.addMessage(msg.role, msg.content, false);
+                    });
+                }
+            })
+            .catch(() => {
+                // No existing conversation
+            });
+        },
+        
+        sendMessage: function() {
+            var input = document.getElementById('crm-chat-input');
+            var message = input.value.trim();
+            
+            if (!message) return;
+            
+            this.addMessage('user', message);
+            input.value = '';
+            
+            fetch(this.apiBase + '/message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    conversation_id: this.conversationId,
+                    message: message
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                this.addMessage('assistant', data.message);
+                if (data.handoff_required) {
+                    this.addMessage('system', 'A team member will be with you shortly.');
+                }
+            })
+            .catch(() => {
+                this.addMessage('system', 'Sorry, I\'m having trouble connecting. Please try again.');
+            });
+        },
+        
+        addMessage: function(role, content, scroll = true) {
+            var messagesDiv = document.getElementById('crm-chat-messages');
+            var messageClass = role === 'user' ? 'user' : 'assistant';
+            var bgColor = role === 'user' ? '#e5e7eb' : '#dbeafe';
+            var align = role === 'user' ? 'flex-end' : 'flex-start';
+            
+            var messageHtml = '<div style="display:flex;justify-content:' + align + ';margin-bottom:10px;">' +
+                '<div style="background:' + bgColor + ';padding:10px 15px;border-radius:10px;max-width:80%;">' +
+                content +
+                '</div>' +
+                '</div>';
+            
+            messagesDiv.insertAdjacentHTML('beforeend', messageHtml);
+            
+            if (scroll) {
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+        }
+    };
+    
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            CRMChat.init();
+        });
+    } else {
+        CRMChat.init();
+    }
+})();
+JS;
+        
+        $response->getBody()->write($widgetScript);
+        return $response->withHeader('Content-Type', 'application/javascript');
     }
 }

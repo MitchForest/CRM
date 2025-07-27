@@ -474,6 +474,26 @@ class ApiClient {
     }
   }
 
+  async getLeadTracking(id: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await this.customClient.get(`/crm/leads/${id}/tracking`)
+      return {
+        data: response.data.data,
+        success: true
+      }
+    } catch {
+      console.error('Failed to fetch lead tracking data')
+      return {
+        success: false,
+        error: {
+          error: 'Failed to fetch tracking data',
+          code: 'TRACKING_ERROR',
+          details: { message: 'Unable to load tracking data' }
+        }
+      }
+    }
+  }
+
   async createLead(data: Partial<LeadDB>): Promise<ApiResponse<LeadDB>> {
     try {
       const response = await this.customClient.post('/crm/leads', data)
@@ -556,7 +576,7 @@ class ApiClient {
   // Task methods
   async getTasks(params?: QueryParams): Promise<ListResponse<TaskDB>> {
     try {
-      const response = await this.customClient.get('/tasks', { 
+      const response = await this.customClient.get('/crm/tasks', { 
         params: {
           page: params?.page || 1,
           limit: params?.limit || 10,
@@ -589,7 +609,7 @@ class ApiClient {
 
   async getTask(id: string): Promise<ApiResponse<TaskDB>> {
     try {
-      const response = await this.customClient.get(`/tasks/${id}`)
+      const response = await this.customClient.get(`/crm/tasks/${id}`)
       return { data: response.data.data, success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -598,7 +618,7 @@ class ApiClient {
 
   async createTask(data: Partial<TaskDB>): Promise<ApiResponse<TaskDB>> {
     try {
-      const response = await this.customClient.post('/tasks', data)
+      const response = await this.customClient.post('/crm/tasks', data)
       return { data: response.data.data, success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -607,7 +627,7 @@ class ApiClient {
 
   async updateTask(id: string, data: Partial<TaskDB>): Promise<ApiResponse<TaskDB>> {
     try {
-      const response = await this.customClient.put(`/tasks/${id}`, data)
+      const response = await this.customClient.put(`/crm/tasks/${id}`, data)
       return { data: response.data.data, success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -616,7 +636,7 @@ class ApiClient {
 
   async deleteTask(id: string): Promise<ApiResponse<void>> {
     try {
-      await this.customClient.delete(`/tasks/${id}`)
+      await this.customClient.delete(`/crm/tasks/${id}`)
       return { success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -626,7 +646,7 @@ class ApiClient {
   // Opportunity methods
   async getOpportunities(params?: QueryParams): Promise<ListResponse<OpportunityDB>> {
     try {
-      const response = await this.customClient.get('/opportunities', { 
+      const response = await this.customClient.get('/crm/opportunities', { 
         params: {
           page: params?.page || 1,
           limit: params?.limit || 10,
@@ -659,7 +679,7 @@ class ApiClient {
 
   async getOpportunity(id: string): Promise<ApiResponse<OpportunityDB>> {
     try {
-      const response = await this.customClient.get(`/opportunities/${id}`)
+      const response = await this.customClient.get(`/crm/opportunities/${id}`)
       return {
         data: response.data.data,
         success: true
@@ -679,7 +699,7 @@ class ApiClient {
 
   async createOpportunity(data: Partial<OpportunityDB>): Promise<ApiResponse<OpportunityDB>> {
     try {
-      const response = await this.customClient.post('/opportunities', data)
+      const response = await this.customClient.post('/crm/opportunities', data)
       return {
         data: response.data.data,
         success: true
@@ -699,7 +719,7 @@ class ApiClient {
 
   async updateOpportunity(id: string, data: Partial<OpportunityDB>): Promise<ApiResponse<OpportunityDB>> {
     try {
-      const response = await this.customClient.put(`/opportunities/${id}`, data)
+      const response = await this.customClient.put(`/crm/opportunities/${id}`, data)
       return {
         data: response.data.data,
         success: true
@@ -719,7 +739,7 @@ class ApiClient {
 
   async deleteOpportunity(id: string): Promise<ApiResponse<void>> {
     try {
-      await this.customClient.delete(`/opportunities/${id}`)
+      await this.customClient.delete(`/crm/opportunities/${id}`)
       return {
         success: true
       }
@@ -743,7 +763,7 @@ class ApiClient {
   // Call methods
   async getCalls(params?: QueryParams): Promise<ListResponse<CallDB>> {
     try {
-      const response = await this.customClient.get('/calls', { 
+      const response = await this.customClient.get('/crm/calls', { 
         params: {
           page: params?.page || 1,
           limit: params?.limit || 10,
@@ -776,7 +796,7 @@ class ApiClient {
 
   async getCall(id: string): Promise<ApiResponse<CallDB>> {
     try {
-      const response = await this.customClient.get(`/calls/${id}`)
+      const response = await this.customClient.get(`/crm/calls/${id}`)
       return { data: response.data.data, success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -785,7 +805,7 @@ class ApiClient {
 
   async createCall(data: Partial<CallDB>): Promise<ApiResponse<CallDB>> {
     try {
-      const response = await this.customClient.post('/calls', data)
+      const response = await this.customClient.post('/crm/calls', data)
       return { data: response.data.data, success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -794,7 +814,7 @@ class ApiClient {
 
   async updateCall(id: string, data: Partial<CallDB>): Promise<ApiResponse<CallDB>> {
     try {
-      const response = await this.customClient.put(`/calls/${id}`, data)
+      const response = await this.customClient.put(`/crm/calls/${id}`, data)
       return { data: response.data.data, success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -803,7 +823,7 @@ class ApiClient {
 
   async deleteCall(id: string): Promise<ApiResponse<void>> {
     try {
-      await this.customClient.delete(`/calls/${id}`)
+      await this.customClient.delete(`/crm/calls/${id}`)
       return { success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -813,7 +833,7 @@ class ApiClient {
   // Meeting methods
   async getMeetings(params?: QueryParams): Promise<ListResponse<MeetingDB>> {
     try {
-      const response = await this.customClient.get('/meetings', { 
+      const response = await this.customClient.get('/crm/meetings', { 
         params: {
           page: params?.page || 1,
           limit: params?.limit || 10,
@@ -846,7 +866,7 @@ class ApiClient {
 
   async getMeeting(id: string): Promise<ApiResponse<MeetingDB>> {
     try {
-      const response = await this.customClient.get(`/meetings/${id}`)
+      const response = await this.customClient.get(`/crm/meetings/${id}`)
       return { data: response.data.data, success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -855,7 +875,7 @@ class ApiClient {
 
   async createMeeting(data: Partial<MeetingDB>): Promise<ApiResponse<MeetingDB>> {
     try {
-      const response = await this.customClient.post('/meetings', data)
+      const response = await this.customClient.post('/crm/meetings', data)
       return { data: response.data.data, success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -864,7 +884,7 @@ class ApiClient {
 
   async updateMeeting(id: string, data: Partial<MeetingDB>): Promise<ApiResponse<MeetingDB>> {
     try {
-      const response = await this.customClient.put(`/meetings/${id}`, data)
+      const response = await this.customClient.put(`/crm/meetings/${id}`, data)
       return { data: response.data.data, success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -873,7 +893,7 @@ class ApiClient {
 
   async deleteMeeting(id: string): Promise<ApiResponse<void>> {
     try {
-      await this.customClient.delete(`/meetings/${id}`)
+      await this.customClient.delete(`/crm/meetings/${id}`)
       return { success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -883,7 +903,7 @@ class ApiClient {
   // Note methods
   async getNotes(params?: QueryParams): Promise<ListResponse<NoteDB>> {
     try {
-      const response = await this.customClient.get('/notes', { 
+      const response = await this.customClient.get('/crm/notes', { 
         params: {
           page: params?.page || 1,
           limit: params?.limit || 10,
@@ -916,7 +936,7 @@ class ApiClient {
 
   async getNote(id: string): Promise<ApiResponse<NoteDB>> {
     try {
-      const response = await this.customClient.get(`/notes/${id}`)
+      const response = await this.customClient.get(`/crm/notes/${id}`)
       return { data: response.data.data, success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -925,7 +945,7 @@ class ApiClient {
 
   async createNote(data: Partial<NoteDB>): Promise<ApiResponse<NoteDB>> {
     try {
-      const response = await this.customClient.post('/notes', data)
+      const response = await this.customClient.post('/crm/notes', data)
       return { data: response.data.data, success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -934,7 +954,7 @@ class ApiClient {
 
   async updateNote(id: string, data: Partial<NoteDB>): Promise<ApiResponse<NoteDB>> {
     try {
-      const response = await this.customClient.put(`/notes/${id}`, data)
+      const response = await this.customClient.put(`/crm/notes/${id}`, data)
       return { data: response.data.data, success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -943,7 +963,7 @@ class ApiClient {
 
   async deleteNote(id: string): Promise<ApiResponse<void>> {
     try {
-      await this.customClient.delete(`/notes/${id}`)
+      await this.customClient.delete(`/crm/notes/${id}`)
       return { success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -953,7 +973,7 @@ class ApiClient {
   // Case methods
   async getCases(params?: QueryParams & { status?: string; priority?: string }): Promise<ListResponse<CaseDB>> {
     try {
-      const response = await this.customClient.get('/cases', { 
+      const response = await this.customClient.get('/crm/cases', { 
         params: {
           page: params?.page || 1,
           limit: params?.limit || 10,
@@ -988,7 +1008,7 @@ class ApiClient {
 
   async getCase(id: string): Promise<ApiResponse<CaseDB>> {
     try {
-      const response = await this.customClient.get(`/cases/${id}`)
+      const response = await this.customClient.get(`/crm/cases/${id}`)
       return { data: response.data.data, success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -997,7 +1017,7 @@ class ApiClient {
 
   async createCase(data: Partial<CaseDB>): Promise<ApiResponse<CaseDB>> {
     try {
-      const response = await this.customClient.post('/cases', data)
+      const response = await this.customClient.post('/crm/cases', data)
       return { data: response.data.data, success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -1006,7 +1026,7 @@ class ApiClient {
 
   async updateCase(id: string, data: Partial<CaseDB>): Promise<ApiResponse<CaseDB>> {
     try {
-      const response = await this.customClient.put(`/cases/${id}`, data)
+      const response = await this.customClient.put(`/crm/cases/${id}`, data)
       return { data: response.data.data, success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }
@@ -1015,7 +1035,7 @@ class ApiClient {
 
   async deleteCase(id: string): Promise<ApiResponse<void>> {
     try {
-      await this.customClient.delete(`/cases/${id}`)
+      await this.customClient.delete(`/crm/cases/${id}`)
       return { success: true }
     } catch {
       return { success: false, error: { error: 'Failed', code: 'ERROR', details: {} } }

@@ -71,11 +71,11 @@ class ActivityTrackingService {
       this.scrollDepth = 0;
       this.clickCount = 0;
 
-      const response = await apiClient.publicPost('/track/pageview', {
+      const response = await apiClient.publicPost('/public/track/pageview', {
         visitor_id: this.visitorId || undefined,
         session_id: this.sessionId || undefined,
         page_url: data?.page_url || window.location.pathname + window.location.search,
-        title: data?.title || document.title,
+        page_title: data?.title || document.title,
         referrer: data?.referrer || document.referrer,
         user_agent: navigator.userAgent,
         screen_resolution: `${window.screen.width}x${window.screen.height}`,
@@ -106,7 +106,7 @@ class ActivityTrackingService {
     const duration = Math.round((Date.now() - this.pageStartTime) / 1000);
     
     try {
-      await apiClient.publicPost('/track/page-exit', {
+      await apiClient.publicPost('/public/track/page-exit', {
         visitor_id: this.visitorId || undefined,
         session_id: this.sessionId || undefined,
         duration,
@@ -131,7 +131,7 @@ class ActivityTrackingService {
    */
   async trackConversion(event: string, value?: string | number, metadata?: Record<string, string | number | boolean>): Promise<void> {
     try {
-      await apiClient.publicPost('/track/conversion', {
+      await apiClient.publicPost('/public/track/conversion', {
         visitor_id: this.visitorId || undefined,
         session_id: this.sessionId || undefined,
         event,
@@ -150,7 +150,7 @@ class ActivityTrackingService {
    */
   async trackEvent(event: TrackingEvent): Promise<void> {
     try {
-      await apiClient.publicPost('/track/event', {
+      await apiClient.publicPost('/public/track/event', {
         ...event,
         visitor_id: event.visitor_id || this.visitorId,
         session_id: event.session_id || this.sessionId

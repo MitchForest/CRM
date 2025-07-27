@@ -75,14 +75,14 @@ class ActivityTrackingSeeder extends BaseSeeder
             
             DB::table('activity_tracking_visitors')->insert([
                 'id' => $visitorId,
-                'visitor_id' => 'v_' . substr(md5($lead->email1), 0, 16),
+                'visitor_id' => 'v_' . substr(md5($lead->email1 . $lead->id), 0, 16),
                 'first_visit' => $firstVisit->format('Y-m-d H:i:s'),
                 'last_visit' => $lead->date_entered,
-                'total_visits' => mt_rand(1, 5),
+                'visit_count' => mt_rand(1, 5),
                 'lead_id' => $leadId,
                 'contact_id' => null,
-                'created_at' => $firstVisit->format('Y-m-d H:i:s'),
-                'updated_at' => $lead->date_entered,
+                'date_entered' => $firstVisit->format('Y-m-d H:i:s'),
+                'date_modified' => $lead->date_entered,
             ]);
             $visitorCount++;
             
@@ -100,19 +100,17 @@ class ActivityTrackingSeeder extends BaseSeeder
                     'start_time' => $sessionDate->format('Y-m-d H:i:s'),
                     'end_time' => (clone $sessionDate)->modify("+{$duration} seconds")->format('Y-m-d H:i:s'),
                     'duration' => $duration,
-                    'page_views' => mt_rand(2, 8),
+                    'page_count' => mt_rand(2, 8),
                     'ip_address' => $this->faker->ipv4(),
                     'user_agent' => $this->faker->randomElement($this->userAgents),
-                    'referrer' => $this->getRandomByDistribution($this->referrers),
                     'lead_id' => $leadId,
                     'contact_id' => null,
-                    'created_at' => $sessionDate->format('Y-m-d H:i:s'),
-                    'updated_at' => $sessionDate->format('Y-m-d H:i:s'),
+                    'date_entered' => $sessionDate->format('Y-m-d H:i:s'),
                 ]);
                 $sessionCount++;
                 
                 // Create page views for this session
-                $pageViewCount += $this->createPageViews($sessionId, $sessionDate, $duration, 'marketing');
+                $pageViewCount += $this->createPageViews($sessionId, $visitorId, $sessionDate, $duration, 'marketing');
             }
             
             if ($index % 100 == 0) {
@@ -130,14 +128,14 @@ class ActivityTrackingSeeder extends BaseSeeder
             
             DB::table('activity_tracking_visitors')->insert([
                 'id' => $visitorId,
-                'visitor_id' => 'v_' . substr(md5($contact->email1), 0, 16),
+                'visitor_id' => 'v_' . substr(md5($contact->email1 . $contact->id), 0, 16),
                 'first_visit' => $firstVisit->format('Y-m-d H:i:s'),
                 'last_visit' => (new \DateTime())->format('Y-m-d H:i:s'),
-                'total_visits' => mt_rand(20, 100),
+                'visit_count' => mt_rand(20, 100),
                 'lead_id' => null,
                 'contact_id' => $contactId,
-                'created_at' => $firstVisit->format('Y-m-d H:i:s'),
-                'updated_at' => (new \DateTime())->format('Y-m-d H:i:s'),
+                'date_entered' => $firstVisit->format('Y-m-d H:i:s'),
+                'date_modified' => (new \DateTime())->format('Y-m-d H:i:s'),
             ]);
             $visitorCount++;
             
@@ -166,19 +164,17 @@ class ActivityTrackingSeeder extends BaseSeeder
                         'start_time' => $sessionTime->format('Y-m-d H:i:s'),
                         'end_time' => (clone $sessionTime)->modify("+{$duration} seconds")->format('Y-m-d H:i:s'),
                         'duration' => $duration,
-                        'page_views' => mt_rand(5, 20),
+                        'page_count' => mt_rand(5, 20),
                         'ip_address' => $this->faker->ipv4(),
                         'user_agent' => $this->faker->randomElement($this->userAgents),
-                        'referrer' => 'direct',
                         'lead_id' => null,
                         'contact_id' => $contactId,
-                        'created_at' => $sessionTime->format('Y-m-d H:i:s'),
-                        'updated_at' => $sessionTime->format('Y-m-d H:i:s'),
+                        'date_entered' => $sessionTime->format('Y-m-d H:i:s'),
                     ]);
                     $sessionCount++;
                     
                     // Create page views for app usage
-                    $pageViewCount += $this->createPageViews($sessionId, $sessionTime, $duration, 'app');
+                    $pageViewCount += $this->createPageViews($sessionId, $visitorId, $sessionTime, $duration, 'app');
                 }
                 
                 $currentDate->modify('+1 day');
@@ -195,11 +191,10 @@ class ActivityTrackingSeeder extends BaseSeeder
                 'visitor_id' => 'v_' . substr(md5(uniqid()), 0, 16),
                 'first_visit' => $firstVisit->format('Y-m-d H:i:s'),
                 'last_visit' => $firstVisit->format('Y-m-d H:i:s'),
-                'total_visits' => 1,
+                'visit_count' => 1,
                 'lead_id' => null,
                 'contact_id' => null,
-                'created_at' => $firstVisit->format('Y-m-d H:i:s'),
-                'updated_at' => $firstVisit->format('Y-m-d H:i:s'),
+                'date_entered' => $firstVisit->format('Y-m-d H:i:s'),
             ]);
             $visitorCount++;
             
@@ -214,19 +209,17 @@ class ActivityTrackingSeeder extends BaseSeeder
                 'start_time' => $firstVisit->format('Y-m-d H:i:s'),
                 'end_time' => (clone $firstVisit)->modify("+{$duration} seconds")->format('Y-m-d H:i:s'),
                 'duration' => $duration,
-                'page_views' => mt_rand(1, 3),
+                'page_count' => mt_rand(1, 3),
                 'ip_address' => $this->faker->ipv4(),
                 'user_agent' => $this->faker->randomElement($this->userAgents),
-                'referrer' => $this->getRandomByDistribution($this->referrers),
                 'lead_id' => null,
                 'contact_id' => null,
-                'created_at' => $firstVisit->format('Y-m-d H:i:s'),
-                'updated_at' => $firstVisit->format('Y-m-d H:i:s'),
+                'date_entered' => $firstVisit->format('Y-m-d H:i:s'),
             ]);
             $sessionCount++;
             
             // Create page views
-            $pageViewCount += $this->createPageViews($sessionId, $firstVisit, $duration, 'marketing');
+            $pageViewCount += $this->createPageViews($sessionId, $visitorId, $firstVisit, $duration, 'marketing');
         }
         
         echo "  Created {$visitorCount} visitors\n";
@@ -258,7 +251,7 @@ class ActivityTrackingSeeder extends BaseSeeder
         return $sessions;
     }
     
-    private function createPageViews(string $sessionId, \DateTime $sessionStart, int $sessionDuration, string $type): int
+    private function createPageViews(string $sessionId, string $visitorId, \DateTime $sessionStart, int $sessionDuration, string $type): int
     {
         $pages = $type === 'app' ? $this->appPages : $this->marketingPages;
         $pageCount = mt_rand(2, min(8, count($pages)));
@@ -281,13 +274,12 @@ class ActivityTrackingSeeder extends BaseSeeder
             
             DB::table('activity_tracking_page_views')->insert([
                 'id' => $this->generateUuid(),
+                'visitor_id' => $visitorId,
                 'session_id' => $sessionId,
-                'url' => $url,
-                'title' => $title,
+                'page_url' => $url,
+                'page_title' => $title,
                 'time_on_page' => $timeOnPage,
-                'timestamp' => $currentTime->format('Y-m-d H:i:s'),
-                'created_at' => $currentTime->format('Y-m-d H:i:s'),
-                'updated_at' => $currentTime->format('Y-m-d H:i:s'),
+                'date_entered' => $currentTime->format('Y-m-d H:i:s'),
             ]);
             
             $viewedPages[] = $url;

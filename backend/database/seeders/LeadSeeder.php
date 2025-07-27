@@ -92,11 +92,7 @@ class LeadSeeder extends BaseSeeder
                 'lead_source_description' => null,
                 'description' => $this->generateLeadDescription($status),
                 'account_name' => $this->faker->randomElement($this->companies) . ' ' . $this->faker->companySuffix(),
-                'website' => $this->faker->domainName(),
-                'converted' => $status === 'Converted' ? 1 : 0,
-                'converted_contact_id' => null, // Will be populated by ContactSeeder for converted leads
-                'converted_account_id' => null, // Will be populated by ContactSeeder for converted leads
-                'converted_opportunity_id' => null, // Will be populated by OpportunitySeeder if opportunity created
+                'website' => $this->faker->domainName()
             ];
             
             DB::table('leads')->insert($lead);
@@ -184,10 +180,22 @@ class LeadSeeder extends BaseSeeder
         $topics = ['project management', 'team collaboration', 'agile workflows', 'resource planning'];
         $quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
         
-        if (strpos($template, '%s') !== false) {
-            $template = sprintf($template, $this->faker->randomElement($topics));
-        } elseif (strpos($template, '%d') !== false) {
-            $template = sprintf($template, mt_rand(1, 4));
+        // Replace placeholders based on what's in the template
+        $args = [];
+        
+        // Count placeholders
+        preg_match_all('/%[sd]/', $template, $matches);
+        
+        foreach ($matches[0] as $placeholder) {
+            if ($placeholder === '%s') {
+                $args[] = $this->faker->randomElement($topics);
+            } else if ($placeholder === '%d') {
+                $args[] = mt_rand(1, 4);
+            }
+        }
+        
+        if (!empty($args)) {
+            $template = sprintf($template, ...$args);
         }
         
         return $template;

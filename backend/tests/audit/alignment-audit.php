@@ -1,11 +1,11 @@
 <?php
 
-require __DIR__ . '/vendor/autoload.php';
+require __DIR__ . '/../../vendor/autoload.php';
 
 use Illuminate\Database\Capsule\Manager as DB;
 
 // Initialize database
-$capsule = require __DIR__ . '/config/database.php';
+$capsule = require __DIR__ . '/../../config/database.php';
 
 echo "\n=== CRM ALIGNMENT AUDIT ===\n";
 echo "Checking for misalignments between database, models, and code...\n\n";

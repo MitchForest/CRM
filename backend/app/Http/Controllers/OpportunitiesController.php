@@ -72,31 +72,35 @@ class OpportunitiesController extends Controller
      */
     public function index(Request $request, Response $response, array $args): Response
     {
-        $query = Opportunity::with(['assignedUser', 'account', 'contacts'])
-            ->where('deleted', 0);
+        try {
+            // Remove 'contacts' from eager loading for now
+            $query = Opportunity::with(['assignedUser', 'account'])
+                ->where('deleted', 0);
+            
+            // Apply filters
+            $queryParams = $request->getQueryParams();
         
-        // Apply filters
-        if ($request->has('search')) {
-            $search = $request->input('search');
+        if (isset($queryParams['search'])) {
+            $search = $queryParams['search'];
             $query->where('name', 'like', "%$search%");
         }
         
-        if ($request->has('stage')) {
-            $query->where('sales_stage', $request->input('stage'));
+        if (isset($queryParams['stage'])) {
+            $query->where('sales_stage', $queryParams['stage']);
         }
         
-        if ($request->has('assigned_user_id')) {
-            $query->where('assigned_user_id', $request->input('assigned_user_id'));
+        if (isset($queryParams['assigned_user_id'])) {
+            $query->where('assigned_user_id', $queryParams['assigned_user_id']);
         }
         
         // Sorting
-        $sortBy = $request->input('sort_by', 'date_entered');
-        $sortOrder = $request->input('sort_order', 'DESC');
+        $sortBy = $queryParams['sort_by'] ?? 'date_entered';
+        $sortOrder = $queryParams['sort_order'] ?? 'DESC';
         $query->orderBy($sortBy, $sortOrder);
         
         // Pagination
-        $page = $request->input('page', 1);
-        $limit = $request->input('limit', 20);
+        $page = $queryParams['page'] ?? 1;
+        $limit = $queryParams['limit'] ?? 20;
         $opportunities = $query->paginate($limit, ['*'], 'page', $page);
         
         // Format response
@@ -113,19 +117,19 @@ class OpportunitiesController extends Controller
                 'total_pages' => $opportunities->lastPage()
             ]
         ]);
+        } catch (\Exception $e) {
+            return $this->error($response, 'Internal server error: ' . $e->getMessage(), 500);
+        }
     }
     
     public function show(Request $request, Response $response, array $args): Response
     {
         $opportunity = Opportunity::with(['assignedUser', 'account', 'contacts'])
             ->where('deleted', 0)
-            ->find($id);
+            ->find($args['id']);
         
         if (!$opportunity) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Opportunity not found'
-            ], 404);
+            return $this->error($response, 'Opportunity not found', 404);
         }
         
         $data = $this->formatOpportunity($opportunity);
@@ -140,12 +144,12 @@ class OpportunitiesController extends Controller
             ];
         });
         
-        return response()->json(['data' => $data]);
+        return $this->json($response, ['data' => $data]);
     }
     
     public function create(Request $request, Response $response, array $args): Response
     {
-        $request->validate([
+        $validatedData = $this->validate($request, [
             'name' => 'required|string|max:50',
             'date_closed' => 'required|date',
             'amount' => 'sometimes|numeric|min:0',
@@ -164,11 +168,12 @@ class OpportunitiesController extends Controller
         
         try {
             // Direct assignment with exact field names
-            $opportunity = Opportunity::create($request->validated());
+            $opportunity = Opportunity::create($validatedData);
             
             // Add contacts if provided
-            if ($request->has('contactIds')) {
-                $opportunity->contacts()->attach($request->input('contactIds'));
+            $body = $request->getParsedBody();
+            if (isset($body['contactIds'])) {
+                $opportunity->contacts()->attach($body['contactIds']);
             }
             
             DB::commit();
@@ -186,16 +191,13 @@ class OpportunitiesController extends Controller
     
     public function update(Request $request, Response $response, array $args): Response
     {
-        $opportunity = Opportunity::where('deleted', 0)->find($id);
+        $opportunity = Opportunity::where('deleted', 0)->find($args['id']);
         
         if (!$opportunity) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Opportunity not found'
-            ], 404);
+            return $this->error($response, 'Opportunity not found', 404);
         }
         
-        $request->validate([
+        $validatedData = $this->validate($request, [
             'name' => 'sometimes|string|max:50',
             'date_closed' => 'sometimes|date',
             'amount' => 'sometimes|numeric|min:0',
@@ -217,38 +219,33 @@ class OpportunitiesController extends Controller
         
         try {
             // Direct update with exact field names
-            $opportunity->update($request->validated());
+            $opportunity->update($validatedData);
             
             // Update contacts if provided
-            if ($request->has('contactIds')) {
-                $opportunity->contacts()->sync($request->input('contactIds'));
+            $body = $request->getParsedBody();
+            if (isset($body['contactIds'])) {
+                $opportunity->contacts()->sync($body['contactIds']);
             }
             
             DB::commit();
             
-            return response()->json([
+            return $this->json($response, [
                 'data' => ['id' => $opportunity->id],
                 'message' => 'Opportunity updated successfully'
             ]);
             
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'error' => 'Failed to update opportunity: ' . $e->getMessage()
-            ], 500);
+            return $this->error($response, 'Failed to update opportunity: ' . $e->getMessage(), 500);
         }
     }
     
     public function delete(Request $request, Response $response, array $args): Response
     {
-        $opportunity = Opportunity::where('deleted', 0)->find($id);
+        $opportunity = Opportunity::where('deleted', 0)->find($args['id']);
         
         if (!$opportunity) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Opportunity not found'
-            ], 404);
+            return $this->error($response, 'Opportunity not found', 404);
         }
         
         $opportunity->deleted = 1;
@@ -256,6 +253,27 @@ class OpportunitiesController extends Controller
         
         return $this->json($response, [
             'message' => 'Opportunity deleted successfully'
+        ]);
+    }
+    
+    public function updateStage(Request $request, Response $response, array $args): Response
+    {
+        $opportunity = Opportunity::where('deleted', 0)->find($args['id']);
+        
+        if (!$opportunity) {
+            return $this->error($response, 'Opportunity not found', 404);
+        }
+        
+        $validatedData = $this->validate($request, [
+            'sales_stage' => 'required|string|max:255'
+        ]);
+        
+        $opportunity->sales_stage = $validatedData['sales_stage'];
+        $opportunity->save();
+        
+        return $this->json($response, [
+            'message' => 'Stage updated successfully',
+            'data' => ['id' => $opportunity->id, 'sales_stage' => $opportunity->sales_stage]
         ]);
     }
     
@@ -340,7 +358,7 @@ class OpportunitiesController extends Controller
             'next_step' => $opportunity->next_step,
             'description' => $opportunity->description,
             'account_id' => $opportunity->account_id,
-            'account_name' => $opportunity->account_name,
+            'account_name' => $opportunity->account ? $opportunity->account->name : null,
             'assigned_user_id' => $opportunity->assigned_user_id,
             'date_entered' => $opportunity->date_entered?->toIso8601String(),
             'date_modified' => $opportunity->date_modified?->toIso8601String(),
