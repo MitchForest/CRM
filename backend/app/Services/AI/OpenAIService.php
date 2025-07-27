@@ -181,4 +181,160 @@ class OpenAIService
             'temperature' => 0.3
         ]);
     }
+    
+    /**
+     * Generate a knowledge base article from a prompt
+     */
+    public function generateArticle(string $topic, array $options = []): array
+    {
+        $tone = $options['tone'] ?? 'professional';
+        $style = $options['style'] ?? 'informative';
+        $wordCount = $options['word_count'] ?? 800;
+        
+        $systemPrompt = "You are an expert content writer creating knowledge base articles. 
+        Write in a {$tone} tone with a {$style} style. 
+        Create well-structured content with clear headings, subheadings, and paragraphs.
+        Include practical examples and actionable information.
+        Target approximately {$wordCount} words.";
+        
+        $userPrompt = "Write a comprehensive knowledge base article about: {$topic}
+        
+        Structure the article with:
+        1. An engaging introduction
+        2. Clear main sections with subheadings
+        3. Practical examples or use cases
+        4. A helpful conclusion
+        5. Key takeaways or summary points
+        
+        Format the content in Markdown.";
+        
+        try {
+            $response = $this->client->post('chat/completions', [
+                'json' => [
+                    'model' => 'gpt-4',
+                    'messages' => [
+                        ['role' => 'system', 'content' => $systemPrompt],
+                        ['role' => 'user', 'content' => $userPrompt]
+                    ],
+                    'max_tokens' => 2000,
+                    'temperature' => 0.7,
+                    'top_p' => 0.9
+                ]
+            ]);
+            
+            $data = json_decode($response->getBody()->getContents(), true);
+            $content = $data['choices'][0]['message']['content'] ?? '';
+            
+            // Extract title from content (usually first # heading)
+            $title = $topic;
+            if (preg_match('/^#\s+(.+)$/m', $content, $matches)) {
+                $title = $matches[1];
+                // Remove the title from content as we store it separately
+                $content = preg_replace('/^#\s+.+\n/', '', $content, 1);
+            }
+            
+            // Generate a summary (first paragraph or custom summary)
+            $summary = $this->generateSummary($content);
+            
+            return [
+                'success' => true,
+                'title' => $title,
+                'content' => trim($content),
+                'summary' => $summary,
+                'word_count' => str_word_count($content)
+            ];
+            
+        } catch (RequestException $e) {
+            return [
+                'success' => false,
+                'error' => 'Failed to generate article: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Rewrite an existing article with specific instructions
+     */
+    public function rewriteArticle(string $currentContent, string $instructions, array $options = []): array
+    {
+        $tone = $options['tone'] ?? 'maintain current';
+        $style = $options['style'] ?? 'maintain current';
+        
+        $systemPrompt = "You are an expert content editor improving knowledge base articles.
+        Maintain the core information while improving clarity, structure, and readability.
+        Tone: {$tone}. Style: {$style}.";
+        
+        $userPrompt = "Rewrite the following article based on these instructions: {$instructions}
+        
+        Current article:
+        {$currentContent}
+        
+        Maintain accuracy while improving the content. Format in Markdown.";
+        
+        try {
+            $response = $this->client->post('chat/completions', [
+                'json' => [
+                    'model' => 'gpt-4',
+                    'messages' => [
+                        ['role' => 'system', 'content' => $systemPrompt],
+                        ['role' => 'user', 'content' => $userPrompt]
+                    ],
+                    'max_tokens' => 2000,
+                    'temperature' => 0.6,
+                    'top_p' => 0.9
+                ]
+            ]);
+            
+            $data = json_decode($response->getBody()->getContents(), true);
+            $content = $data['choices'][0]['message']['content'] ?? '';
+            
+            return [
+                'success' => true,
+                'content' => trim($content),
+                'word_count' => str_word_count($content)
+            ];
+            
+        } catch (RequestException $e) {
+            return [
+                'success' => false,
+                'error' => 'Failed to rewrite article: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Generate a summary from article content
+     */
+    public function generateSummary(string $content): string
+    {
+        // Try to extract first paragraph
+        $paragraphs = explode("\n\n", $content);
+        foreach ($paragraphs as $para) {
+            $para = trim($para);
+            if (strlen($para) > 50 && !str_starts_with($para, '#')) {
+                return substr($para, 0, 200) . '...';
+            }
+        }
+        
+        // Fallback: generate summary using AI
+        try {
+            $response = $this->client->post('chat/completions', [
+                'json' => [
+                    'model' => 'gpt-3.5-turbo',
+                    'messages' => [
+                        ['role' => 'system', 'content' => 'Summarize this article in 1-2 sentences.'],
+                        ['role' => 'user', 'content' => $content]
+                    ],
+                    'max_tokens' => 100,
+                    'temperature' => 0.5
+                ]
+            ]);
+            
+            $data = json_decode($response->getBody()->getContents(), true);
+            return $data['choices'][0]['message']['content'] ?? '';
+            
+        } catch (\Exception $e) {
+            return 'Article about ' . substr($content, 0, 100) . '...';
+        }
+    }
 }

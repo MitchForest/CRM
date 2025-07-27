@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, FolderOpen, FileText, Eye, Edit, Trash2, Star } from 'lucide-react';
+import { Plus, Search, FolderOpen, FileText, Eye, Edit, Trash2, Star, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ import { useNavigate } from 'react-router-dom';
 import { knowledgeBaseService } from '@/services/knowledgeBase.service';
 import { formatDistanceToNow } from 'date-fns';
 import type { KBCategory, KBArticle } from '@/types/api.types';
+import { AIArticleDialog } from '@/components/features/knowledge-base/AIArticleDialog';
 
 export function KnowledgeBaseAdmin() {
   const navigate = useNavigate();
@@ -43,6 +44,8 @@ export function KnowledgeBaseAdmin() {
   const [editingCategory, setEditingCategory] = useState<KBCategory | null>(null);
   const [deleteArticleId, setDeleteArticleId] = useState<string | null>(null);
   const [deleteCategoryId, setDeleteCategoryId] = useState<string | null>(null);
+  const [showAIDialog, setShowAIDialog] = useState(false);
+  const [aiMode, setAiMode] = useState<'generate' | 'rewrite'>('generate');
   
   // Category form state
   const [categoryName, setCategoryName] = useState('');
@@ -282,10 +285,19 @@ export function KnowledgeBaseAdmin() {
             Manage articles and categories for your help center
           </p>
         </div>
-        <Button onClick={() => navigate('/app/kb/new')}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Article
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => {
+            setAiMode('generate');
+            setShowAIDialog(true);
+          }}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            Generate with AI
+          </Button>
+          <Button onClick={() => navigate('/app/kb/new')}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Article
+          </Button>
+        </div>
       </div>
 
       {/* Metrics */}
@@ -600,6 +612,28 @@ export function KnowledgeBaseAdmin() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* AI Article Dialog */}
+      <AIArticleDialog
+        open={showAIDialog}
+        onOpenChange={setShowAIDialog}
+        mode={aiMode}
+        categories={categories || []}
+        onGenerated={(data) => {
+          if (aiMode === 'generate') {
+            // Navigate to the article editor with the generated content
+            navigate('/app/kb/new', { 
+              state: { 
+                generatedContent: data 
+              } 
+            });
+          }
+          toast({
+            title: aiMode === 'generate' ? 'Article Generated' : 'Article Rewritten',
+            description: 'AI has successfully processed your request.',
+          });
+        }}
+      />
     </div>
   );
 }

@@ -57,20 +57,20 @@ export function ActivityTrackingDashboard() {
   const { data: metrics } = useQuery({
     queryKey: ['visitor-metrics', timeRange],
     queryFn: async () => {
-      const response = await apiClient.customGet('/analytics/visitors', {
+      const response = await apiClient.customGet('/crm/analytics/visitor-metrics', {
         params: { range: timeRange }
       })
       return response.data as VisitorMetrics
     }
   })
 
-  const { data: liveSessions, isLoading: isLoadingLive } = useQuery({
+  const { data: liveVisitors, isLoading: isLoadingLive } = useQuery({
     queryKey: ['live-visitors'],
     queryFn: async () => {
-      const response = await apiClient.customGet('/analytics/visitors', {
+      const response = await apiClient.customGet('/crm/analytics/visitors', {
         params: { active_only: true }
       })
-      return response.data as WebsiteSession[]
+      return response.data.data as any[] // Will be visitor data
     },
     refetchInterval: 5000 // Refresh every 5 seconds
   })
@@ -189,7 +189,7 @@ export function ActivityTrackingDashboard() {
               <div className="flex items-center justify-between">
                 <CardTitle>Live Visitor Activity</CardTitle>
                 <Badge variant="secondary">
-                  {liveSessions?.length || 0} Active
+                  {liveVisitors?.length || 0} Active
                 </Badge>
               </div>
             </CardHeader>
@@ -200,12 +200,12 @@ export function ActivityTrackingDashboard() {
                     <p className="text-center text-muted-foreground py-8">
                       Loading visitors...
                     </p>
-                  ) : liveSessions?.length === 0 ? (
+                  ) : liveVisitors?.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8">
                       No active visitors at the moment
                     </p>
                   ) : (
-                    liveSessions?.map((session) => {
+                    liveVisitors?.map((session: any) => {
                       const engagement = getEngagementLevel(session)
                       const currentPage = session.pages_viewed?.[session.pages_viewed.length - 1]
                       

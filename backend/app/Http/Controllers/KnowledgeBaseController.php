@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\KnowledgeBaseArticle;
 use App\Models\KnowledgeBaseFeedback;
 use App\Services\CRM\KnowledgeBaseService;
+use App\Services\AI\OpenAIService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Illuminate\Database\Capsule\Manager as DB;
@@ -638,5 +639,117 @@ class KnowledgeBaseController extends Controller
         return $this->json($response, [
             'message' => 'Category deleted successfully'
         ]);
+    }
+    
+    /**
+     * Generate article content using AI
+     * POST /api/admin/knowledge-base/articles/ai-generate
+     */
+    public function aiGenerate(Request $request, Response $response): Response
+    {
+        $data = $this->validate($request, [
+            'topic' => 'required|string|min:3',
+            'tone' => 'sometimes|string|in:professional,casual,technical,friendly',
+            'style' => 'sometimes|string|in:informative,tutorial,guide,reference',
+            'word_count' => 'sometimes|integer|min:100|max:5000',
+            'category' => 'sometimes|string'
+        ]);
+        
+        $openAI = new OpenAIService();
+        $result = $openAI->generateArticle($data['topic'], [
+            'tone' => $data['tone'] ?? 'professional',
+            'style' => $data['style'] ?? 'informative',
+            'word_count' => $data['word_count'] ?? 800
+        ]);
+        
+        if (!$result['success']) {
+            return $this->error($response, $result['error'], 500);
+        }
+        
+        // Generate slug from title
+        $slug = $this->generateSlug($result['title']);
+        
+        return $this->json($response, [
+            'data' => [
+                'title' => $result['title'],
+                'slug' => $slug,
+                'content' => $result['content'],
+                'summary' => $result['summary'],
+                'category' => $data['category'] ?? 'general',
+                'word_count' => $result['word_count'],
+                'ai_generated' => true
+            ]
+        ]);
+    }
+    
+    /**
+     * Rewrite existing article using AI
+     * POST /api/admin/knowledge-base/articles/{id}/ai-rewrite
+     */
+    public function aiRewrite(Request $request, Response $response, array $args): Response
+    {
+        $id = $args['id'];
+        $article = KnowledgeBaseArticle::where('deleted', 0)->find($id);
+        
+        if (!$article) {
+            return $this->error($response, 'Article not found', 404);
+        }
+        
+        $data = $this->validate($request, [
+            'instructions' => 'required|string|min:10',
+            'tone' => 'sometimes|string|in:professional,casual,technical,friendly,maintain current',
+            'style' => 'sometimes|string|in:informative,tutorial,guide,reference,maintain current',
+            'update_summary' => 'sometimes|boolean'
+        ]);
+        
+        $openAI = new OpenAIService();
+        $result = $openAI->rewriteArticle($article->content, $data['instructions'], [
+            'tone' => $data['tone'] ?? 'maintain current',
+            'style' => $data['style'] ?? 'maintain current'
+        ]);
+        
+        if (!$result['success']) {
+            return $this->error($response, $result['error'], 500);
+        }
+        
+        // Generate new summary if requested
+        $summary = $article->summary;
+        if ($data['update_summary'] ?? false) {
+            $summaryResult = $openAI->generateSummary($result['content']);
+            if ($summaryResult) {
+                $summary = $summaryResult;
+            }
+        }
+        
+        return $this->json($response, [
+            'data' => [
+                'id' => $article->id,
+                'content' => $result['content'],
+                'summary' => $summary,
+                'word_count' => $result['word_count'],
+                'ai_revision_count' => ($article->ai_revision_count ?? 0) + 1
+            ]
+        ]);
+    }
+    
+    /**
+     * Generate slug from title
+     */
+    private function generateSlug(string $title): string
+    {
+        $slug = strtolower(trim($title));
+        $slug = preg_replace('/[^a-z0-9-]/', '-', $slug);
+        $slug = preg_replace('/-+/', '-', $slug);
+        $slug = trim($slug, '-');
+        
+        // Ensure uniqueness
+        $baseSlug = $slug;
+        $counter = 1;
+        while (KnowledgeBaseArticle::where('slug', $slug)->where('deleted', 0)->exists()) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+        }
+        
+        return $slug;
     }
 }

@@ -153,10 +153,56 @@ class KnowledgeBaseService {
    * Delete an article
    */
   async deleteArticle(id: string): Promise<void> {
-    const response = await apiClient.customDelete(`/admin/knowledge-base/articles/${id}`);
-    if (response === null || response === undefined) {
-      throw new Error('Failed to delete article');
+    await apiClient.customDelete(`/admin/knowledge-base/articles/${id}`);
+  }
+
+  // AI Generation
+  
+  /**
+   * Generate article content using AI
+   */
+  async generateArticle(data: {
+    topic: string;
+    tone?: 'professional' | 'casual' | 'technical' | 'friendly';
+    style?: 'informative' | 'tutorial' | 'guide' | 'reference';
+    word_count?: number;
+    category?: string;
+  }): Promise<{
+    title: string;
+    slug: string;
+    content: string;
+    summary: string;
+    category: string;
+    word_count: number;
+    ai_generated: boolean;
+  }> {
+    const response = await apiClient.customPost('/admin/knowledge-base/articles/ai-generate', data);
+    if (!response || !response.data) {
+      throw new Error('Failed to generate article');
     }
+    return response.data;
+  }
+  
+  /**
+   * Rewrite existing article using AI
+   */
+  async rewriteArticle(id: string, data: {
+    instructions: string;
+    tone?: 'professional' | 'casual' | 'technical' | 'friendly' | 'maintain current';
+    style?: 'informative' | 'tutorial' | 'guide' | 'reference' | 'maintain current';
+    update_summary?: boolean;
+  }): Promise<{
+    id: string;
+    content: string;
+    summary: string;
+    word_count: number;
+    ai_revision_count: number;
+  }> {
+    const response = await apiClient.customPost(`/admin/knowledge-base/articles/${id}/ai-rewrite`, data);
+    if (!response || !response.data) {
+      throw new Error('Failed to rewrite article');
+    }
+    return response.data;
   }
 
   /**

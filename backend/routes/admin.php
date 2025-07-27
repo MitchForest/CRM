@@ -35,6 +35,8 @@ return function (RouteCollectorProxy $api) {
             $kb->delete('/articles/{id}', [KnowledgeBaseController::class, 'deleteArticle']);
             $kb->post('/articles/{id}/publish', [KnowledgeBaseController::class, 'publishArticle']);
             $kb->post('/articles/{id}/unpublish', [KnowledgeBaseController::class, 'unpublishArticle']);
+            $kb->post('/articles/ai-generate', [KnowledgeBaseController::class, 'aiGenerate']);
+            $kb->post('/articles/{id}/ai-rewrite', [KnowledgeBaseController::class, 'aiRewrite']);
             $kb->get('/categories', [KnowledgeBaseController::class, 'getCategories']);
             $kb->post('/categories', [KnowledgeBaseController::class, 'createCategory']);
             $kb->put('/categories/{id}', [KnowledgeBaseController::class, 'updateCategory']);

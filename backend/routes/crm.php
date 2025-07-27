@@ -101,6 +101,7 @@ return function (RouteCollectorProxy $api) {
             
             // Activity tracking analytics
             $analytics->get('/visitors', [ActivityTrackingController::class, 'getVisitors']);
+            $analytics->get('/visitor-metrics', [ActivityTrackingController::class, 'getVisitorMetrics']);
         });
         
         // AI Features

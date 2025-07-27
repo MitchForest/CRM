@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DefaultEditor } from 'react-simple-wysiwyg';
 import { 
   Save, 
   ArrowLeft, 
-  Eye
+  Eye,
+  Sparkles
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,13 +25,16 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { knowledgeBaseService } from '@/services/knowledgeBase.service';
 import type { KBArticle } from '@/types/api.types';
+import { AIArticleDialog } from '@/components/features/knowledge-base/AIArticleDialog';
 
 export function ArticleEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isEditing = !!id;
+  const [showAIDialog, setShowAIDialog] = useState(false);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -80,6 +84,25 @@ export function ArticleEditor() {
       setSlug(generatedSlug);
     }
   }, [title, isEditing]);
+
+  // Check for AI-generated content in navigation state
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.generatedContent) {
+      setTitle(state.generatedContent.title || '');
+      setSlug(state.generatedContent.slug || '');
+      setExcerpt(state.generatedContent.summary || '');
+      setContent(state.generatedContent.content || '');
+      if (state.generatedContent.category) {
+        const category = categories?.find(c => c.name === state.generatedContent.category);
+        if (category) {
+          setCategoryId(category.id);
+        }
+      }
+      // Clear the state to prevent re-applying on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, categories]);
 
   // Save mutation
   const saveMutation = useMutation({
@@ -169,6 +192,15 @@ export function ArticleEditor() {
             >
               <Eye className="mr-2 h-4 w-4" />
               Preview
+            </Button>
+          )}
+          {isEditing && (
+            <Button 
+              variant="outline"
+              onClick={() => setShowAIDialog(true)}
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              AI Rewrite
             </Button>
           )}
           <Button onClick={handleSave} disabled={saveMutation.isPending}>
@@ -355,6 +387,29 @@ export function ArticleEditor() {
           )}
         </div>
       </div>
+
+      {/* AI Rewrite Dialog */}
+      {isEditing && (
+        <AIArticleDialog
+          open={showAIDialog}
+          onOpenChange={setShowAIDialog}
+          mode="rewrite"
+          articleId={id}
+          currentContent={content}
+          categories={categories || []}
+          onGenerated={(data) => {
+            setContent(data.content);
+            if (data.summary) {
+              setExcerpt(data.summary);
+            }
+            setShowAIDialog(false);
+            toast({
+              title: 'Article Rewritten',
+              description: 'AI has successfully rewritten your article. Remember to save your changes.',
+            });
+          }}
+        />
+      )}
     </div>
   );
 }
