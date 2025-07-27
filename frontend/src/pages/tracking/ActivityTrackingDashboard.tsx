@@ -57,20 +57,41 @@ export function ActivityTrackingDashboard() {
   const { data: metrics } = useQuery({
     queryKey: ['visitor-metrics', timeRange],
     queryFn: async () => {
-      const response = await apiClient.customGet('/crm/analytics/visitor-metrics', {
-        params: { range: timeRange }
-      })
-      return response.data as VisitorMetrics
+      try {
+        const response = await apiClient.customGet('/crm/analytics/visitor-metrics', {
+          params: { range: timeRange }
+        })
+        return response.data as VisitorMetrics
+      } catch (error) {
+        console.error('Failed to fetch visitor metrics:', error)
+        // Return default data structure to prevent undefined errors
+        return {
+          total_visitors: 0,
+          active_visitors: 0,
+          avg_session_duration: 0,
+          avg_pages_per_session: 0,
+          top_pages: [],
+          device_types: [],
+          referrers: [],
+          hourly_traffic: []
+        } as VisitorMetrics
+      }
     }
   })
 
   const { data: liveVisitors, isLoading: isLoadingLive } = useQuery({
     queryKey: ['live-visitors'],
     queryFn: async () => {
-      const response = await apiClient.customGet('/crm/analytics/visitors', {
-        params: { active_only: true }
-      })
-      return response.data.data as any[] // Will be visitor data
+      try {
+        const response = await apiClient.customGet('/crm/analytics/visitors', {
+          params: { active_only: true }
+        })
+        return response.data.data as any[] // Will be visitor data
+      } catch (error) {
+        console.error('Failed to fetch live visitors:', error)
+        // Return empty array to prevent undefined errors
+        return []
+      }
     },
     refetchInterval: 5000 // Refresh every 5 seconds
   })

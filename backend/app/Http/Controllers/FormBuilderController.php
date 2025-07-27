@@ -66,11 +66,11 @@ class FormBuilderController extends Controller
         
         return $this->json($response, [
             'data' => $data,
-            'meta' => [
+            'pagination' => [
                 'total' => $forms->total(),
                 'page' => $forms->currentPage(),
                 'limit' => $forms->perPage(),
-                'pages' => $forms->lastPage()
+                'total_pages' => $forms->lastPage()
             ]
         ]);
     }

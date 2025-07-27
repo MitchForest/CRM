@@ -20,7 +20,7 @@ class FormBuilderService {
     page: number;
     limit: number;
   }> {
-    const response = await apiClient.customGet('/forms', { params });
+    const response = await apiClient.customGet('/admin/forms', { params });
     if (!response.success) {
       throw new Error(response.error || 'Failed to fetch forms');
     }
@@ -31,7 +31,7 @@ class FormBuilderService {
    * Get a single form by ID
    */
   async getForm(id: string): Promise<Form> {
-    const response = await apiClient.customGet(`/forms/${id}`);
+    const response = await apiClient.customGet(`/admin/forms/${id}`);
     if (!response.success) {
       throw new Error(response.error || 'Failed to fetch form');
     }
@@ -42,7 +42,7 @@ class FormBuilderService {
    * Create a new form
    */
   async createForm(data: Partial<Form>): Promise<Form> {
-    const response = await apiClient.customPost('/forms', data);
+    const response = await apiClient.customPost('/admin/forms', data);
     if (!response.success) {
       throw new Error(response.error || 'Failed to create form');
     }
@@ -53,7 +53,7 @@ class FormBuilderService {
    * Update an existing form
    */
   async updateForm(id: string, data: Partial<Form>): Promise<Form> {
-    const response = await apiClient.customPut(`/forms/${id}`, data);
+    const response = await apiClient.customPut(`/admin/forms/${id}`, data);
     if (!response.success) {
       throw new Error(response.error || 'Failed to update form');
     }
@@ -64,7 +64,7 @@ class FormBuilderService {
    * Delete a form
    */
   async deleteForm(id: string): Promise<void> {
-    const response = await apiClient.customDelete(`/forms/${id}`);
+    const response = await apiClient.customDelete(`/admin/forms/${id}`);
     if (!response.success) {
       throw new Error(response.error || 'Failed to delete form');
     }
@@ -74,7 +74,7 @@ class FormBuilderService {
    * Duplicate a form
    */
   async duplicateForm(id: string, newName: string): Promise<Form> {
-    const response = await apiClient.customPost(`/forms/${id}/duplicate`, { name: newName });
+    const response = await apiClient.customPost(`/admin/forms/${id}/duplicate`, { name: newName });
     if (!response.success) {
       throw new Error(response.error || 'Failed to duplicate form');
     }
@@ -98,7 +98,7 @@ class FormBuilderService {
     page: number;
     limit: number;
   }> {
-    const response = await apiClient.customGet(`/forms/${formId}/submissions`, { params });
+    const response = await apiClient.customGet(`/admin/forms/${formId}/submissions`, { params });
     if (!response.success) {
       throw new Error(response.error || 'Failed to fetch submissions');
     }
@@ -114,7 +114,7 @@ class FormBuilderService {
     lead_id?: string;
     submission_id: string;
   }> {
-    const response = await apiClient.publicPost(`/forms/${formId}/submit`, data);
+    const response = await apiClient.publicPost(`/public/forms/${formId}/submit`, data);
     if (!response.success) {
       throw new Error(response.error || 'Form submission failed');
     }
@@ -133,7 +133,7 @@ class FormBuilderService {
       onSuccess?: string;
     }
   ): Promise<string> {
-    const response = await apiClient.customPost(`/forms/${formId}/embed-code`, options);
+    const response = await apiClient.customPost(`/admin/forms/${formId}/embed-code`, options);
     if (!response.success) {
       throw new Error(response.error || 'Failed to generate embed code');
     }
@@ -161,7 +161,7 @@ class FormBuilderService {
       count: number;
     }[];
   }> {
-    const response = await apiClient.customGet(`/forms/${formId}/analytics`, { 
+    const response = await apiClient.customGet(`/admin/forms/${formId}/analytics`, { 
       params: dateRange 
     });
     if (!response.success) {
@@ -181,7 +181,7 @@ class FormBuilderService {
       end_date?: string;
     }
   ): Promise<Blob> {
-    const response = await apiClient.customGet(`/forms/${formId}/export`, {
+    const response = await apiClient.customGet(`/admin/forms/${formId}/export`, {
       params: { format, ...params },
       responseType: 'blob'
     });
@@ -246,7 +246,7 @@ class FormBuilderService {
     preview_url: string;
     fields: FormField[];
   }[]> {
-    const response = await apiClient.customGet('/forms/templates');
+    const response = await apiClient.customGet('/admin/forms/templates');
     if (!response.success) {
       throw new Error(response.error || 'Failed to fetch form templates');
     }

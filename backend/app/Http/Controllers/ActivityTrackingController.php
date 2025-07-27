@@ -802,6 +802,22 @@ class ActivityTrackingController extends Controller
         $params = $request->getQueryParams();
         $range = $params['range'] ?? '24h';
         
+        // Calculate date range
+        $endDate = new \DateTime();
+        switch ($range) {
+            case '24h':
+                $startDate = (clone $endDate)->modify('-24 hours');
+                break;
+            case '7d':
+                $startDate = (clone $endDate)->modify('-7 days');
+                break;
+            case '30d':
+                $startDate = (clone $endDate)->modify('-30 days');
+                break;
+            default:
+                $startDate = (clone $endDate)->modify('-24 hours');
+        }
+        
         // Get real data from the database
         $startDateStr = $startDate->format('Y-m-d H:i:s');
         $endDateStr = $endDate->format('Y-m-d H:i:s');

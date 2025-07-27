@@ -117,7 +117,7 @@ export function FormBuilderPage() {
         title: 'Form saved',
         description: 'Your form has been saved successfully.'
       });
-      navigate('/forms');
+      navigate('/app/forms');
     },
     onError: () => {
       toast({
@@ -207,7 +207,7 @@ export function FormBuilderPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/forms')}>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/app/forms')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>

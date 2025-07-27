@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Ramsey\Uuid\Uuid;
 
 class ActivityTrackingVisitor extends Model
@@ -65,5 +66,15 @@ class ActivityTrackingVisitor extends Model
     public function pageViews(): HasMany
     {
         return $this->hasMany(ActivityTrackingPageView::class, 'visitor_id', 'visitor_id');
+    }
+    
+    public function lead(): BelongsTo
+    {
+        return $this->belongsTo(Lead::class, 'lead_id');
+    }
+    
+    public function contact(): BelongsTo
+    {
+        return $this->belongsTo(Contact::class, 'contact_id');
     }
 }

@@ -105,11 +105,11 @@ export function FormsList() {
       )
     },
     {
-      accessorKey: 'created_at',
+      accessorKey: 'date_entered',
       header: 'Created',
       cell: ({ row }: { row: { original: Form } }) => (
         <span className="text-sm text-muted-foreground">
-          {row.original.created_at ? formatDistanceToNow(new Date(row.original.created_at), { addSuffix: true }) : '-'}
+          {row.original.date_entered ? formatDistanceToNow(new Date(row.original.date_entered), { addSuffix: true }) : '-'}
         </span>
       )
     },
@@ -120,7 +120,7 @@ export function FormsList() {
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => navigate(`/forms/${row.original.id}`)}
+                          onClick={() => navigate(`/app/forms/${row.original.id}`)}
           >
             Edit
           </Button>
@@ -174,7 +174,7 @@ export function FormsList() {
             Create and manage dynamic forms for lead capture
           </p>
         </div>
-        <Button onClick={() => navigate('/forms/new')}>
+        <Button onClick={() => navigate('/app/forms/new')}>
           <Plus className="mr-2 h-4 w-4" />
           Create Form
         </Button>

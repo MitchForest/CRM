@@ -165,9 +165,10 @@ export interface Form {
     successMessage?: string;
     redirectUrl?: string;
   };
-  created_at: string;
-  updated_at: string;
-  date_created?: string;
+  date_entered: string;
+  date_modified: string;
+  is_active: boolean;
+  created_by: string;
   submissions_count?: number;
   embed_code?: string;
 }

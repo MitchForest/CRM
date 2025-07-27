@@ -208,7 +208,8 @@ export function ChatWidget({
                 setIsOpen(true);
                 activityTrackingService.trackEvent({
                   event: 'chat_opened',
-                  properties: { visitor_id: activityTrackingService.getVisitorId() || 'anonymous' },
+                  properties: {},
+                  visitor_id: activityTrackingService.getVisitorId() || 'anonymous',
                   timestamp: new Date().toISOString()
                 });
               }}
