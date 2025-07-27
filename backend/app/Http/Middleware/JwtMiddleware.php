@@ -16,6 +16,10 @@ class JwtMiddleware implements MiddlewareInterface
     {
         $authHeader = $request->getHeaderLine('Authorization');
         
+        // Debug logging
+        error_log('JWT Middleware - Path: ' . $request->getUri()->getPath());
+        error_log('JWT Middleware - Auth Header: ' . ($authHeader ?: 'MISSING'));
+        
         if (empty($authHeader)) {
             return $this->unauthorizedResponse('Missing authorization header');
         }
@@ -31,6 +35,8 @@ class JwtMiddleware implements MiddlewareInterface
             // Decode JWT token
             $decoded = JWT::decode($token, new Key($_ENV['JWT_SECRET'], 'HS256'));
             
+            error_log('JWT Decoded successfully - User ID: ' . ($decoded->user_id ?? $decoded->sub ?? 'unknown'));
+            
             // Add user info to request
             $request = $request->withAttribute('user_id', $decoded->user_id ?? $decoded->sub ?? null);
             $request = $request->withAttribute('user_data', $decoded);
@@ -39,6 +45,7 @@ class JwtMiddleware implements MiddlewareInterface
             return $handler->handle($request);
             
         } catch (Exception $e) {
+            error_log('JWT Decode Error: ' . $e->getMessage());
             return $this->unauthorizedResponse('Invalid or expired token');
         }
     }

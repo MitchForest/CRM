@@ -129,13 +129,13 @@ class ActivityTrackingService {
   /**
    * Track a conversion event
    */
-  async trackConversion(event: string, value?: string | number, metadata?: Record<string, string | number | boolean>): Promise<void> {
+  async trackConversion(conversionType: string, value?: string | number, metadata?: Record<string, string | number | boolean>): Promise<void> {
     try {
       await apiClient.publicPost('/public/track/conversion', {
         visitor_id: this.visitorId || undefined,
         session_id: this.sessionId || undefined,
-        event,
-        value,
+        conversion_type: conversionType,
+        conversion_value: value,
         metadata,
         page_url: window.location.pathname,
         timestamp: new Date().toISOString()

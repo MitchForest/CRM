@@ -65,17 +65,44 @@ class ActivityTrackingService
     /**
      * Track an event
      */
-    public function trackEvent(array $data): void
+    public function trackEvent(array $data): array
     {
-        $session = ActivityTrackingSession::where('session_id', $data['session_id'])->first();
-        if ($session) {
-            $session->increment('events_count');
-            
-            // Track specific events
-            if ($data['event_type'] === 'form_submission') {
-                $session->increment('form_submissions');
+        // Create the event record
+        $eventData = [
+            'visitor_id' => $data['visitor_id'],
+            'event_type' => $data['event_type'],
+            'event_name' => $data['event_type'], // Use event_type as name if not provided
+            'event_category' => $data['event_category'] ?? null,
+            'event_data' => $data['event_data'] ?? [],
+            'occurred_at' => $data['timestamp'] ?? date('Y-m-d H:i:s'),
+            'page_url' => $data['page_url'] ?? null
+        ];
+        
+        // Only add session_id if it's provided and not empty
+        if (!empty($data['session_id'])) {
+            $eventData['session_id'] = $data['session_id'];
+        }
+        
+        $event = \App\Models\ActivityTrackingEvent::create($eventData);
+        
+        // Update session if provided
+        if (!empty($data['session_id'])) {
+            $session = ActivityTrackingSession::where('session_id', $data['session_id'])->first();
+            if ($session) {
+                $session->increment('events');
+                
+                // Track specific events
+                if ($data['event_type'] === 'form_submission') {
+                    $session->increment('form_submissions');
+                }
             }
         }
+        
+        return [
+            'event_id' => $event->id,
+            'visitor_id' => $data['visitor_id'],
+            'status' => 'tracked'
+        ];
     }
     
     /**

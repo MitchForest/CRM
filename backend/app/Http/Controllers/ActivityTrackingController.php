@@ -17,13 +17,8 @@ class ActivityTrackingController extends Controller
     public function __construct()
     {
         parent::__construct();
-        // Service is optional for now
-        try {
-            // TODO: Properly inject dependencies
-            // $this->trackingService = new ActivityTrackingService();
-        } catch (\Exception $e) {
-            $this->trackingService = null;
-        }
+        // Initialize the tracking service
+        $this->trackingService = new ActivityTrackingService();
     }
     
     /**
@@ -132,20 +127,16 @@ class ActivityTrackingController extends Controller
                 $visitorId = 'visitor_' . uniqid() . '_' . time();
             }
             
-            // Track the event
-            $result = $this->trackingService->trackEvent(
-                $visitorId,
-                $data['event'],
-                $data['properties'] ?? [],
-                $data['session_id'] ?? null,
-                $data['timestamp'] ?? null
-            );
-            
-            return $this->json($response, [
-                'event_id' => $result['event_id'],
+            // Track the event using the service
+            $result = $this->trackingService->trackEvent([
                 'visitor_id' => $visitorId,
-                'status' => 'tracked'
+                'session_id' => $data['session_id'] ?? null,
+                'event_type' => $data['event'],
+                'event_data' => $data['properties'] ?? [],
+                'timestamp' => $data['timestamp'] ?? null
             ]);
+            
+            return $this->json($response, $result);
             
         } catch (\Exception $e) {
             return $this->error($response, 'Failed to track event: ' . $e->getMessage(), 500);
@@ -763,14 +754,17 @@ class ActivityTrackingController extends Controller
         
         try {
             // Track as special event
-            return $this->trackEvent($request->withParsedBody(array_merge($data, [
-                'event_type' => 'conversion',
-                'event_name' => $data['conversion_type'],
-                'event_data' => [
+            return $this->trackEvent($request->withParsedBody([
+                'visitor_id' => $data['visitor_id'],
+                'session_id' => $data['session_id'],
+                'event' => 'conversion:' . $data['conversion_type'],
+                'properties' => [
+                    'conversion_type' => $data['conversion_type'],
                     'value' => $data['conversion_value'] ?? null,
                     'metadata' => $data['metadata'] ?? []
-                ]
-            ])), $response, $args);
+                ],
+                'timestamp' => date('Y-m-d H:i:s')
+            ]), $response, $args);
             
         } catch (\Exception $e) {
             return $this->error($response, 'Failed to track conversion: ' . $e->getMessage(), 500);

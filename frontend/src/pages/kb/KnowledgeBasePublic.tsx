@@ -8,14 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { knowledgeBaseService } from '@/services/knowledgeBase.service';
-import ReactMarkdown from 'react-markdown';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 export function KnowledgeBasePublic() {
   const { slug } = useParams();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [hasRated, setHasRated] = useState(false);
 
   // Fetch categories
@@ -30,11 +29,23 @@ export function KnowledgeBasePublic() {
     queryFn: () => knowledgeBaseService.getFeaturedArticles(6)
   });
 
+  // Fetch all public articles
+  const { data: allArticlesResponse, isLoading: isLoadingArticles } = useQuery({
+    queryKey: ['kb-articles-public', selectedCategory],
+    queryFn: () => knowledgeBaseService.getPublicArticles({
+      category: selectedCategory || undefined,
+      limit: 50
+    }),
+    enabled: !slug // Only fetch when not viewing a specific article
+  });
+
+  const allArticles = allArticlesResponse?.data || [];
+
   // Search articles
   const { data: searchResults, isLoading: isSearching } = useQuery({
-    queryKey: ['kb-search', searchQuery, selectedCategoryId],
+    queryKey: ['kb-search', searchQuery, selectedCategory],
     queryFn: () => knowledgeBaseService.searchPublicArticles(searchQuery, {
-      category: selectedCategoryId || undefined,
+      category: selectedCategory || undefined,
       limit: 20
     }),
     enabled: searchQuery.length > 2
@@ -153,11 +164,10 @@ export function KnowledgeBasePublic() {
                 )}
               </div>
 
-              <div className="prose prose-lg dark:prose-invert max-w-none">
-                <ReactMarkdown>
-                  {article.content}
-                </ReactMarkdown>
-              </div>
+              <div 
+                className="prose prose-lg dark:prose-invert max-w-none"
+                dangerouslySetInnerHTML={{ __html: article.content }}
+              />
 
               {/* Article Rating */}
               <Card className="mt-8">
@@ -296,16 +306,31 @@ export function KnowledgeBasePublic() {
         {/* Categories */}
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-6">Browse by Category</h2>
+          {selectedCategory && (
+            <div className="mb-4 flex items-center gap-2">
+              <span className="text-muted-foreground">Filtering by:</span>
+              <Badge variant="secondary" className="gap-1">
+                {selectedCategory}
+                <button
+                  onClick={() => setSelectedCategory(null)}
+                  className="ml-1 hover:text-destructive"
+                  aria-label="Clear filter"
+                >
+                  ×
+                </button>
+              </Badge>
+            </div>
+          )}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {categories.map(category => (
               <Card 
                 key={category.category} 
                 className={cn(
                   "cursor-pointer hover:shadow-md transition-all",
-                  selectedCategoryId === category.category && "ring-2 ring-primary"
+                  selectedCategory === category.category && "ring-2 ring-primary"
                 )}
-                onClick={() => setSelectedCategoryId(
-                  selectedCategoryId === category.category ? null : category.category
+                onClick={() => setSelectedCategory(
+                  selectedCategory === category.category ? null : category.category
                 )}
               >
                 <CardHeader>
@@ -324,11 +349,57 @@ export function KnowledgeBasePublic() {
           </div>
         </section>
 
+        {/* All Articles (filtered by category) */}
+        {selectedCategory && (
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold mb-6">
+              {selectedCategory} Articles
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedCategory(null)}
+                className="ml-4"
+              >
+                Clear filter
+              </Button>
+            </h2>
+            {isLoadingArticles ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Loading articles...</p>
+              </div>
+            ) : allArticles.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {allArticles.map(article => (
+                  <Card key={article.id} className="hover:shadow-md transition-shadow">
+                    <CardHeader>
+                      <a href={`/kb/public/${article.slug}`}>
+                        <CardTitle className="text-lg hover:text-primary">
+                          {article.title}
+                        </CardTitle>
+                      </a>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground line-clamp-3">
+                        {article.summary || 'No summary available'}
+                      </p>
+                      <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground">
+                        <span>{article.view_count || 0} views</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">No articles found in this category.</p>
+            )}
+          </section>
+        )}
+
         {/* Featured Articles */}
-        {!searchQuery && featuredArticles.length > 0 && (
-          <section>
+        {!slug && !selectedCategory && featuredArticles.length > 0 && (
+          <section className="mb-12">
             <h2 className="text-2xl font-bold mb-6">Featured Articles</h2>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {featuredArticles.map(article => (
                 <Card key={article.id} className="hover:shadow-md transition-shadow">
                   <CardHeader>

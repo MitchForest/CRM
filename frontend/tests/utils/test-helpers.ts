@@ -72,6 +72,7 @@ export function createMockContact(overrides?: Partial<ContactDB>): ContactDB {
     primary_address_country: 'USA',
     description: 'Key decision maker',
     lead_source: 'Referral',
+    account_id: null,
     lifetime_value: 50000,
     engagement_score: 85,
     last_activity_date: '2024-01-01T00:00:00Z',

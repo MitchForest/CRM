@@ -352,6 +352,7 @@ export function useActivitiesByParent(parent_type: string, parent_id: string) {
     queryKey: ['activities', 'byParent', parent_type, parent_id],
     queryFn: async () => {
       // Fetch all activity types with parent filters
+      // Fetch all activity types with parent filters
       const filters = [
         { field: 'parent_type', operator: 'eq' as const, value: parent_type },
         { field: 'parent_id', operator: 'eq' as const, value: parent_id }

@@ -45,16 +45,16 @@ class ActivitiesController extends Controller
             
             // Get activities based on type
             if ($type === 'all' || $type === 'call') {
-                $activities = array_merge($activities, $this->getCalls($parentType, $parentId, $assignedUserId, $dateFrom, $dateTo)->toArray());
+                $activities = array_merge($activities, $this->getCallsInternal($parentType, $parentId, $assignedUserId, $dateFrom, $dateTo)->toArray());
             }
             if ($type === 'all' || $type === 'meeting') {
-                $activities = array_merge($activities, $this->getMeetings($parentType, $parentId, $assignedUserId, $dateFrom, $dateTo)->toArray());
+                $activities = array_merge($activities, $this->getMeetingsInternal($parentType, $parentId, $assignedUserId, $dateFrom, $dateTo)->toArray());
             }
             if ($type === 'all' || $type === 'task') {
-                $activities = array_merge($activities, $this->getTasks($parentType, $parentId, $assignedUserId, $dateFrom, $dateTo)->toArray());
+                $activities = array_merge($activities, $this->getTasksInternal($parentType, $parentId, $assignedUserId, $dateFrom, $dateTo)->toArray());
             }
             if ($type === 'all' || $type === 'note') {
-                $activities = array_merge($activities, $this->getNotes($parentType, $parentId, $assignedUserId, $dateFrom, $dateTo)->toArray());
+                $activities = array_merge($activities, $this->getNotesInternal($parentType, $parentId, $assignedUserId, $dateFrom, $dateTo)->toArray());
             }
             
             // Sort by date descending
@@ -540,7 +540,52 @@ class ActivitiesController extends Controller
     /**
      * Get calls
      */
-    private function getCalls($parentType = null, $parentId = null, $assignedUserId = null, $dateFrom = null, $dateTo = null)
+    public function getCalls(Request $request, Response $response, array $args): Response
+    {
+        $params = $request->getQueryParams();
+        $page = intval($params['page'] ?? 1);
+        $limit = intval($params['limit'] ?? 10);
+        $offset = ($page - 1) * $limit;
+        
+        $query = Call::where('deleted', 0);
+        
+        // Apply filters if provided
+        if (isset($params['parent_type']) && isset($params['parent_id'])) {
+            $query->where('parent_type', $params['parent_type'])
+                  ->where('parent_id', $params['parent_id']);
+        }
+        
+        if (isset($params['assigned_user_id'])) {
+            $query->where('assigned_user_id', $params['assigned_user_id']);
+        }
+        
+        // Support filter array format from frontend
+        if (isset($params['filter']) && is_array($params['filter'])) {
+            foreach ($params['filter'] as $filter) {
+                if (isset($filter['field']) && isset($filter['value'])) {
+                    $query->where($filter['field'], $filter['value']);
+                }
+            }
+        }
+        
+        $total = $query->count();
+        $calls = $query->orderBy('date_start', 'desc')
+                       ->offset($offset)
+                       ->limit($limit)
+                       ->get();
+        
+        return $this->json($response, [
+            'data' => $calls,
+            'meta' => [
+                'total' => $total,
+                'page' => $page,
+                'limit' => $limit,
+                'pages' => ceil($total / $limit)
+            ]
+        ]);
+    }
+    
+    private function getCallsInternal($parentType = null, $parentId = null, $assignedUserId = null, $dateFrom = null, $dateTo = null)
     {
         $query = Call::where('deleted', 0);
         
@@ -565,10 +610,55 @@ class ActivitiesController extends Controller
         });
     }
     
+    public function getMeetings(Request $request, Response $response, array $args): Response
+    {
+        $params = $request->getQueryParams();
+        $page = intval($params['page'] ?? 1);
+        $limit = intval($params['limit'] ?? 10);
+        $offset = ($page - 1) * $limit;
+        
+        $query = Meeting::where('deleted', 0);
+        
+        // Apply filters if provided
+        if (isset($params['parent_type']) && isset($params['parent_id'])) {
+            $query->where('parent_type', $params['parent_type'])
+                  ->where('parent_id', $params['parent_id']);
+        }
+        
+        if (isset($params['assigned_user_id'])) {
+            $query->where('assigned_user_id', $params['assigned_user_id']);
+        }
+        
+        // Support filter array format from frontend
+        if (isset($params['filter']) && is_array($params['filter'])) {
+            foreach ($params['filter'] as $filter) {
+                if (isset($filter['field']) && isset($filter['value'])) {
+                    $query->where($filter['field'], $filter['value']);
+                }
+            }
+        }
+        
+        $total = $query->count();
+        $meetings = $query->orderBy('date_start', 'desc')
+                          ->offset($offset)
+                          ->limit($limit)
+                          ->get();
+        
+        return $this->json($response, [
+            'data' => $meetings,
+            'meta' => [
+                'total' => $total,
+                'page' => $page,
+                'limit' => $limit,
+                'pages' => ceil($total / $limit)
+            ]
+        ]);
+    }
+    
     /**
      * Get meetings
      */
-    private function getMeetings($parentType = null, $parentId = null, $assignedUserId = null, $dateFrom = null, $dateTo = null)
+    private function getMeetingsInternal($parentType = null, $parentId = null, $assignedUserId = null, $dateFrom = null, $dateTo = null)
     {
         $query = Meeting::where('deleted', 0);
         
@@ -593,10 +683,55 @@ class ActivitiesController extends Controller
         });
     }
     
+    public function getTasks(Request $request, Response $response, array $args): Response
+    {
+        $params = $request->getQueryParams();
+        $page = intval($params['page'] ?? 1);
+        $limit = intval($params['limit'] ?? 10);
+        $offset = ($page - 1) * $limit;
+        
+        $query = Task::where('deleted', 0);
+        
+        // Apply filters if provided
+        if (isset($params['parent_type']) && isset($params['parent_id'])) {
+            $query->where('parent_type', $params['parent_type'])
+                  ->where('parent_id', $params['parent_id']);
+        }
+        
+        if (isset($params['assigned_user_id'])) {
+            $query->where('assigned_user_id', $params['assigned_user_id']);
+        }
+        
+        // Support filter array format from frontend
+        if (isset($params['filter']) && is_array($params['filter'])) {
+            foreach ($params['filter'] as $filter) {
+                if (isset($filter['field']) && isset($filter['value'])) {
+                    $query->where($filter['field'], $filter['value']);
+                }
+            }
+        }
+        
+        $total = $query->count();
+        $tasks = $query->orderBy('date_due', 'asc')
+                       ->offset($offset)
+                       ->limit($limit)
+                       ->get();
+        
+        return $this->json($response, [
+            'data' => $tasks,
+            'meta' => [
+                'total' => $total,
+                'page' => $page,
+                'limit' => $limit,
+                'pages' => ceil($total / $limit)
+            ]
+        ]);
+    }
+    
     /**
      * Get tasks
      */
-    private function getTasks($parentType = null, $parentId = null, $assignedUserId = null, $dateFrom = null, $dateTo = null)
+    private function getTasksInternal($parentType = null, $parentId = null, $assignedUserId = null, $dateFrom = null, $dateTo = null)
     {
         $query = Task::where('deleted', 0);
         
@@ -621,10 +756,55 @@ class ActivitiesController extends Controller
         });
     }
     
+    public function getNotes(Request $request, Response $response, array $args): Response
+    {
+        $params = $request->getQueryParams();
+        $page = intval($params['page'] ?? 1);
+        $limit = intval($params['limit'] ?? 10);
+        $offset = ($page - 1) * $limit;
+        
+        $query = Note::where('deleted', 0);
+        
+        // Apply filters if provided
+        if (isset($params['parent_type']) && isset($params['parent_id'])) {
+            $query->where('parent_type', $params['parent_type'])
+                  ->where('parent_id', $params['parent_id']);
+        }
+        
+        if (isset($params['assigned_user_id'])) {
+            $query->where('assigned_user_id', $params['assigned_user_id']);
+        }
+        
+        // Support filter array format from frontend
+        if (isset($params['filter']) && is_array($params['filter'])) {
+            foreach ($params['filter'] as $filter) {
+                if (isset($filter['field']) && isset($filter['value'])) {
+                    $query->where($filter['field'], $filter['value']);
+                }
+            }
+        }
+        
+        $total = $query->count();
+        $notes = $query->orderBy('date_entered', 'desc')
+                       ->offset($offset)
+                       ->limit($limit)
+                       ->get();
+        
+        return $this->json($response, [
+            'data' => $notes,
+            'meta' => [
+                'total' => $total,
+                'page' => $page,
+                'limit' => $limit,
+                'pages' => ceil($total / $limit)
+            ]
+        ]);
+    }
+    
     /**
      * Get notes
      */
-    private function getNotes($parentType = null, $parentId = null, $assignedUserId = null, $dateFrom = null, $dateTo = null)
+    private function getNotesInternal($parentType = null, $parentId = null, $assignedUserId = null, $dateFrom = null, $dateTo = null)
     {
         $query = Note::where('deleted', 0);
         

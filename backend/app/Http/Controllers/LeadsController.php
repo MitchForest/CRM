@@ -439,7 +439,7 @@ class LeadsController extends Controller
         $activities = [];
         
         $conversations = \App\Models\ChatConversation::where('lead_id', $lead->id)
-            ->orderBy('started_at', 'desc')
+            ->orderBy('date_started', 'desc')
             ->limit($limit)
             ->get();
             
@@ -449,13 +449,13 @@ class LeadsController extends Controller
                 'type' => 'chat_conversation',
                 'title' => 'Chat Conversation',
                 'description' => "Had a chat conversation with {$conversation->messages()->count()} messages",
-                'timestamp' => $conversation->started_at->toIso8601String(),
+                'timestamp' => $conversation->date_started->toIso8601String(),
                 'icon' => 'message-circle',
                 'data' => [
                     'conversation_id' => $conversation->id,
                     'message_count' => $conversation->messages()->count(),
-                    'duration' => $conversation->ended_at ? 
-                        $conversation->ended_at->diffInMinutes($conversation->started_at) : null
+                    'duration' => $conversation->date_ended ? 
+                        $conversation->date_ended->diffInMinutes($conversation->date_started) : null
                 ]
             ];
         }

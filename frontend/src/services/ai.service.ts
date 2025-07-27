@@ -8,6 +8,57 @@ import type {
 
 class AIService {
   /**
+   * Start a public chat session (for visitors)
+   */
+  async startPublicChat(visitorId: string): Promise<{
+    conversation_id: string;
+    visitor_id: string;
+    status: string;
+  }> {
+    const response = await apiClient.publicPost('/public/chat/start', {
+      visitor_id: visitorId
+    });
+    
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to start chat');
+    }
+    return response.data;
+  }
+
+  /**
+   * Send a message in public chat (for visitors)
+   */
+  async sendPublicChatMessage(
+    conversationId: string,
+    message: string
+  ): Promise<{
+    message: string;
+    handoff_required: boolean;
+    confidence: number;
+  }> {
+    const response = await apiClient.publicPost('/public/chat/message', {
+      conversation_id: conversationId,
+      message
+    });
+    
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to send message');
+    }
+    return response.data;
+  }
+
+  /**
+   * Get public chat conversation history
+   */
+  async getPublicChatHistory(sessionId: string): Promise<ChatSession> {
+    const response = await apiClient.publicGet(`/public/chat/conversation/${sessionId}`);
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to get chat history');
+    }
+    return response.data;
+  }
+
+  /**
    * Calculate AI score for a single lead
    */
   async scoreLead(leadId: string): Promise<AIScoreResult> {
@@ -56,7 +107,7 @@ class AIService {
     suggested_actions?: string[];
     metadata?: Record<string, unknown>;
   }> {
-    const response = await apiClient.customPost('/ai/chat', {
+    const response = await apiClient.customPost('/crm/ai/chat', {
       conversation_id: conversationId,
       message,
       visitor_id: visitorId || localStorage.getItem('crm_visitor_id')
@@ -82,7 +133,7 @@ class AIService {
    * Get chat conversation history
    */
   async getChatHistory(conversationId: string): Promise<ChatSession> {
-    const response = await apiClient.customGet(`/ai/chat/${conversationId}`);
+    const response = await apiClient.customGet(`/crm/ai/chat/${conversationId}`);
     if (!response.success) {
       throw new Error(response.error || 'Failed to get chat history');
     }
@@ -127,7 +178,9 @@ class AIService {
     confidence: number;
     keywords: string[];
   }> {
-    const response = await apiClient.customPost('/ai/sentiment', {
+    // Note: Sentiment analysis endpoint not implemented in backend yet
+    throw new Error('Sentiment analysis not available');
+    const response = await apiClient.customPost('/crm/ai/sentiment', {
       text,
       context
     });
@@ -156,7 +209,9 @@ class AIService {
       priority: string;
     };
   }> {
-    const response = await apiClient.customPost('/ai/create-ticket', {
+    // Note: Create ticket endpoint not implemented in backend routes yet
+    throw new Error('Ticket creation through AI not available');
+    const response = await apiClient.customPost('/crm/ai/create-ticket', {
       issue,
       userInfo
     });

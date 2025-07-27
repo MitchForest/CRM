@@ -60,7 +60,7 @@ class KnowledgeBaseController extends Controller
         }
         
         // Apply sorting
-        $query->orderBy('created_at', 'desc');
+        $query->orderBy('date_entered', 'desc');
         
         // Paginate
         $page = intval($data['page'] ?? 1);

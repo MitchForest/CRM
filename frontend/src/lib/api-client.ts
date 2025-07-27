@@ -95,10 +95,12 @@ class ApiClient {
       (config) => {
         // Get auth from store
         const auth = getStoredAuth()
+        console.log('Custom API Request:', config.url, 'Has token:', !!auth?.accessToken)
         if (auth?.accessToken) {
           // Always set the token if we have one
           this.customApiToken = auth.accessToken
           config.headers.Authorization = `Bearer ${auth.accessToken}`
+          console.log('Setting auth header:', config.headers.Authorization?.substring(0, 20) + '...')
         }
         return config
       },
@@ -603,12 +605,16 @@ class ApiClient {
   // Task methods
   async getTasks(params?: QueryParams): Promise<ListResponse<TaskDB>> {
     try {
+      const queryParams: any = {
+        page: params?.page || 1,
+        limit: params?.limit || 10,
+      }
+      
+      if (params?.search) queryParams.search = params.search
+      if (params?.filter) queryParams.filter = params.filter
+      
       const response = await this.customClient.get('/crm/tasks', { 
-        params: {
-          page: params?.page || 1,
-          limit: params?.limit || 10,
-          search: params?.search
-        }
+        params: queryParams
       })
       
       return {
@@ -790,12 +796,16 @@ class ApiClient {
   // Call methods
   async getCalls(params?: QueryParams): Promise<ListResponse<CallDB>> {
     try {
+      const queryParams: any = {
+        page: params?.page || 1,
+        limit: params?.limit || 10,
+      }
+      
+      if (params?.search) queryParams.search = params.search
+      if (params?.filter) queryParams.filter = params.filter
+      
       const response = await this.customClient.get('/crm/calls', { 
-        params: {
-          page: params?.page || 1,
-          limit: params?.limit || 10,
-          search: params?.search
-        }
+        params: queryParams
       })
       
       return {
@@ -860,12 +870,16 @@ class ApiClient {
   // Meeting methods
   async getMeetings(params?: QueryParams): Promise<ListResponse<MeetingDB>> {
     try {
+      const queryParams: any = {
+        page: params?.page || 1,
+        limit: params?.limit || 10,
+      }
+      
+      if (params?.search) queryParams.search = params.search
+      if (params?.filter) queryParams.filter = params.filter
+      
       const response = await this.customClient.get('/crm/meetings', { 
-        params: {
-          page: params?.page || 1,
-          limit: params?.limit || 10,
-          search: params?.search
-        }
+        params: queryParams
       })
       
       return {
@@ -930,12 +944,16 @@ class ApiClient {
   // Note methods
   async getNotes(params?: QueryParams): Promise<ListResponse<NoteDB>> {
     try {
+      const queryParams: any = {
+        page: params?.page || 1,
+        limit: params?.limit || 10,
+      }
+      
+      if (params?.search) queryParams.search = params.search
+      if (params?.filter) queryParams.filter = params.filter
+      
       const response = await this.customClient.get('/crm/notes', { 
-        params: {
-          page: params?.page || 1,
-          limit: params?.limit || 10,
-          search: params?.search
-        }
+        params: queryParams
       })
       
       return {

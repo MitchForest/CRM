@@ -52,7 +52,7 @@
     }
     
     // Public API
-    window.ActivityTracking = {
+    window.ActivityTracker = {
         trackEvent: function(event, properties) {
             var data = {
                 visitor_id: visitorId,
@@ -62,6 +62,24 @@
             };
             
             fetch(API_ENDPOINT + '/api/public/track/event', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+        },
+        
+        trackConversion: function(conversionType, value, metadata) {
+            var data = {
+                visitor_id: visitorId,
+                session_id: sessionId,
+                conversion_type: conversionType,
+                conversion_value: value || 0,
+                metadata: metadata || {}
+            };
+            
+            fetch(API_ENDPOINT + '/api/public/track/conversion', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

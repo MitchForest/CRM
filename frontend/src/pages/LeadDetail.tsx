@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useLead, useConvertLead, useDeleteLead } from '@/hooks/use-leads'
 import { formatDateTime } from '@/lib/utils'
-import { LeadActivityTimeline } from '@/components/activities/LeadActivityTimeline'
+import { UnifiedActivityTimeline } from '@/components/activities/UnifiedActivityTimeline'
 import { useActivitiesByParent } from '@/hooks/use-activities'
 import { apiClient } from '@/lib/api-client'
 import { toast } from 'sonner'
@@ -368,7 +368,7 @@ export function LeadDetailPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <LeadActivityTimeline leadId={id!} />
+                  <UnifiedActivityTimeline entityType="lead" entityId={id!} />
                 </CardContent>
               </Card>
             </TabsContent>

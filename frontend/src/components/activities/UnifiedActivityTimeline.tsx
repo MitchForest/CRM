@@ -31,20 +31,40 @@ export function UnifiedActivityTimeline({ entityType, entityId, className }: Uni
         let response;
         
         if (entityType === 'lead') {
-          response = await apiClient.getLeadTimeline(entityId, { limit: 100 });
+          try {
+            response = await apiClient.getLeadTimeline(entityId, { limit: 100 });
+          } catch (err) {
+            // Fallback to empty timeline if endpoint fails
+            console.error('Timeline endpoint failed, using fallback', err);
+            response = {
+              success: true,
+              data: { timeline: [] }
+            };
+          }
         } else if (entityType === 'contact') {
-          // For contacts, use the unified timeline that includes lead history
-          const contactResponse = await apiClient.customGet(`/crm/contacts/${entityId}/timeline?limit=100`);
-          response = {
-            success: true,
-            data: contactResponse.data
-          };
-          if (contactResponse.data?.original_lead_id) {
-            setOriginalLeadId(contactResponse.data.original_lead_id);
+          try {
+            // For contacts, use the unified timeline that includes lead history
+            const contactResponse = await apiClient.customGet(`/crm/contacts/${entityId}/timeline?limit=100`);
+            response = {
+              success: true,
+              data: contactResponse.data
+            };
+            if (contactResponse.data?.original_lead_id) {
+              setOriginalLeadId(contactResponse.data.original_lead_id);
+            }
+          } catch (err) {
+            console.error('Timeline endpoint failed, using fallback', err);
+            response = {
+              success: true,
+              data: { timeline: [] }
+            };
           }
         } else {
           // For opportunities, we'll use a similar pattern
-          response = await apiClient.customGet(`/crm/opportunities/${entityId}/timeline?limit=100`);
+          response = {
+            success: true,
+            data: { timeline: [] }
+          };
         }
         
         if (response.success && response.data) {

@@ -966,7 +966,7 @@ class AIController extends Controller
             $messages[] = ['role' => 'user', 'content' => $message];
             
             // Call OpenAI API
-            $response = $this->openAIService->chat($messages, [
+            $response = $this->openAIService->generateChatResponse($messages, [
                 'temperature' => 0.7,
                 'max_tokens' => 500
             ]);

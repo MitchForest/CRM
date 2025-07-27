@@ -24,6 +24,7 @@ class Meeting extends BaseModel
         'status',
         'parent_type',
         'parent_id',
+        'contact_id',
         'description'
     ];
     

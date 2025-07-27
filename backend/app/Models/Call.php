@@ -21,6 +21,7 @@ class Call extends BaseModel
         'status',
         'direction',
         'description',
+        'contact_id',               // Direct contact reference
         'date_entered',
         'date_modified',
         'deleted'

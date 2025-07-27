@@ -85,6 +85,12 @@ return function (RouteCollectorProxy $api) {
             $activities->delete('/{type}/{id}', [ActivitiesController::class, 'delete']);
         });
         
+        // Individual activity type routes for listing
+        $crm->get('/tasks', [ActivitiesController::class, 'getTasks']);
+        $crm->get('/calls', [ActivitiesController::class, 'getCalls']);
+        $crm->get('/meetings', [ActivitiesController::class, 'getMeetings']);
+        $crm->get('/notes', [ActivitiesController::class, 'getNotes']);
+        
         // Analytics Routes
         $crm->group('/analytics', function (RouteCollectorProxy $analytics) {
             $analytics->get('/sales', [AnalyticsController::class, 'salesAnalytics']);
@@ -92,6 +98,9 @@ return function (RouteCollectorProxy $api) {
             $analytics->get('/activities', [AnalyticsController::class, 'activityAnalytics']);
             $analytics->get('/conversion', [AnalyticsController::class, 'conversionAnalytics']);
             $analytics->get('/team-performance', [AnalyticsController::class, 'teamPerformance']);
+            
+            // Activity tracking analytics
+            $analytics->get('/visitors', [ActivityTrackingController::class, 'getVisitors']);
         });
         
         // AI Features

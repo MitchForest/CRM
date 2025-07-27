@@ -116,13 +116,26 @@ export function ChatWidget({
     setHasInteracted(true);
 
     try {
-      const response = await aiService.sendChatMessage(
-        conversationId,
-        input,
-        activityTrackingService.getVisitorId() || undefined
-      );
-
-      setConversationId(response.conversation_id);
+      const visitorId = activityTrackingService.getVisitorId() || 'anonymous';
+      let response;
+      
+      if (!conversationId) {
+        // Start a new public chat session
+        const startResponse = await aiService.startPublicChat(visitorId);
+        setConversationId(startResponse.conversation_id);
+        
+        // Send the first message
+        response = await aiService.sendPublicChatMessage(
+          startResponse.conversation_id,
+          input
+        );
+      } else {
+        // Send message in existing conversation
+        response = await aiService.sendPublicChatMessage(
+          conversationId,
+          input
+        );
+      }
 
       const assistantMessage: ChatMessage = {
         id: Date.now().toString(),
@@ -130,63 +143,20 @@ export function ChatWidget({
         content: response.message,
         timestamp: new Date().toISOString(),
         metadata: {
-          intent: response.intent as "support" | "sales" | "general" | "qualification" | undefined,
-          sentiment: response.sentiment,
-          suggested_actions: response.suggested_actions,
           confidence: response.confidence,
-          ...response.metadata
+          handoff_required: response.handoff_required
         },
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
 
-      // Check if lead was captured
-      if (response.metadata?.lead_captured && response.metadata?.lead_info) {
-        const leadInfo = response.metadata.lead_info as ExtractedLeadInfo;
-        
-        // Prepare lead info for callback
-        const callbackData = {
-          name: [leadInfo.first_name, leadInfo.last_name].filter(Boolean).join(' ') || 'Unknown',
-          email: leadInfo.email || '',
-          company: leadInfo.company || leadInfo.account_name || undefined,
-          phone: leadInfo.phone || undefined,
-          title: leadInfo.title || undefined,
-          leadId: response.metadata.lead_id,
-          leadScore: response.metadata.lead_score,
-          confidence: leadInfo.extraction_confidence
-        };
-        
-        onLeadCapture?.(callbackData);
-        
-        // Show success notification in chat
-        const notificationMessage: ChatMessage = {
-          id: Date.now().toString() + '_notification',
-          role: 'system',
-          content: '✓ Your information has been saved. A team member will follow up with you soon.',
-          timestamp: new Date().toISOString(),
-        };
-        setMessages((prev) => [...prev, notificationMessage]);
-      }
-
-      // Check if support ticket action was suggested
-      if (response.intent === 'support' && response.suggested_actions?.some(action => action.includes('support ticket'))) {
-        // Automatically offer to create ticket
-        const ticketMessage: ChatMessage = {
-          id: Date.now().toString() + '_ticket_offer',
-          role: 'assistant',
-          content: 'Would you like me to create a support ticket for you? Just describe your issue and I\'ll handle it right away.',
-          timestamp: new Date().toISOString(),
-          metadata: {
-            suggested_actions: ['Yes, create a ticket', 'No, I\'ll browse the knowledge base']
-          }
-        };
-        setMessages((prev) => [...prev, ticketMessage]);
-      }
-
       // Track engagement
       activityTrackingService.trackEvent({
-        type: 'chat_message_sent',
-        data: { conversation_id: response.conversation_id, visitor_id: activityTrackingService.getVisitorId() || 'anonymous' },
+        event: 'chat_message_sent',
+        properties: { 
+          conversation_id: conversationId || 'new', 
+          visitor_id: visitorId 
+        },
         timestamp: new Date().toISOString()
       });
     } catch (error) {
@@ -237,8 +207,8 @@ export function ChatWidget({
               onClick={() => {
                 setIsOpen(true);
                 activityTrackingService.trackEvent({
-                  type: 'chat_opened',
-                  data: { visitor_id: activityTrackingService.getVisitorId() || 'anonymous' },
+                  event: 'chat_opened',
+                  properties: { visitor_id: activityTrackingService.getVisitorId() || 'anonymous' },
                   timestamp: new Date().toISOString()
                 });
               }}
@@ -310,8 +280,8 @@ export function ChatWidget({
                     onClick={() => {
                       setIsOpen(false);
                       activityTrackingService.trackEvent({
-                        type: 'chat_closed',
-                        data: conversationId ? { conversation_id: conversationId, visitor_id: activityTrackingService.getVisitorId() || 'anonymous' } : { visitor_id: activityTrackingService.getVisitorId() || 'anonymous' },
+                        event: 'chat_closed',
+                        properties: conversationId ? { conversation_id: conversationId, visitor_id: activityTrackingService.getVisitorId() || 'anonymous' } : { visitor_id: activityTrackingService.getVisitorId() || 'anonymous' },
                         timestamp: new Date().toISOString()
                       });
                     }}

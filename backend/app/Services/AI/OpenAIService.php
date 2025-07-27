@@ -113,8 +113,10 @@ class OpenAIService
         ];
         
         foreach ($messages as $message) {
+            // Handle both formats: ['role' => 'user', 'content' => '...'] and ['message_type' => 'user', 'content' => '...']
+            $role = $message['role'] ?? ($message['message_type'] ?? 'user');
             $formattedMessages[] = [
-                'role' => $message['message_type'] === 'user' ? 'user' : 'assistant',
+                'role' => in_array($role, ['user', 'assistant', 'system']) ? $role : 'user',
                 'content' => $message['content']
             ];
         }

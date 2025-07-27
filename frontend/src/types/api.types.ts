@@ -317,8 +317,8 @@ export interface ActivityHeatmap {
 }
 
 export interface TrackingEvent {
-  type: string;
-  data: Record<string, any>;
+  event: string;
+  properties: Record<string, any>;
   timestamp: string;
   visitor_id?: string;
   session_id?: string;

@@ -23,7 +23,7 @@ class AuthController extends Controller
     public function __construct()
     {
         parent::__construct();
-        $this->jwtKey = $_ENV['JWT_SECRET'] ?? 'your-secret-key';
+        $this->jwtKey = $_ENV['JWT_SECRET'] ?? 'your-secret-key-change-in-production';
     }
     
     /**

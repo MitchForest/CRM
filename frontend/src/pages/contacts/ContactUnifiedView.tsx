@@ -1,14 +1,14 @@
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Phone, Mail, Building, Calendar, MessageSquare, FileText, Activity } from 'lucide-react'
+import { ArrowLeft, Building } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { format } from 'date-fns'
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
+import { UnifiedActivityTimeline } from '@/components/activities/UnifiedActivityTimeline'
 
 interface UnifiedContactData {
   contact: {
@@ -104,45 +104,7 @@ export function ContactUnifiedView() {
     )
   }
 
-  const { contact, activities, tickets, opportunities, score, stats } = data
-
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'website_visit':
-        return <Activity className="h-4 w-4" />
-      case 'ai_chat':
-        return <MessageSquare className="h-4 w-4" />
-      case 'call':
-        return <Phone className="h-4 w-4" />
-      case 'meeting':
-        return <Calendar className="h-4 w-4" />
-      case 'email':
-        return <Mail className="h-4 w-4" />
-      case 'note':
-        return <FileText className="h-4 w-4" />
-      default:
-        return <Activity className="h-4 w-4" />
-    }
-  }
-
-  const getActivityTitle = (activity: UnifiedContactData['activities'][0]) => {
-    switch (activity.type) {
-      case 'website_visit':
-        return `Website visit - ${activity.data.totalPageViews || 0} pages viewed`
-      case 'ai_chat':
-        return `AI Chat conversation - ${activity.data.messageCount || 0} messages`
-      case 'call':
-        return String(activity.data.name || 'Call')
-      case 'meeting':
-        return String(activity.data.name || 'Meeting')
-      case 'email':
-        return String(activity.data.name || 'Email')
-      case 'note':
-        return String(activity.data.name || 'Note')
-      default:
-        return 'Activity'
-    }
-  }
+  const { contact, tickets, opportunities, score, stats } = data
 
   return (
     <div className="space-y-6">
@@ -250,35 +212,11 @@ export function ContactUnifiedView() {
               <CardDescription>All interactions and activities in one place</CardDescription>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[600px] pr-4">
-                <div className="space-y-4">
-                  {activities.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">No activities recorded</p>
-                  ) : (
-                    activities.map((activity: UnifiedContactData['activities'][0], index: number) => (
-                      <div key={index} className="flex gap-4 pb-4 border-b last:border-0">
-                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                          {getActivityIcon(activity.type)}
-                        </div>
-                        <div className="flex-1 space-y-1">
-                          <p className="text-sm font-medium">{getActivityTitle(activity)}</p>
-                          {activity.data.description && (
-                            <p className="text-sm text-muted-foreground">
-                              {String(activity.data.description)}
-                            </p>
-                          )}
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(activity.date), 'PPp')}
-                            {activity.data.assignedTo && (
-                              <> • {String(activity.data.assignedTo)}</>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </ScrollArea>
+              <UnifiedActivityTimeline 
+                entityType="contact" 
+                entityId={id!} 
+                className="max-h-[600px] overflow-y-auto"
+              />
             </CardContent>
           </Card>
         </TabsContent>
