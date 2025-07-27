@@ -17,6 +17,18 @@ if (!isset($_SERVER['HTTP_AUTHORIZATION']) && isset($_SERVER['REDIRECT_HTTP_AUTH
 chdir(__DIR__ . '/../../');
 require_once __DIR__ . '/../../include/entryPoint.php';
 
+// Initialize TimeDate global if not already set
+if (!isset($GLOBALS['timedate'])) {
+    require_once __DIR__ . '/../../include/TimeDate.php';
+    $GLOBALS['timedate'] = new TimeDate();
+}
+
+// Ensure database global is set
+if (!isset($GLOBALS['db']) && class_exists('DBManagerFactory')) {
+    require_once __DIR__ . '/../../include/database/DBManagerFactory.php';
+    $GLOBALS['db'] = DBManagerFactory::getInstance();
+}
+
 $app = new \Slim\App(\Api\Core\Loader\ContainerLoader::configure());
 // closure shouldn't be created in static context under PHP7
 $routeLoader = new \Api\Core\Loader\RouteLoader();

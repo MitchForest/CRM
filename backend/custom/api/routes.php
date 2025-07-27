@@ -126,10 +126,10 @@ function configureRoutes($router) {
     $router->post('/forms/{id}/submissions/{submission_id}/convert', 'Api\Controllers\FormBuilderController::convertSubmissionToLead');
     
     // Knowledge Base Routes (Phase 5 - Enhanced) 
-    $router->get('/kb/categories', 'Api\Controllers\KnowledgeBaseController::getCategories');
-    $router->get('/kb/articles', 'Api\Controllers\KnowledgeBaseController::getArticles');
-    $router->get('/kb/articles/{id}', 'Api\Controllers\KnowledgeBaseController::getArticle');
-    $router->get('/kb/search', 'Api\Controllers\KnowledgeBaseController::searchArticles');
+    $router->get('/kb/categories', 'Api\Controllers\KnowledgeBaseController::getCategories', ['skipAuth' => true]);
+    $router->get('/kb/articles', 'Api\Controllers\KnowledgeBaseController::getArticles', ['skipAuth' => true]);
+    $router->get('/kb/articles/{id}', 'Api\Controllers\KnowledgeBaseController::getArticle', ['skipAuth' => true]);
+    $router->get('/kb/search', 'Api\Controllers\KnowledgeBaseController::searchArticles', ['skipAuth' => true]);
     $router->post('/kb/articles/{id}/helpful', 'Api\Controllers\KnowledgeBaseController::markHelpful', ['skipAuth' => true]);
     
     // Public Lead Form Submission

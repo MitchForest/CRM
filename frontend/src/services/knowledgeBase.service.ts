@@ -12,9 +12,10 @@ class KnowledgeBaseService {
    * Get all categories
    */
   async getCategories(): Promise<KBCategory[]> {
-    const response = await apiClient.customGet('/knowledge-base/categories');
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to fetch categories');
+    const response = await apiClient.customGet('/kb/categories');
+    // The response IS the data, not wrapped in success/data
+    if (!response || !response.data) {
+      throw new Error('Failed to fetch categories');
     }
     return response.data;
   }
@@ -24,10 +25,10 @@ class KnowledgeBaseService {
    */
   async getCategory(id: string): Promise<KBCategory> {
     const response = await apiClient.customGet(`/knowledge-base/categories/${id}`);
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to fetch category');
+    if (!response) {
+      throw new Error('Failed to fetch category');
     }
-    return response.data;
+    return response;
   }
 
   /**
@@ -35,10 +36,10 @@ class KnowledgeBaseService {
    */
   async createCategory(data: Partial<KBCategory>): Promise<KBCategory> {
     const response = await apiClient.customPost('/knowledge-base/categories', data);
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to create category');
+    if (!response) {
+      throw new Error('Failed to create category');
     }
-    return response.data;
+    return response;
   }
 
   /**
@@ -46,10 +47,10 @@ class KnowledgeBaseService {
    */
   async updateCategory(id: string, data: Partial<KBCategory>): Promise<KBCategory> {
     const response = await apiClient.customPut(`/knowledge-base/categories/${id}`, data);
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to update category');
+    if (!response) {
+      throw new Error('Failed to update category');
     }
-    return response.data;
+    return response;
   }
 
   /**
@@ -57,8 +58,8 @@ class KnowledgeBaseService {
    */
   async deleteCategory(id: string): Promise<void> {
     const response = await apiClient.customDelete(`/knowledge-base/categories/${id}`);
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to delete category');
+    if (response === null || response === undefined) {
+      throw new Error('Failed to delete category');
     }
   }
 
@@ -83,10 +84,16 @@ class KnowledgeBaseService {
     limit: number;
   }> {
     const response = await apiClient.customGet('/knowledge-base/articles', { params });
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to fetch articles');
+    // Response format: { data: [...], meta: { total, page, limit } }
+    if (!response || !response.data) {
+      throw new Error('Failed to fetch articles');
     }
-    return response.data;
+    return {
+      data: response.data,
+      total: response.meta?.total || 0,
+      page: response.meta?.page || 1,
+      limit: response.meta?.limit || 20
+    };
   }
 
   /**
@@ -94,8 +101,8 @@ class KnowledgeBaseService {
    */
   async getArticle(id: string): Promise<KBArticle> {
     const response = await apiClient.customGet(`/knowledge-base/articles/${id}`);
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to fetch article');
+    if (!response || !response.data) {
+      throw new Error('Failed to fetch article');
     }
     return response.data;
   }
@@ -104,9 +111,9 @@ class KnowledgeBaseService {
    * Get public article by slug (no auth required)
    */
   async getPublicArticle(slug: string): Promise<KBArticle> {
-    const response = await apiClient.publicGet(`/knowledge-base/public/${slug}`);
-    if (!response.success) {
-      throw new Error(response.error || 'Article not found');
+    const response = await apiClient.customGet(`/kb/articles/${slug}`);
+    if (!response || !response.data) {
+      throw new Error('Article not found');
     }
     return response.data;
   }
@@ -116,8 +123,8 @@ class KnowledgeBaseService {
    */
   async createArticle(data: Partial<KBArticle>): Promise<KBArticle> {
     const response = await apiClient.customPost('/knowledge-base/articles', data);
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to create article');
+    if (!response || !response.data) {
+      throw new Error('Failed to create article');
     }
     return response.data;
   }
@@ -127,8 +134,8 @@ class KnowledgeBaseService {
    */
   async updateArticle(id: string, data: Partial<KBArticle>): Promise<KBArticle> {
     const response = await apiClient.customPut(`/knowledge-base/articles/${id}`, data);
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to update article');
+    if (!response || !response.data) {
+      throw new Error('Failed to update article');
     }
     return response.data;
   }
@@ -138,8 +145,8 @@ class KnowledgeBaseService {
    */
   async deleteArticle(id: string): Promise<void> {
     const response = await apiClient.customDelete(`/knowledge-base/articles/${id}`);
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to delete article');
+    if (response === null || response === undefined) {
+      throw new Error('Failed to delete article');
     }
   }
 
@@ -150,8 +157,8 @@ class KnowledgeBaseService {
     const response = await apiClient.customPost(`/knowledge-base/articles/${id}/duplicate`, { 
       title: newTitle 
     });
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to duplicate article');
+    if (!response || !response.data) {
+      throw new Error('Failed to duplicate article');
     }
     return response.data;
   }
@@ -164,10 +171,10 @@ class KnowledgeBaseService {
     helpful_no: number;
   }> {
     const response = await apiClient.customPost(`/knowledge-base/articles/${id}/rate`, { helpful });
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to rate article');
+    if (!response) {
+      throw new Error('Failed to rate article');
     }
-    return response.data;
+    return response;
   }
 
   /**
@@ -185,15 +192,16 @@ class KnowledgeBaseService {
     category_id?: string;
     is_public?: boolean;
   }): Promise<KBSearchResult[]> {
-    const response = await apiClient.customPost('/knowledge-base/search', { 
-      query,
-      ...params 
+    const response = await apiClient.customGet('/kb/search', { 
+      params: { q: query, ...params }
     });
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to search articles');
+    if (!response || !response.data) {
+      throw new Error('Failed to search articles');
     }
-    return response.data;
+    // Response format: { data: { results: [...], search_type: '...', query: '...' } }
+    return response.data.results || [];
   }
+
 
   /**
    * Get related articles
@@ -202,8 +210,8 @@ class KnowledgeBaseService {
     const response = await apiClient.customGet(`/knowledge-base/articles/${articleId}/related`, {
       params: { limit }
     });
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to fetch related articles');
+    if (!response || !response.data) {
+      throw new Error('Failed to fetch related articles');
     }
     return response.data;
   }
@@ -217,8 +225,8 @@ class KnowledgeBaseService {
     category_id?: string;
   }): Promise<KBArticle[]> {
     const response = await apiClient.customGet('/knowledge-base/articles/popular', { params });
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to fetch popular articles');
+    if (!response || !response.data) {
+      throw new Error('Failed to fetch popular articles');
     }
     return response.data;
   }
@@ -227,13 +235,14 @@ class KnowledgeBaseService {
    * Get featured articles
    */
   async getFeaturedArticles(limit = 10): Promise<KBArticle[]> {
-    const response = await apiClient.customGet('/knowledge-base/articles/featured', {
-      params: { limit }
+    const response = await apiClient.customGet('/kb/articles', {
+      params: { limit, is_featured: true }
     });
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to fetch featured articles');
+    // The response has data and meta fields
+    if (!response || !response.data) {
+      throw new Error('Failed to fetch featured articles');
     }
-    return response.data;
+    return response.data || [];
   }
 
   /**

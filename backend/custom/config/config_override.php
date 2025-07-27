@@ -1,42 +1,41 @@
 <?php
-// Headless mode configuration for SaaS CRM
-
-// API-specific settings
+/***CONFIGURATOR***/
 $sugar_config['site_url'] = 'http://localhost:8080';
 $sugar_config['api_enabled'] = true;
 $sugar_config['rest_enabled'] = true;
-
-// Security settings for API
 $sugar_config['api_cors_enabled'] = true;
-$sugar_config['api_cors_allowed_origins'] = ['http://localhost:5173', 'http://localhost:3000'];
-$sugar_config['api_cors_allowed_methods'] = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'];
-$sugar_config['api_cors_allowed_headers'] = ['Content-Type', 'Authorization', 'X-Requested-With'];
-
-// Performance optimizations
+$sugar_config['api_cors_allowed_origins'][0] = 'http://localhost:5173';
+$sugar_config['api_cors_allowed_origins'][1] = 'http://localhost:3000';
+$sugar_config['api_cors_allowed_methods'][0] = 'GET';
+$sugar_config['api_cors_allowed_methods'][1] = 'POST';
+$sugar_config['api_cors_allowed_methods'][2] = 'PUT';
+$sugar_config['api_cors_allowed_methods'][3] = 'DELETE';
+$sugar_config['api_cors_allowed_methods'][4] = 'OPTIONS';
+$sugar_config['api_cors_allowed_headers'][0] = 'Content-Type';
+$sugar_config['api_cors_allowed_headers'][1] = 'Authorization';
+$sugar_config['api_cors_allowed_headers'][2] = 'X-Requested-With';
 $sugar_config['disable_count_query'] = true;
 $sugar_config['save_query'] = 'populate_only';
 $sugar_config['list_max_entries_per_page'] = 50;
-
-// Cache settings
 $sugar_config['external_cache_disabled'] = false;
-
-// Session handling for API
-$sugar_config['session_gc_maxlifetime'] = 86400; // 24 hours
-
-// v8 API Configuration
+$sugar_config['session_gc_maxlifetime'] = 86400;
 $sugar_config['api']['v8']['enabled'] = true;
 $sugar_config['api']['v8']['jwt']['secret'] = 'your-secret-key-change-in-production';
-$sugar_config['api']['v8']['jwt']['expire_after'] = 3600; // 1 hour
-$sugar_config['api']['v8']['jwt']['refresh_expire_after'] = 604800; // 7 days
-
-// CORS Configuration for v8 API
+$sugar_config['api']['v8']['jwt']['expire_after'] = 3600;
+$sugar_config['api']['v8']['jwt']['refresh_expire_after'] = 604800;
 $sugar_config['api']['v8']['cors']['enabled'] = true;
-$sugar_config['api']['v8']['cors']['origin'] = ['http://localhost:3000', 'http://localhost:5173'];
-$sugar_config['api']['v8']['cors']['methods'] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'];
-$sugar_config['api']['v8']['cors']['headers'] = ['Content-Type', 'Authorization', 'X-Requested-With'];
-
-// Redis Cache Configuration
-$sugar_config['external_cache_disabled'] = false;
+$sugar_config['api']['v8']['cors']['origin'][0] = 'http://localhost:3000';
+$sugar_config['api']['v8']['cors']['origin'][1] = 'http://localhost:5173';
+$sugar_config['api']['v8']['cors']['methods'][0] = 'GET';
+$sugar_config['api']['v8']['cors']['methods'][1] = 'POST';
+$sugar_config['api']['v8']['cors']['methods'][2] = 'PUT';
+$sugar_config['api']['v8']['cors']['methods'][3] = 'PATCH';
+$sugar_config['api']['v8']['cors']['methods'][4] = 'DELETE';
+$sugar_config['api']['v8']['cors']['methods'][5] = 'OPTIONS';
+$sugar_config['api']['v8']['cors']['headers'][0] = 'Content-Type';
+$sugar_config['api']['v8']['cors']['headers'][1] = 'Authorization';
+$sugar_config['api']['v8']['cors']['headers'][2] = 'X-Requested-With';
 $sugar_config['external_cache_type'] = 'redis';
 $sugar_config['external_cache_redis_host'] = 'redis';
 $sugar_config['external_cache_redis_port'] = 6379;
+/***CONFIGURATOR***/

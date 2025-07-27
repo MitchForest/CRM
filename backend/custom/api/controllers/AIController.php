@@ -234,6 +234,15 @@ class AIController extends BaseController
             // Get visitor context for personalization
             $visitorContext = $this->getVisitorContext($visitorId);
             
+            // Search knowledge base for relevant articles
+            $kbArticles = $this->searchKnowledgeBase($message);
+            
+            // Add KB context to the conversation
+            if (!empty($kbArticles)) {
+                $kbContext = $this->formatKBContext($kbArticles);
+                $visitorContext['kb_context'] = $kbContext;
+            }
+            
             // Generate AI response with knowledge base integration
             $aiResponse = $this->openAIService->generateChatResponse($conversation, $message, $visitorContext);
             
@@ -901,6 +910,53 @@ Conversation:
             mt_rand(0, 0x3fff) | 0x8000,
             mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
         );
+    }
+    
+    /**
+     * Search knowledge base for relevant articles
+     */
+    private function searchKnowledgeBase($query)
+    {
+        try {
+            // Search for relevant KB articles
+            $searchTerm = '%' . $query . '%';
+            $safeSearchTerm = $this->db->quote($searchTerm);
+            
+            $sql = "SELECT id, name as title, description as content 
+                   FROM aok_knowledgebase 
+                   WHERE status = 'published' AND deleted = 0
+                   AND (name LIKE {$safeSearchTerm} OR description LIKE {$safeSearchTerm})
+                   ORDER BY date_entered DESC
+                   LIMIT 3";
+            
+            $result = $this->db->query($sql);
+            $articles = [];
+            while ($row = $this->db->fetchByAssoc($result)) {
+                $articles[] = $row;
+            }
+            
+            return $articles;
+        } catch (Exception $e) {
+            error_log('KB search error in AI chat: ' . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Format KB articles for AI context
+     */
+    private function formatKBContext($articles)
+    {
+        $context = "Here are relevant knowledge base articles that may help answer the question:\n\n";
+        
+        foreach ($articles as $article) {
+            $context .= "Article: " . $article['title'] . "\n";
+            $context .= "Content: " . substr(strip_tags($article['content']), 0, 500) . "...\n\n";
+        }
+        
+        $context .= "Please use this information to provide accurate answers based on our knowledge base.";
+        
+        return $context;
     }
     
     private function getVisitorContext($visitorId)

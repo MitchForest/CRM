@@ -4,13 +4,12 @@ RewriteEngine On
 RewriteCond %{HTTP:Authorization} ^(.*)
 RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
 
-# Route API requests to custom/api/index.php
-RewriteRule ^api/(.*)$ custom/api/index.php [QSA,L]
+# Route API requests to api.php which handles PATH_INFO properly
+RewriteRule ^api/(.*)$ api.php [QSA,L]
 
 # Default SuiteCRM rules
 RewriteBase /
 RewriteRule ^cache/jsLanguage/(.._..).js$ index.php?entryPoint=jslang&module=app_strings&lang=$1 [L,QSA]
 RewriteRule ^cache/jsLanguage/(\w*)/(.._..).js$ index.php?entryPoint=jslang&module=$1&lang=$2 [L,QSA]
 RewriteRule ^Api/(.*)$ - [L]
-RewriteRule ^api/(.*)$ - [L]
 RewriteRule ^service/(.*)$ - [L]

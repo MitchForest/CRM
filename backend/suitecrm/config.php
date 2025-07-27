@@ -1,9 +1,10 @@
 <?php
-// created: 2025-07-22 21:42:40
+// created: 2025-07-26 22:53:21
 $sugar_config = array (
   'addAjaxBannedModules' => 
   array (
     0 => 'SecurityGroups',
+    1 => 'SecurityGroups',
   ),
   'admin_access_control' => false,
   'admin_export_only' => false,
@@ -45,11 +46,11 @@ $sugar_config = array (
   'aop' => 
   array (
     'distribution_method' => 'roundRobin',
-    'case_closure_email_template_id' => 'a78446a6-bc63-96b1-fc72-688005a0c11d',
-    'joomla_account_creation_email_template_id' => 'aa7b2e31-65b3-6599-1618-688005db27dd',
-    'case_creation_email_template_id' => 'acdddcce-ed25-2e2f-dc52-688005d0a7d5',
-    'contact_email_template_id' => 'b1d921bd-3f84-2d33-08f2-688005659344',
-    'user_email_template_id' => 'b3f0ee44-0b65-7aed-5051-688005bf62e9',
+    'case_closure_email_template_id' => '5ac8d1a2-1f1c-4ab4-68a0-68855c943b72',
+    'joomla_account_creation_email_template_id' => '5dc29cae-676f-7645-ca60-68855ca9ea65',
+    'case_creation_email_template_id' => '600e101c-aa2a-09e3-5223-68855c38d662',
+    'contact_email_template_id' => '686a3bb9-59dc-1e94-5b5e-68855cc80d0c',
+    'user_email_template_id' => '6afc40ce-8911-2975-85cd-68855c81b1a9',
   ),
   'aos' => 
   array (
@@ -180,7 +181,7 @@ $sugar_config = array (
   'default_time_format' => 'h:ia',
   'default_user_is_admin' => false,
   'default_user_name' => '',
-  'demoData' => 'yes',
+  'demoData' => 'no',
   'developerMode' => false,
   'disable_convert_lead' => false,
   'disable_export' => false,
@@ -350,7 +351,7 @@ $sugar_config = array (
       'host' => 'localhost',
       'user' => '',
       'pass' => '',
-      'index' => '2d932c67b85860a702d771e61090b61c',
+      'index' => '431f509e7f6838110f72d55d6d3047ec',
       'search_wildcard_char' => '%',
       'search_wildcard_infront' => true,
     ),
@@ -408,7 +409,7 @@ $sugar_config = array (
   'trusted_hosts' => 
   array (
   ),
-  'unique_key' => '2d932c67b85860a702d771e61090b61c',
+  'unique_key' => '431f509e7f6838110f72d55d6d3047ec',
   'upload_badext' => 
   array (
     0 => 'php',

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 // import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { Layout } from '@/components/layout/Layout'
+import { PublicLayout } from '@/components/layout/PublicLayout'
 import { LoginPage } from '@/pages/Login'
 import { useAuthStore } from '@/stores/auth-store'
 import { DashboardPage } from '@/pages/Dashboard'
@@ -12,6 +13,13 @@ import { LeadsListPage } from '@/pages/LeadsList'
 import { LeadDetailPage } from '@/pages/LeadDetail'
 import { LeadFormPage } from '@/pages/LeadForm'
 import { SettingsPage } from '@/pages/Settings'
+
+// Marketing/Public Pages
+import { Homepage } from '@/pages/marketing/Homepage'
+import { Pricing } from '@/pages/marketing/Pricing'
+import { GetStarted } from '@/pages/marketing/GetStarted'
+import { Support } from '@/pages/marketing/Support'
+import { DemoBooking } from '@/pages/marketing/DemoBooking'
 
 // Opportunities
 import { OpportunitiesPipeline } from '@/pages/opportunities/OpportunitiesPipeline'
@@ -114,8 +122,14 @@ function AppContent() {
   return (
       <Router>
         <Routes>
-          {/* Redirect to login */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* Public Marketing Pages */}
+          <Route path="/" element={<PublicLayout />}>
+            <Route index element={<Homepage />} />
+            <Route path="pricing" element={<Pricing />} />
+            <Route path="get-started" element={<GetStarted />} />
+            <Route path="support" element={<Support />} />
+            <Route path="demo" element={<DemoBooking />} />
+          </Route>
           
           {/* Public KB Route */}
           <Route path="/kb/public/*" element={

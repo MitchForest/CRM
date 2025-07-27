@@ -46,8 +46,10 @@ class Response {
         return $this;
     }
     
-    public function json($data, $statusCode = null) {
-        return $this->withJson($data, $statusCode);
+    // Static factory method for JSON responses
+    public static function json($data, $statusCode = 200) {
+        $response = new self();
+        return $response->withJson($data, $statusCode);
     }
     
     public function send() {

@@ -51,7 +51,10 @@ class Router {
         $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         
         // Handle different access patterns
-        if (strpos($path, '/api/') !== false) {
+        if (strpos($path, '/api/v8/') !== false) {
+            // When accessed via /api/v8/...
+            $path = preg_replace('#^/api/v8#', '', $path);
+        } elseif (strpos($path, '/api/') !== false) {
             // When accessed via /api/...
             $path = preg_replace('#^(/custom)?/api(/index\.php)?#', '', $path);
         } elseif (strpos($path, '/custom/api/') !== false) {
@@ -108,14 +111,12 @@ class Router {
         list($class, $method) = explode('::', $matchedRoute['handler']);
         $controller = new $class();
         
-        // Create response object
-        $responseObj = new Response();
-        
         // Check if route has parameters
         if (!empty($params)) {
-            $response = $controller->$method($request, $responseObj, $params);
+            // Pass parameters as individual arguments after the request
+            $response = $controller->$method($request, ...array_values($params));
         } else {
-            $response = $controller->$method($request, $responseObj);
+            $response = $controller->$method($request);
         }
         
         // Send response

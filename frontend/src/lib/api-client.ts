@@ -66,7 +66,7 @@ class ApiClient {
 
     // Custom API client for Phase 2 features
     this.customClient = axios.create({
-      baseURL: '/api', // Use relative URL to work with Vite proxy
+      baseURL: '/api/v8', // Use relative URL to work with Vite proxy
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',

@@ -51,4 +51,20 @@ class Request {
         }
         return null;
     }
+    
+    public function getQueryParams() {
+        // For GET requests, params come from URL
+        if ($this->method === 'GET') {
+            return $_GET;
+        }
+        return [];
+    }
+    
+    public function getParsedBody() {
+        // For POST/PUT requests, return the data
+        if (in_array($this->method, ['POST', 'PUT', 'PATCH'])) {
+            return $this->data;
+        }
+        return null;
+    }
 }
