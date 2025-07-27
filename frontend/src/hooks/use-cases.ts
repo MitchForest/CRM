@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
 import { toast } from 'sonner'
-import type { Case } from '@/types/api.generated'
+import type { CaseDB } from '@/types/database.types'
 
 export type CasePriority = 'High' | 'Medium' | 'Low'
 import { getErrorMessage } from '@/lib/error-utils'
@@ -21,7 +21,7 @@ export function useCases(
     queryFn: async () => {
       return await apiClient.getCases({ 
         page, 
-        pageSize: limit,
+        limit,
         ...filters 
       })
     },
@@ -45,7 +45,7 @@ export function useCasesByAccount(accountId: string) {
     queryKey: ['cases', 'by-account', accountId],
     queryFn: async () => {
       return await apiClient.getCases({ 
-        pageSize: 100,
+        limit: 100,
         // This would need backend support for account filtering
         // filter: { accountId }
       })
@@ -137,7 +137,7 @@ export function useCaseMetrics() {
   return useQuery({
     queryKey: ['cases', 'metrics'],
     queryFn: async () => {
-      const response = await apiClient.getCases({ pageSize: 1000 })
+      const response = await apiClient.getCases({ limit: 1000 })
       const cases = response.data
 
       const openCases = cases.filter(c => c.status !== 'closed').length
@@ -183,7 +183,7 @@ export function useCriticalCases() {
     queryKey: ['cases', 'critical'],
     queryFn: async () => {
       const response = await apiClient.getCases({ 
-        pageSize: 100,
+        limit: 100,
         priority: 'P1'
       })
       

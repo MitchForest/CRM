@@ -5,7 +5,7 @@ import { Phone, Calendar, CheckSquare, FileText, Clock } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import type { Call, Meeting, Task, Note } from '@/types/api.generated';
+import type { CallDB, MeetingDB, TaskDB, NoteDB } from '@/types/database.types';
 
 interface EntityActivitiesProps {
   entityType: 'Lead' | 'Opportunity' | 'Case';
@@ -13,10 +13,10 @@ interface EntityActivitiesProps {
 }
 
 type ActivityWithType = 
-  | (Call & { type: 'call'; date: string })
-  | (Meeting & { type: 'meeting'; date: string })
-  | (Task & { type: 'task'; date: string })
-  | (Note & { type: 'note'; date: string });
+  | (CallDB & { type: 'call'; date: string })
+  | (MeetingDB & { type: 'meeting'; date: string })
+  | (TaskDB & { type: 'task'; date: string })
+  | (NoteDB & { type: 'note'; date: string });
 
 export function EntityActivities({ entityType, limit = 10 }: EntityActivitiesProps) {
   const { data: activities, isLoading } = useQuery({
@@ -28,18 +28,18 @@ export function EntityActivities({ entityType, limit = 10 }: EntityActivitiesPro
       ];
       
       const [calls, meetings, tasks, notes] = await Promise.all([
-        apiClient.getCalls({ pageSize: limit, filters }),
-        apiClient.getMeetings({ pageSize: limit, filters }),
-        apiClient.getTasks({ pageSize: limit, filters }),
-        apiClient.getNotes({ pageSize: limit, filters }),
+        apiClient.getCalls({ limit, filter: filters }),
+        apiClient.getMeetings({ limit, filter: filters }),
+        apiClient.getTasks({ limit, filter: filters }),
+        apiClient.getNotes({ limit, filter: filters }),
       ]);
 
-      // Combine and sort - using camelCase field names from generated types
+      // Combine and sort - using snake_case field names from database types
       const combined: ActivityWithType[] = [
-        ...calls.data.map(c => ({ ...c, type: 'call' as const, date: c.startDate || c.createdAt || '' })),
-        ...meetings.data.map(m => ({ ...m, type: 'meeting' as const, date: m.startDate || m.createdAt || '' })),
-        ...tasks.data.map(t => ({ ...t, type: 'task' as const, date: t.dueDate || t.createdAt || '' })),
-        ...notes.data.map(n => ({ ...n, type: 'note' as const, date: n.createdAt || '' })),
+        ...calls.data.map(c => ({ ...c, type: 'call' as const, date: String(c.date_start || c.date_entered || '') })),
+        ...meetings.data.map(m => ({ ...m, type: 'meeting' as const, date: String(m.date_start || m.date_entered || '') })),
+        ...tasks.data.map(t => ({ ...t, type: 'task' as const, date: String(t.date_due || t.date_entered || '') })),
+        ...notes.data.map(n => ({ ...n, type: 'note' as const, date: String(n.date_entered || '') })),
       ].sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
 
       return combined.slice(0, limit);

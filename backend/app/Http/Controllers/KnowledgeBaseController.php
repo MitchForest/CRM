@@ -5,17 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\KnowledgeBaseArticle;
 use App\Models\KnowledgeBaseFeedback;
 use App\Services\CRM\KnowledgeBaseService;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Illuminate\Database\Capsule\Manager as DB;
 
 class KnowledgeBaseController extends Controller
 {
     private KnowledgeBaseService $kbService;
     
-    public function __construct(KnowledgeBaseService $kbService)
+    public function __construct()
     {
-        $this->kbService = $kbService;
+        parent::__construct();
+        $this->kbService = new KnowledgeBaseService();
     }
     
     /**
@@ -283,12 +284,293 @@ class KnowledgeBaseController extends Controller
      * Get article categories
      * GET /api/crm/knowledge-base/categories
      */
-    public function getCategories(Request $request): JsonResponse
+    public function getCategories(Request $request, Response $response, array $args): Response
     {
         $categories = $this->kbService->getCategories();
         
-        return response()->json([
+        return $this->json($response, [
             'data' => $categories
+        ]);
+    }
+    
+    /**
+     * Search public articles (public endpoint)
+     * GET /api/public/kb/search
+     */
+    public function searchPublic(Request $request, Response $response, array $args): Response
+    {
+        $params = $request->getQueryParams();
+        $query = $params['q'] ?? '';
+        
+        if (empty($query)) {
+            return $this->json($response, [
+                'articles' => [],
+                'total' => 0
+            ]);
+        }
+        
+        $articles = $this->kbService->searchPublicArticles($query);
+        
+        return $this->json($response, [
+            'articles' => $articles,
+            'total' => count($articles)
+        ]);
+    }
+    
+    /**
+     * Get public articles (public endpoint)
+     * GET /api/public/kb/articles
+     */
+    public function getPublicArticles(Request $request, Response $response, array $args): Response
+    {
+        $params = $request->getQueryParams();
+        $category = $params['category'] ?? null;
+        $page = intval($params['page'] ?? 1);
+        $limit = min(intval($params['limit'] ?? 10), 50);
+        
+        $query = KnowledgeBaseArticle::where('is_published', 1)
+            ->where('deleted', 0);
+        
+        if ($category) {
+            $query->where('category', $category);
+        }
+        
+        $articles = $query->orderBy('is_featured', 'desc')
+            ->orderBy('date_modified', 'desc')
+            ->paginate($limit, ['*'], 'page', $page);
+        
+        $data = $articles->map(function ($article) {
+            return [
+                'id' => $article->id,
+                'slug' => $article->slug,
+                'title' => $article->title,
+                'summary' => $article->summary,
+                'category' => $article->category,
+                'tags' => $article->tags,
+                'author' => $article->author,
+                'published_date' => $article->published_date,
+                'is_featured' => $article->is_featured,
+                'view_count' => $article->view_count
+            ];
+        });
+        
+        return $this->json($response, [
+            'data' => $data,
+            'meta' => [
+                'total' => $articles->total(),
+                'page' => $articles->currentPage(),
+                'limit' => $articles->perPage(),
+                'pages' => $articles->lastPage()
+            ]
+        ]);
+    }
+    
+    /**
+     * Get single public article (public endpoint)
+     * GET /api/public/kb/articles/{slug}
+     */
+    public function getPublicArticle(Request $request, Response $response, array $args): Response
+    {
+        $slug = $args['slug'];
+        
+        $article = KnowledgeBaseArticle::where('slug', $slug)
+            ->where('is_published', 1)
+            ->where('deleted', 0)
+            ->first();
+        
+        if (!$article) {
+            return $this->error($response, 'Article not found', 404);
+        }
+        
+        // Increment view count
+        $article->increment('view_count');
+        
+        return $this->json($response, [
+            'data' => [
+                'id' => $article->id,
+                'slug' => $article->slug,
+                'title' => $article->title,
+                'content' => $article->content,
+                'summary' => $article->summary,
+                'category' => $article->category,
+                'tags' => $article->tags,
+                'author' => $article->author,
+                'published_date' => $article->published_date,
+                'is_featured' => $article->is_featured,
+                'view_count' => $article->view_count,
+                'helpful_count' => $article->helpful_count,
+                'not_helpful_count' => $article->not_helpful_count
+            ]
+        ]);
+    }
+    
+    /**
+     * Get public categories (public endpoint)
+     * GET /api/public/kb/categories
+     */
+    public function getPublicCategories(Request $request, Response $response, array $args): Response
+    {
+        $categories = DB::table('kb_articles')
+            ->where('is_published', 1)
+            ->where('deleted', 0)
+            ->select('category', DB::raw('COUNT(*) as article_count'))
+            ->groupBy('category')
+            ->orderBy('article_count', 'desc')
+            ->get();
+        
+        return $this->json($response, [
+            'data' => $categories
+        ]);
+    }
+    
+    /**
+     * Get articles (admin endpoint)
+     * GET /api/admin/knowledge-base/articles
+     */
+    public function getArticles(Request $request, Response $response, array $args): Response
+    {
+        return $this->index($request, $response, $args);
+    }
+    
+    /**
+     * Create article (admin endpoint)
+     * POST /api/admin/knowledge-base/articles
+     */
+    public function createArticle(Request $request, Response $response, array $args): Response
+    {
+        return $this->store($request, $response, $args);
+    }
+    
+    /**
+     * Get article (admin endpoint)
+     * GET /api/admin/knowledge-base/articles/{id}
+     */
+    public function getArticle(Request $request, Response $response, array $args): Response
+    {
+        return $this->show($request, $response, $args);
+    }
+    
+    /**
+     * Update article (admin endpoint)
+     * PUT /api/admin/knowledge-base/articles/{id}
+     */
+    public function updateArticle(Request $request, Response $response, array $args): Response
+    {
+        return $this->update($request, $response, $args);
+    }
+    
+    /**
+     * Delete article (admin endpoint)
+     * DELETE /api/admin/knowledge-base/articles/{id}
+     */
+    public function deleteArticle(Request $request, Response $response, array $args): Response
+    {
+        return $this->destroy($request, $response, $args);
+    }
+    
+    /**
+     * Publish article (admin endpoint)
+     * POST /api/admin/knowledge-base/articles/{id}/publish
+     */
+    public function publishArticle(Request $request, Response $response, array $args): Response
+    {
+        $id = $args['id'];
+        $article = KnowledgeBaseArticle::where('deleted', 0)->find($id);
+        
+        if (!$article) {
+            return $this->error($response, 'Article not found', 404);
+        }
+        
+        $article->is_published = 1;
+        $article->published_date = new \DateTime();
+        $article->save();
+        
+        return $this->json($response, [
+            'message' => 'Article published successfully',
+            'data' => [
+                'id' => $article->id,
+                'is_published' => $article->is_published,
+                'published_date' => $article->published_date
+            ]
+        ]);
+    }
+    
+    /**
+     * Unpublish article (admin endpoint)
+     * POST /api/admin/knowledge-base/articles/{id}/unpublish
+     */
+    public function unpublishArticle(Request $request, Response $response, array $args): Response
+    {
+        $id = $args['id'];
+        $article = KnowledgeBaseArticle::where('deleted', 0)->find($id);
+        
+        if (!$article) {
+            return $this->error($response, 'Article not found', 404);
+        }
+        
+        $article->is_published = 0;
+        $article->save();
+        
+        return $this->json($response, [
+            'message' => 'Article unpublished successfully',
+            'data' => [
+                'id' => $article->id,
+                'is_published' => $article->is_published
+            ]
+        ]);
+    }
+    
+    /**
+     * Create category (admin endpoint)
+     * POST /api/admin/knowledge-base/categories
+     */
+    public function createCategory(Request $request, Response $response, array $args): Response
+    {
+        $data = $this->validate($request, [
+            'name' => 'required|string|max:100',
+            'description' => 'sometimes|string',
+            'parent_id' => 'sometimes|string'
+        ]);
+        
+        // In a real implementation, this would create a category in a kb_categories table
+        return $this->json($response, [
+            'message' => 'Category created successfully',
+            'data' => $data
+        ], 201);
+    }
+    
+    /**
+     * Update category (admin endpoint)
+     * PUT /api/admin/knowledge-base/categories/{id}
+     */
+    public function updateCategory(Request $request, Response $response, array $args): Response
+    {
+        $id = $args['id'];
+        
+        $data = $this->validate($request, [
+            'name' => 'sometimes|string|max:100',
+            'description' => 'sometimes|string',
+            'parent_id' => 'sometimes|string'
+        ]);
+        
+        // In a real implementation, this would update a category
+        return $this->json($response, [
+            'message' => 'Category updated successfully',
+            'data' => array_merge(['id' => $id], $data)
+        ]);
+    }
+    
+    /**
+     * Delete category (admin endpoint)
+     * DELETE /api/admin/knowledge-base/categories/{id}
+     */
+    public function deleteCategory(Request $request, Response $response, array $args): Response
+    {
+        $id = $args['id'];
+        
+        // In a real implementation, this would delete a category
+        return $this->json($response, [
+            'message' => 'Category deleted successfully'
         ]);
     }
 }

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
 import { toast } from 'sonner'
-import type { Lead } from '@/types/api.generated'
+import type { LeadDB } from '@/types/database.types'
 import { getErrorMessage } from '@/lib/error-utils'
 
 // Get paginated leads
@@ -11,7 +11,7 @@ export function useLeads(page = 1, limit = 10, filters?: Record<string, string |
     queryFn: async () => {
       return await apiClient.getLeads({ 
         page, 
-        pageSize: limit,
+        limit,
         ...filters 
       })
     },

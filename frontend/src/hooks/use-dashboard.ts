@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
-import type { DashboardMetrics, ActivityMetrics } from '@/types/phase2.types'
+import type { DashboardMetrics, ActivityMetrics } from '@/types/api.types'
 import { useAuthStore } from '@/stores/auth-store'
 
 // Get dashboard metrics from custom API
@@ -46,13 +46,8 @@ export function usePipelineData() {
       const response = await apiClient.getPipelineData()
       if (!response.success || !response.data) return []
       
-      // Transform the API response to match the expected format
-      return response.data.stages.map(stage => ({
-        stage: stage.stage,
-        count: stage.count,
-        value: stage.value,
-        opportunities: [] // Not included in the API response for performance
-      }))
+      // The API returns an array of pipeline data directly
+      return response.data
     },
   })
 }

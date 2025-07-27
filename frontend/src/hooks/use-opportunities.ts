@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
 import { toast } from 'sonner'
-import type { Opportunity } from '@/types/api.generated'
+import type { OpportunityDB } from '@/types/database.types'
 import { getErrorMessage } from '@/lib/error-utils'
 
 // Get paginated opportunities
@@ -11,7 +11,7 @@ export function useOpportunities(page = 1, limit = 50, filters?: Record<string, 
     queryFn: async () => {
       return await apiClient.getOpportunities({ 
         page, 
-        pageSize: limit,
+        limit,
         ...filters 
       })
     },
@@ -36,7 +36,7 @@ export function useOpportunitiesByStage(stage?: OpportunityDB['sales_stage']) {
     queryFn: async () => {
       const params = stage ? { sales_stage: stage } : {}
       return await apiClient.getOpportunities({ 
-        pageSize: 100, // Get more for pipeline view
+        limit: 100, // Get more for pipeline view
         ...params
       })
     },
@@ -164,7 +164,7 @@ export function useOpportunitiesPipeline() {
     queryFn: async () => {
       // Get all opportunities for pipeline view
       const response = await apiClient.getOpportunities({ 
-        pageSize: 200, // Get more for complete pipeline view
+        limit: 200, // Get more for complete pipeline view
       })
       
       
@@ -181,7 +181,7 @@ export function useOpportunitiesPipeline() {
       return {
         opportunities: response.data,
         byStage: opportunitiesByStage,
-        total: response.pagination?.totalCount || 0
+        total: response.pagination?.total || 0
       }
     },
   })

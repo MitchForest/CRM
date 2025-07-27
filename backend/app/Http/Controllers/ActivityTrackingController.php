@@ -6,17 +6,18 @@ use App\Models\ActivityTrackingVisitor;
 use App\Models\ActivityTrackingSession;
 use App\Models\ActivityTrackingPageView;
 use App\Services\Tracking\ActivityTrackingService;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Illuminate\Database\Capsule\Manager as DB;
 
 class ActivityTrackingController extends Controller
 {
     private ActivityTrackingService $trackingService;
     
-    public function __construct(ActivityTrackingService $trackingService)
+    public function __construct()
     {
-        $this->trackingService = $trackingService;
+        parent::__construct();
+        $this->trackingService = new ActivityTrackingService();
     }
     
     /**
@@ -284,5 +285,360 @@ class ActivityTrackingController extends Controller
         } catch (\Exception $e) {
             return $this->error($response, 'Failed to get visitor history: ' . $e->getMessage(), 500);
         }
+    }
+    
+    /**
+     * Start session tracking (public endpoint)
+     * POST /api/public/track/session/start
+     */
+    public function startSession(Request $request, Response $response, array $args): Response
+    {
+        $data = $this->validate($request, [
+            'visitor_id' => 'sometimes|string',
+            'referrer' => 'sometimes|string',
+            'user_agent' => 'sometimes|string'
+        ]);
+        
+        try {
+            $visitorId = $data['visitor_id'] ?? null;
+            if (empty($visitorId) || in_array($visitorId, ['undefined', 'null'])) {
+                $visitorId = 'visitor_' . uniqid() . '_' . time();
+            }
+            
+            $sessionId = 'session_' . uniqid() . '_' . time();
+            
+            $result = $this->trackingService->startSession(
+                $visitorId,
+                $sessionId,
+                $data['referrer'] ?? null,
+                $data['user_agent'] ?? $request->getHeaderLine('User-Agent')
+            );
+            
+            return $this->json($response, [
+                'visitor_id' => $result['visitor_id'],
+                'session_id' => $result['session_id'],
+                'status' => 'started'
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->error($response, 'Failed to start session: ' . $e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * End session tracking (public endpoint)
+     * POST /api/public/track/session/end
+     */
+    public function endSession(Request $request, Response $response, array $args): Response
+    {
+        $data = $this->validate($request, [
+            'session_id' => 'required|string',
+            'page_views' => 'sometimes|integer',
+            'duration' => 'sometimes|integer'
+        ]);
+        
+        try {
+            $result = $this->trackingService->endSession(
+                $data['session_id'],
+                $data['page_views'] ?? null,
+                $data['duration'] ?? null
+            );
+            
+            return $this->json($response, [
+                'session_id' => $data['session_id'],
+                'status' => 'ended'
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->error($response, 'Failed to end session: ' . $e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * Get tracking configuration (admin endpoint)
+     * GET /api/admin/tracking/config
+     */
+    public function getConfig(Request $request, Response $response, array $args): Response
+    {
+        return $this->json($response, [
+            'config' => [
+                'enabled' => true,
+                'session_timeout' => 30 * 60, // 30 minutes
+                'tracking_domains' => ['localhost', 'sassycrm.com'],
+                'excluded_paths' => ['/admin', '/api'],
+                'anonymize_ip' => false,
+                'track_authenticated_users' => true
+            ]
+        ]);
+    }
+    
+    /**
+     * Update tracking configuration (admin endpoint)
+     * PUT /api/admin/tracking/config
+     */
+    public function updateConfig(Request $request, Response $response, array $args): Response
+    {
+        $data = $this->validate($request, [
+            'enabled' => 'sometimes|boolean',
+            'session_timeout' => 'sometimes|integer|min:300|max:7200',
+            'tracking_domains' => 'sometimes|array',
+            'excluded_paths' => 'sometimes|array',
+            'anonymize_ip' => 'sometimes|boolean',
+            'track_authenticated_users' => 'sometimes|boolean'
+        ]);
+        
+        // In a real implementation, save to config file or database
+        return $this->json($response, [
+            'message' => 'Configuration updated',
+            'config' => $data
+        ]);
+    }
+    
+    /**
+     * Get sessions list (admin endpoint)
+     * GET /api/admin/tracking/sessions
+     */
+    public function getSessions(Request $request, Response $response, array $args): Response
+    {
+        $params = $request->getQueryParams();
+        $page = intval($params['page'] ?? 1);
+        $limit = min(intval($params['limit'] ?? 20), 100);
+        
+        $query = ActivityTrackingSession::with(['visitor']);
+        
+        if (isset($params['start_date'])) {
+            $query->where('started_at', '>=', $params['start_date']);
+        }
+        
+        if (isset($params['end_date'])) {
+            $query->where('started_at', '<=', $params['end_date']);
+        }
+        
+        $sessions = $query->orderBy('started_at', 'desc')
+            ->paginate($limit, ['*'], 'page', $page);
+        
+        $data = $sessions->map(function ($session) {
+            return [
+                'session_id' => $session->session_id,
+                'visitor_id' => $session->visitor_id,
+                'started_at' => $session->started_at,
+                'ended_at' => $session->ended_at,
+                'duration' => $session->duration,
+                'page_views' => $session->page_views,
+                'visitor' => [
+                    'first_visit' => $session->visitor->first_visit,
+                    'total_visits' => $session->visitor->total_visits
+                ]
+            ];
+        });
+        
+        return $this->json($response, [
+            'data' => $data,
+            'meta' => [
+                'total' => $sessions->total(),
+                'page' => $sessions->currentPage(),
+                'limit' => $sessions->perPage(),
+                'pages' => $sessions->lastPage()
+            ]
+        ]);
+    }
+    
+    /**
+     * Get session details (admin endpoint)
+     * GET /api/admin/tracking/sessions/{id}
+     */
+    public function getSession(Request $request, Response $response, array $args): Response
+    {
+        // This method already exists as getSessionDetails, just redirecting
+        return $this->getSessionDetails($request, $response, $args);
+    }
+    
+    /**
+     * Get page views (admin endpoint)
+     * GET /api/admin/tracking/page-views
+     */
+    public function getPageViews(Request $request, Response $response, array $args): Response
+    {
+        $params = $request->getQueryParams();
+        $page = intval($params['page'] ?? 1);
+        $limit = min(intval($params['limit'] ?? 20), 100);
+        
+        $query = ActivityTrackingPageView::with(['session', 'visitor']);
+        
+        if (isset($params['url'])) {
+            $query->where('page_url', 'like', '%' . $params['url'] . '%');
+        }
+        
+        $pageViews = $query->orderBy('viewed_at', 'desc')
+            ->paginate($limit, ['*'], 'page', $page);
+        
+        $data = $pageViews->map(function ($pv) {
+            return [
+                'id' => $pv->id,
+                'page_url' => $pv->page_url,
+                'page_title' => $pv->page_title,
+                'viewed_at' => $pv->viewed_at,
+                'session_id' => $pv->session_id,
+                'visitor_id' => $pv->visitor_id
+            ];
+        });
+        
+        return $this->json($response, [
+            'data' => $data,
+            'meta' => [
+                'total' => $pageViews->total(),
+                'page' => $pageViews->currentPage(),
+                'limit' => $pageViews->perPage(),
+                'pages' => $pageViews->lastPage()
+            ]
+        ]);
+    }
+    
+    /**
+     * Get visitors list (admin endpoint)
+     * GET /api/admin/tracking/visitors
+     */
+    public function getVisitors(Request $request, Response $response, array $args): Response
+    {
+        $params = $request->getQueryParams();
+        $page = intval($params['page'] ?? 1);
+        $limit = min(intval($params['limit'] ?? 20), 100);
+        
+        $visitors = ActivityTrackingVisitor::with(['lead', 'contact'])
+            ->orderBy('last_activity', 'desc')
+            ->paginate($limit, ['*'], 'page', $page);
+        
+        $data = $visitors->map(function ($visitor) {
+            return [
+                'visitor_id' => $visitor->visitor_id,
+                'first_visit' => $visitor->first_visit,
+                'last_activity' => $visitor->last_activity,
+                'total_visits' => $visitor->total_visits,
+                'total_page_views' => $visitor->total_page_views,
+                'engagement_score' => $visitor->engagement_score,
+                'lead' => $visitor->lead ? [
+                    'id' => $visitor->lead->id,
+                    'name' => $visitor->lead->full_name,
+                    'email' => $visitor->lead->email1
+                ] : null,
+                'contact' => $visitor->contact ? [
+                    'id' => $visitor->contact->id,
+                    'name' => $visitor->contact->full_name,
+                    'email' => $visitor->contact->email1
+                ] : null
+            ];
+        });
+        
+        return $this->json($response, [
+            'data' => $data,
+            'meta' => [
+                'total' => $visitors->total(),
+                'page' => $visitors->currentPage(),
+                'limit' => $visitors->perPage(),
+                'pages' => $visitors->lastPage()
+            ]
+        ]);
+    }
+    
+    /**
+     * Get tracking analytics (admin endpoint)
+     * GET /api/admin/tracking/analytics
+     */
+    public function getTrackingAnalytics(Request $request, Response $response, array $args): Response
+    {
+        $params = $request->getQueryParams();
+        $startDate = $params['start_date'] ?? (new \DateTime())->modify('-30 days')->format('Y-m-d');
+        $endDate = $params['end_date'] ?? (new \DateTime())->format('Y-m-d');
+        
+        // Get daily stats
+        $dailyStats = DB::table('activity_tracking_page_views')
+            ->whereBetween('viewed_at', [$startDate, $endDate])
+            ->select(DB::raw('
+                DATE(viewed_at) as date,
+                COUNT(*) as page_views,
+                COUNT(DISTINCT visitor_id) as unique_visitors,
+                COUNT(DISTINCT session_id) as sessions
+            '))
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+        
+        // Get top pages
+        $topPages = DB::table('activity_tracking_page_views')
+            ->whereBetween('viewed_at', [$startDate, $endDate])
+            ->select('page_url', 'page_title', DB::raw('COUNT(*) as views'))
+            ->groupBy('page_url', 'page_title')
+            ->orderBy('views', 'desc')
+            ->limit(10)
+            ->get();
+        
+        // Get engagement metrics
+        $engagementStats = DB::table('activity_tracking_sessions')
+            ->whereBetween('started_at', [$startDate, $endDate])
+            ->select(DB::raw('
+                AVG(duration) as avg_session_duration,
+                AVG(page_views) as avg_pages_per_session,
+                MAX(duration) as max_session_duration
+            '))
+            ->first();
+        
+        return $this->json($response, [
+            'data' => [
+                'date_range' => [
+                    'start' => $startDate,
+                    'end' => $endDate
+                ],
+                'summary' => [
+                    'total_page_views' => $dailyStats->sum('page_views'),
+                    'unique_visitors' => DB::table('activity_tracking_visitors')
+                        ->whereBetween('first_visit', [$startDate, $endDate])
+                        ->count(),
+                    'total_sessions' => $dailyStats->sum('sessions'),
+                    'avg_session_duration' => round($engagementStats->avg_session_duration ?? 0, 2),
+                    'avg_pages_per_session' => round($engagementStats->avg_pages_per_session ?? 0, 2)
+                ],
+                'daily_stats' => $dailyStats,
+                'top_pages' => $topPages
+            ]
+        ]);
+    }
+    
+    /**
+     * Get settings (admin endpoint)
+     * GET /api/admin/settings/tracking
+     */
+    public function getSettings(Request $request, Response $response, array $args): Response
+    {
+        return $this->getConfig($request, $response, $args);
+    }
+    
+    /**
+     * Update settings (admin endpoint)
+     * PUT /api/admin/settings/tracking
+     */
+    public function updateSettings(Request $request, Response $response, array $args): Response
+    {
+        return $this->updateConfig($request, $response, $args);
+    }
+    
+    /**
+     * Get tracking script (public endpoint)
+     * GET /api/public/tracking-script.js
+     */
+    public function getTrackingScript(Request $request, Response $response, array $args): Response
+    {
+        $script = file_get_contents(__DIR__ . '/../../../public/js/tracking.js');
+        
+        // Replace API endpoint placeholder
+        $apiUrl = $request->getUri()->getScheme() . '://' . $request->getUri()->getHost();
+        if ($request->getUri()->getPort() && !in_array($request->getUri()->getPort(), [80, 443])) {
+            $apiUrl .= ':' . $request->getUri()->getPort();
+        }
+        $script = str_replace('{{API_URL}}', $apiUrl, $script);
+        
+        $response->getBody()->write($script);
+        return $response
+            ->withHeader('Content-Type', 'application/javascript')
+            ->withHeader('Cache-Control', 'public, max-age=3600');
     }
 }

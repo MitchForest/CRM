@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { LoginResponse } from '@/types/api.generated'
+import type { LoginResponse } from '@/types/api.types'
 
 interface User {
   id: string

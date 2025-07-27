@@ -4,46 +4,41 @@ namespace App\Http\Controllers;
 
 use App\Models\Lead;
 use App\Models\Opportunity;
-use App\Models\Case;
+use App\Models\Cases;
 use App\Models\Call;
 use App\Models\Meeting;
 use App\Models\Task;
 use App\Models\Note;
 use App\Models\User;
 use App\Services\CRM\AnalyticsService;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Illuminate\Database\Capsule\Manager as DB;
 
 class AnalyticsController extends Controller
 {
     private AnalyticsService $analyticsService;
     
-    public function __construct(AnalyticsService $analyticsService)
+    public function __construct()
     {
-        $this->analyticsService = $analyticsService;
+        parent::__construct();
+        $this->analyticsService = new AnalyticsService();
     }
     
     /**
-     * Get analytics overview
-     * GET /api/crm/analytics/overview
+     * Get sales analytics
+     * GET /api/crm/analytics/sales
      */
-    public function getOverview(Request $request): JsonResponse
+    public function salesAnalytics(Request $request, Response $response, array $args): Response
     {
         try {
-            $request->validate([
+            $data = $this->validate($request, [
                 'date_from' => 'sometimes|date',
                 'date_to' => 'sometimes|date|after_or_equal:date_from'
             ]);
             
-            $dateFrom = $request->input('date_from', now()->subDays(30)->format('Y-m-d'));
-            $dateTo = $request->input('date_to', now()->format('Y-m-d'));
-            
-            // Get leads metrics
-            $leadsCount = Lead::where('deleted', 0)
-                ->whereBetween('date_entered', [$dateFrom, $dateTo])
-                ->count();
+            $dateFrom = $data['date_from'] ?? (new \DateTime())->modify('-30 days')->format('Y-m-d');
+            $dateTo = $data['date_to'] ?? (new \DateTime())->format('Y-m-d');
             
             // Get opportunities metrics
             $opportunities = Opportunity::where('deleted', 0)
@@ -57,179 +52,246 @@ class AnalyticsController extends Controller
                 ->whereBetween('date_closed', [$dateFrom, $dateTo])
                 ->selectRaw('COUNT(*) as count, SUM(amount) as total_value')
                 ->first();
+                
+            // Get lost opportunities
+            $lostOpportunities = Opportunity::where('deleted', 0)
+                ->where('sales_stage', 'Closed Lost')
+                ->whereBetween('date_closed', [$dateFrom, $dateTo])
+                ->selectRaw('COUNT(*) as count, SUM(amount) as total_value')
+                ->first();
             
-            // Get cases metrics
-            $casesCount = Case::where('deleted', 0)
+            // Get pipeline value by stage
+            $pipelineByStage = Opportunity::where('deleted', 0)
+                ->whereNotIn('sales_stage', ['Closed Won', 'Closed Lost'])
+                ->select('sales_stage', DB::raw('COUNT(*) as count'), DB::raw('SUM(amount) as value'))
+                ->groupBy('sales_stage')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'stage' => $item->sales_stage,
+                        'count' => $item->count,
+                        'value' => (float)$item->value
+                    ];
+                });
+            
+            // Calculate metrics
+            $winRate = $opportunities->count > 0 ? round(($wonOpportunities->count / $opportunities->count) * 100, 2) : 0;
+            $avgDealSize = $wonOpportunities->count > 0 ? round($wonOpportunities->total_value / $wonOpportunities->count, 2) : 0;
+            
+            // Get sales velocity (deals closed per day)
+            $daysInPeriod = (new \DateTime($dateTo))->diff(new \DateTime($dateFrom))->days + 1;
+            $salesVelocity = round($wonOpportunities->count / $daysInPeriod, 2);
+            
+            return $this->json($response, [
+                'summary' => [
+                    'totalOpportunities' => $opportunities->count,
+                    'totalValue' => (float)$opportunities->total_value,
+                    'wonDeals' => $wonOpportunities->count,
+                    'wonValue' => (float)$wonOpportunities->total_value,
+                    'lostDeals' => $lostOpportunities->count,
+                    'lostValue' => (float)$lostOpportunities->total_value,
+                    'winRate' => $winRate,
+                    'averageDealSize' => $avgDealSize,
+                    'salesVelocity' => $salesVelocity
+                ],
+                'pipeline' => $pipelineByStage,
+                'trends' => $this->getSalesTrends($dateFrom, $dateTo),
+                'period' => [
+                    'from' => $dateFrom,
+                    'to' => $dateTo
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->error($response, 'Failed to fetch sales analytics: ' . $e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * Get lead analytics
+     * GET /api/crm/analytics/leads
+     */
+    public function leadAnalytics(Request $request, Response $response, array $args): Response
+    {
+        try {
+            $data = $this->validate($request, [
+                'date_from' => 'sometimes|date',
+                'date_to' => 'sometimes|date|after_or_equal:date_from'
+            ]);
+            
+            $dateFrom = $data['date_from'] ?? (new \DateTime())->modify('-30 days')->format('Y-m-d');
+            $dateTo = $data['date_to'] ?? (new \DateTime())->format('Y-m-d');
+            
+            // Get leads by status
+            $leadsByStatus = Lead::where('deleted', 0)
+                ->whereBetween('date_entered', [$dateFrom, $dateTo])
+                ->select('status', DB::raw('COUNT(*) as count'))
+                ->groupBy('status')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'status' => $item->status ?: 'Unknown',
+                        'count' => $item->count
+                    ];
+                });
+            
+            // Get leads by source
+            $leadsBySource = Lead::where('deleted', 0)
+                ->whereBetween('date_entered', [$dateFrom, $dateTo])
+                ->select('lead_source', DB::raw('COUNT(*) as count'))
+                ->groupBy('lead_source')
+                ->orderBy('count', 'desc')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'source' => $item->lead_source ?: 'Unknown',
+                        'count' => $item->count
+                    ];
+                });
+            
+            // Get conversion metrics
+            $totalLeads = Lead::where('deleted', 0)
+                ->whereBetween('date_entered', [$dateFrom, $dateTo])
+                ->count();
+                
+            $convertedLeads = Lead::where('deleted', 0)
+                ->where('converted', 1)
+                ->whereBetween('date_entered', [$dateFrom, $dateTo])
+                ->count();
+                
+            $qualifiedLeads = Lead::where('deleted', 0)
+                ->where('status', 'Qualified')
                 ->whereBetween('date_entered', [$dateFrom, $dateTo])
                 ->count();
             
-            $openCasesCount = Case::where('deleted', 0)
-                ->whereIn('status', ['Open_New', 'Open_Assigned', 'Open_Pending'])
+            $conversionRate = $totalLeads > 0 ? round(($convertedLeads / $totalLeads) * 100, 2) : 0;
+            $qualificationRate = $totalLeads > 0 ? round(($qualifiedLeads / $totalLeads) * 100, 2) : 0;
+            
+            // Get lead response time
+            $avgResponseTime = $this->getAverageLeadResponseTime($dateFrom, $dateTo);
+            
+            return $this->json($response, [
+                'summary' => [
+                    'totalLeads' => $totalLeads,
+                    'convertedLeads' => $convertedLeads,
+                    'qualifiedLeads' => $qualifiedLeads,
+                    'conversionRate' => $conversionRate,
+                    'qualificationRate' => $qualificationRate,
+                    'averageResponseTime' => $avgResponseTime
+                ],
+                'byStatus' => $leadsByStatus,
+                'bySource' => $leadsBySource,
+                'trends' => $this->getLeadTrends($dateFrom, $dateTo),
+                'period' => [
+                    'from' => $dateFrom,
+                    'to' => $dateTo
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->error($response, 'Failed to fetch lead analytics: ' . $e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * Get activity analytics
+     * GET /api/crm/analytics/activities
+     */
+    public function activityAnalytics(Request $request, Response $response, array $args): Response
+    {
+        try {
+            $data = $this->validate($request, [
+                'date_from' => 'sometimes|date',
+                'date_to' => 'sometimes|date|after_or_equal:date_from'
+            ]);
+            
+            $dateFrom = $data['date_from'] ?? (new \DateTime())->modify('-30 days')->format('Y-m-d');
+            $dateTo = $data['date_to'] ?? (new \DateTime())->format('Y-m-d');
+            
+            // Get activities by type
+            $callsCount = Call::where('deleted', 0)
+                ->whereBetween('date_entered', [$dateFrom, $dateTo])
+                ->count();
+                
+            $meetingsCount = Meeting::where('deleted', 0)
+                ->whereBetween('date_entered', [$dateFrom, $dateTo])
+                ->count();
+                
+            $tasksCount = Task::where('deleted', 0)
+                ->whereBetween('date_entered', [$dateFrom, $dateTo])
+                ->count();
+                
+            $notesCount = Note::where('deleted', 0)
+                ->whereBetween('date_entered', [$dateFrom, $dateTo])
+                ->count();
+                
+            $totalActivities = $callsCount + $meetingsCount + $tasksCount + $notesCount;
+            
+            // Get completed vs pending tasks
+            $completedTasks = Task::where('deleted', 0)
+                ->where('status', 'Completed')
+                ->whereBetween('date_entered', [$dateFrom, $dateTo])
+                ->count();
+                
+            $pendingTasks = Task::where('deleted', 0)
+                ->whereIn('status', ['Not Started', 'In Progress', 'Pending Input'])
+                ->count(); // Current pending, not date-filtered
+            
+            // Get overdue activities
+            $overdueTasks = Task::where('deleted', 0)
+                ->whereIn('status', ['Not Started', 'In Progress'])
+                ->where('date_due', '<', (new \DateTime())->format('Y-m-d'))
+                ->count();
+                
+            $overdueCalls = Call::where('deleted', 0)
+                ->where('status', 'Planned')
+                ->where('date_start', '<', (new \DateTime())->format('Y-m-d'))
+                ->count();
+                
+            $overdueMeetings = Meeting::where('deleted', 0)
+                ->where('status', 'Planned')
+                ->where('date_start', '<', (new \DateTime())->format('Y-m-d'))
                 ->count();
             
-            // Get activities count
-            $activitiesCount = 0;
-            $activitiesCount += Call::where('deleted', 0)->whereBetween('date_entered', [$dateFrom, $dateTo])->count();
-            $activitiesCount += Meeting::where('deleted', 0)->whereBetween('date_entered', [$dateFrom, $dateTo])->count();
-            $activitiesCount += Task::where('deleted', 0)->whereBetween('date_entered', [$dateFrom, $dateTo])->count();
-            $activitiesCount += Note::where('deleted', 0)->whereBetween('date_entered', [$dateFrom, $dateTo])->count();
-            
-            // Calculate metrics
-            $conversionRate = $leadsCount > 0 ? round(($opportunities->count / $leadsCount) * 100, 2) : 0;
-            $winRate = $opportunities->count > 0 ? round(($wonOpportunities->count / $opportunities->count) * 100, 2) : 0;
-            
-            // Get top performers
-            $topPerformers = User::join('opportunities', 'opportunities.assigned_user_id', '=', 'users.id')
-                ->where('opportunities.deleted', 0)
-                ->where('opportunities.sales_stage', 'Closed Won')
-                ->whereBetween('opportunities.date_closed', [$dateFrom, $dateTo])
+            // Get activities by user
+            $activitiesByUser = User::join('tasks', 'tasks.assigned_user_id', '=', 'users.id')
+                ->where('tasks.deleted', 0)
+                ->whereBetween('tasks.date_entered', [$dateFrom, $dateTo])
                 ->select('users.id', 'users.first_name', 'users.last_name')
-                ->selectRaw('COUNT(opportunities.id) as won_deals, SUM(opportunities.amount) as total_value')
+                ->selectRaw('COUNT(tasks.id) as activity_count')
                 ->groupBy('users.id', 'users.first_name', 'users.last_name')
-                ->orderBy('total_value', 'desc')
-                ->limit(5)
+                ->orderBy('activity_count', 'desc')
+                ->limit(10)
                 ->get()
                 ->map(function ($user) {
                     return [
                         'id' => $user->id,
                         'name' => $user->first_name . ' ' . $user->last_name,
-                        'wonDeals' => $user->won_deals,
-                        'totalValue' => (float)$user->total_value
+                        'activityCount' => $user->activity_count
                     ];
                 });
             
-            return response()->json([
-                'overview' => [
-                    'leads' => [
-                        'count' => $leadsCount,
-                        'trend' => $this->calculateTrend('leads', $dateFrom, $dateTo)
-                    ],
-                    'opportunities' => [
-                        'count' => $opportunities->count,
-                        'totalValue' => (float)$opportunities->total_value,
-                        'averageValue' => $opportunities->count > 0 ? round($opportunities->total_value / $opportunities->count, 2) : 0,
-                        'trend' => $this->calculateTrend('opportunities', $dateFrom, $dateTo)
-                    ],
-                    'wonDeals' => [
-                        'count' => $wonOpportunities->count,
-                        'totalValue' => (float)$wonOpportunities->total_value,
-                        'winRate' => $winRate
-                    ],
-                    'cases' => [
-                        'total' => $casesCount,
-                        'open' => $openCasesCount,
-                        'resolved' => $casesCount - $openCasesCount
-                    ],
-                    'activities' => [
-                        'count' => $activitiesCount,
-                        'trend' => $this->calculateTrend('activities', $dateFrom, $dateTo)
-                    ],
-                    'metrics' => [
-                        'conversionRate' => $conversionRate,
-                        'winRate' => $winRate,
-                        'averageDealSize' => $wonOpportunities->count > 0 ? round($wonOpportunities->total_value / $wonOpportunities->count, 2) : 0
-                    ]
-                ],
-                'topPerformers' => $topPerformers,
-                'period' => [
-                    'from' => $dateFrom,
-                    'to' => $dateTo
-                ]
-            ]);
-            
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to fetch analytics overview',
-                'message' => $e->getMessage()
-            ], 500);
-        }
-    }
-    
-    /**
-     * Get conversion funnel
-     * GET /api/crm/analytics/funnel
-     */
-    public function getConversionFunnel(Request $request): JsonResponse
-    {
-        try {
-            $request->validate([
-                'date_from' => 'sometimes|date',
-                'date_to' => 'sometimes|date|after_or_equal:date_from'
-            ]);
-            
-            $dateFrom = $request->input('date_from', now()->subDays(30)->format('Y-m-d'));
-            $dateTo = $request->input('date_to', now()->format('Y-m-d'));
-            
-            // Lead funnel
-            $leadStages = ['New', 'Contacted', 'Qualified'];
-            $leadFunnel = [];
-            
-            foreach ($leadStages as $stage) {
-                $count = Lead::where('deleted', 0)
-                    ->where('status', $stage)
-                    ->whereBetween('date_entered', [$dateFrom, $dateTo])
-                    ->count();
-                
-                $leadFunnel[] = [
-                    'stage' => $stage,
-                    'count' => $count
-                ];
-            }
-            
-            // Opportunity funnel
-            $oppStages = ['Qualification', 'Proposal/Price Quote', 'Negotiation/Review', 'Closed Won', 'Closed Lost'];
-            $oppFunnel = [];
-            
-            foreach ($oppStages as $stage) {
-                $data = Opportunity::where('deleted', 0)
-                    ->where('sales_stage', $stage)
-                    ->whereBetween('date_entered', [$dateFrom, $dateTo])
-                    ->selectRaw('COUNT(*) as count, SUM(amount) as value')
-                    ->first();
-                
-                $oppFunnel[] = [
-                    'stage' => $stage,
-                    'count' => $data->count,
-                    'value' => (float)$data->value
-                ];
-            }
-            
-            // Calculate conversion metrics
-            $totalLeads = array_sum(array_column($leadFunnel, 'count'));
-            $qualifiedLeads = $leadFunnel[2]['count'] ?? 0;
-            $totalOpps = array_sum(array_column($oppFunnel, 'count'));
-            $wonOpps = 0;
-            $lostOpps = 0;
-            
-            foreach ($oppFunnel as $stage) {
-                if ($stage['stage'] === 'Closed Won') $wonOpps = $stage['count'];
-                if ($stage['stage'] === 'Closed Lost') $lostOpps = $stage['count'];
-            }
-            
-            $leadToOppRate = $totalLeads > 0 ? round(($totalOpps / $totalLeads) * 100, 2) : 0;
-            $oppToWonRate = $totalOpps > 0 ? round(($wonOpps / $totalOpps) * 100, 2) : 0;
-            
-            // Get conversion time metrics
-            $avgLeadTime = $this->getAverageLeadTime($dateFrom, $dateTo);
-            $avgSalesTime = $this->getAverageSalesTime($dateFrom, $dateTo);
-            
-            return response()->json([
-                'leadFunnel' => $leadFunnel,
-                'opportunityFunnel' => $oppFunnel,
-                'conversionMetrics' => [
-                    'leadToOpportunityRate' => $leadToOppRate,
-                    'opportunityToWonRate' => $oppToWonRate,
-                    'overallConversionRate' => $totalLeads > 0 ? round(($wonOpps / $totalLeads) * 100, 2) : 0,
-                    'averageLeadTime' => $avgLeadTime,
-                    'averageSalesTime' => $avgSalesTime
-                ],
+            return $this->json($response, [
                 'summary' => [
-                    'totalLeads' => $totalLeads,
-                    'qualifiedLeads' => $qualifiedLeads,
-                    'totalOpportunities' => $totalOpps,
-                    'wonDeals' => $wonOpps,
-                    'lostDeals' => $lostOpps
+                    'totalActivities' => $totalActivities,
+                    'calls' => $callsCount,
+                    'meetings' => $meetingsCount,
+                    'tasks' => $tasksCount,
+                    'notes' => $notesCount
                 ],
+                'taskMetrics' => [
+                    'completed' => $completedTasks,
+                    'pending' => $pendingTasks,
+                    'completionRate' => $tasksCount > 0 ? round(($completedTasks / $tasksCount) * 100, 2) : 0
+                ],
+                'overdue' => [
+                    'tasks' => $overdueTasks,
+                    'calls' => $overdueCalls,
+                    'meetings' => $overdueMeetings,
+                    'total' => $overdueTasks + $overdueCalls + $overdueMeetings
+                ],
+                'byUser' => $activitiesByUser,
+                'trends' => $this->getActivityTrends($dateFrom, $dateTo),
                 'period' => [
                     'from' => $dateFrom,
                     'to' => $dateTo
@@ -237,192 +299,372 @@ class AnalyticsController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to fetch conversion funnel',
-                'message' => $e->getMessage()
-            ], 500);
+            return $this->error($response, 'Failed to fetch activity analytics: ' . $e->getMessage(), 500);
         }
     }
     
     /**
-     * Get lead sources analytics
-     * GET /api/crm/analytics/lead-sources
+     * Get conversion analytics
+     * GET /api/crm/analytics/conversion
      */
-    public function getLeadSources(Request $request): JsonResponse
+    public function conversionAnalytics(Request $request, Response $response, array $args): Response
     {
         try {
-            $request->validate([
+            $data = $this->validate($request, [
                 'date_from' => 'sometimes|date',
                 'date_to' => 'sometimes|date|after_or_equal:date_from'
             ]);
             
-            $dateFrom = $request->input('date_from', now()->subDays(30)->format('Y-m-d'));
-            $dateTo = $request->input('date_to', now()->format('Y-m-d'));
+            $dateFrom = $data['date_from'] ?? (new \DateTime())->modify('-30 days')->format('Y-m-d');
+            $dateTo = $data['date_to'] ?? (new \DateTime())->format('Y-m-d');
             
-            $sources = $this->analyticsService->getLeadSourcesPerformance($dateFrom, $dateTo);
+            // Lead to opportunity conversion
+            $totalLeads = Lead::where('deleted', 0)
+                ->whereBetween('date_entered', [$dateFrom, $dateTo])
+                ->count();
+                
+            $convertedToOpp = Lead::where('deleted', 0)
+                ->where('converted', 1)
+                ->whereNotNull('converted_opp_id')
+                ->whereBetween('date_entered', [$dateFrom, $dateTo])
+                ->count();
             
-            // Get trending sources (last 7 days)
-            $trending = Lead::where('deleted', 0)
-                ->where('date_entered', '>=', now()->subDays(7))
-                ->select('lead_source', DB::raw('COUNT(*) as count'))
-                ->groupBy('lead_source')
-                ->orderBy('count', 'desc')
-                ->limit(5)
+            // Opportunity to won conversion
+            $totalOpps = Opportunity::where('deleted', 0)
+                ->whereBetween('date_entered', [$dateFrom, $dateTo])
+                ->count();
+                
+            $wonOpps = Opportunity::where('deleted', 0)
+                ->where('sales_stage', 'Closed Won')
+                ->whereBetween('date_closed', [$dateFrom, $dateTo])
+                ->count();
+            
+            // Build conversion funnel
+            $funnel = [
+                ['stage' => 'Leads', 'count' => $totalLeads, 'percentage' => 100],
+                ['stage' => 'Qualified Leads', 'count' => Lead::where('deleted', 0)->where('status', 'Qualified')->whereBetween('date_entered', [$dateFrom, $dateTo])->count(), 'percentage' => 0],
+                ['stage' => 'Opportunities', 'count' => $convertedToOpp, 'percentage' => 0],
+                ['stage' => 'Proposals', 'count' => Opportunity::where('deleted', 0)->where('sales_stage', 'Proposal/Price Quote')->whereBetween('date_entered', [$dateFrom, $dateTo])->count(), 'percentage' => 0],
+                ['stage' => 'Won Deals', 'count' => $wonOpps, 'percentage' => 0]
+            ];
+            
+            // Calculate percentages
+            for ($i = 1; $i < count($funnel); $i++) {
+                $funnel[$i]['percentage'] = $totalLeads > 0 ? round(($funnel[$i]['count'] / $totalLeads) * 100, 2) : 0;
+            }
+            
+            // Calculate conversion times
+            $avgLeadToOppTime = $this->getAverageConversionTime('lead_to_opp', $dateFrom, $dateTo);
+            $avgOppToWonTime = $this->getAverageConversionTime('opp_to_won', $dateFrom, $dateTo);
+            
+            // Conversion rates by source
+            $conversionBySource = $this->getConversionRatesBySource($dateFrom, $dateTo);
+            
+            return $this->json($response, [
+                'funnel' => $funnel,
+                'rates' => [
+                    'leadToOpportunity' => $totalLeads > 0 ? round(($convertedToOpp / $totalLeads) * 100, 2) : 0,
+                    'opportunityToWon' => $totalOpps > 0 ? round(($wonOpps / $totalOpps) * 100, 2) : 0,
+                    'overallConversion' => $totalLeads > 0 ? round(($wonOpps / $totalLeads) * 100, 2) : 0
+                ],
+                'timing' => [
+                    'averageLeadToOpportunity' => $avgLeadToOppTime,
+                    'averageOpportunityToWon' => $avgOppToWonTime,
+                    'totalSalesCycle' => $avgLeadToOppTime + $avgOppToWonTime
+                ],
+                'bySource' => $conversionBySource,
+                'period' => [
+                    'from' => $dateFrom,
+                    'to' => $dateTo
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->error($response, 'Failed to fetch conversion analytics: ' . $e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * Get team performance
+     * GET /api/crm/analytics/team-performance
+     */
+    public function teamPerformance(Request $request, Response $response, array $args): Response
+    {
+        try {
+            $data = $this->validate($request, [
+                'date_from' => 'sometimes|date',
+                'date_to' => 'sometimes|date|after_or_equal:date_from'
+            ]);
+            
+            $dateFrom = $data['date_from'] ?? (new \DateTime())->modify('-30 days')->format('Y-m-d');
+            $dateTo = $data['date_to'] ?? (new \DateTime())->format('Y-m-d');
+            
+            // Get team members with their metrics
+            $teamMetrics = User::where('deleted', 0)
+                ->where('status', 'Active')
                 ->get()
-                ->map(function ($item) {
-                    return [
-                        'source' => $item->lead_source ?: 'Unknown',
-                        'recentLeads' => $item->count
-                    ];
-                });
-            
-            $totalLeads = array_sum(array_column($sources, 'leads'));
-            $totalRevenue = array_sum(array_column($sources, 'revenue'));
-            
-            return response()->json([
-                'sources' => $sources,
-                'summary' => [
-                    'totalSources' => count($sources),
-                    'totalLeads' => $totalLeads,
-                    'totalRevenue' => $totalRevenue,
-                    'topSource' => !empty($sources) ? $sources[0]['source'] : null,
-                    'averageLeadsPerSource' => count($sources) > 0 ? round($totalLeads / count($sources), 2) : 0
-                ],
-                'trending' => $trending,
-                'period' => [
-                    'from' => $dateFrom,
-                    'to' => $dateTo
-                ]
-            ]);
-            
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to fetch lead sources analytics',
-                'message' => $e->getMessage()
-            ], 500);
-        }
-    }
-    
-    /**
-     * Get custom report
-     * GET /api/crm/analytics/report
-     */
-    public function getCustomReport(Request $request): JsonResponse
-    {
-        $request->validate([
-            'type' => 'required|string|in:sales,marketing,support,activity',
-            'group_by' => 'sometimes|string|in:user,team,source,stage,month,week',
-            'date_from' => 'sometimes|date',
-            'date_to' => 'sometimes|date|after_or_equal:date_from'
-        ]);
-        
-        $type = $request->input('type');
-        $groupBy = $request->input('group_by', 'month');
-        $dateFrom = $request->input('date_from', now()->subMonths(3)->format('Y-m-d'));
-        $dateTo = $request->input('date_to', now()->format('Y-m-d'));
-        
-        try {
-            $data = $this->analyticsService->generateCustomReport($type, $groupBy, $dateFrom, $dateTo);
-            
-            return response()->json([
-                'data' => $data,
-                'metadata' => [
-                    'type' => $type,
-                    'groupBy' => $groupBy,
-                    'period' => [
-                        'from' => $dateFrom,
-                        'to' => $dateTo
-                    ]
-                ]
-            ]);
-            
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to generate custom report',
-                'message' => $e->getMessage()
-            ], 500);
-        }
-    }
-    
-    /**
-     * Calculate trend for a metric
-     */
-    private function calculateTrend(string $type, string $dateFrom, string $dateTo): array
-    {
-        $currentPeriod = Carbon::parse($dateFrom)->diffInDays(Carbon::parse($dateTo));
-        $prevDateTo = Carbon::parse($dateFrom)->subDay();
-        $prevDateFrom = $prevDateTo->copy()->subDays($currentPeriod);
-        
-        $currentCount = 0;
-        $previousCount = 0;
-        
-        switch ($type) {
-            case 'leads':
-                $currentCount = Lead::where('deleted', 0)
-                    ->whereBetween('date_entered', [$dateFrom, $dateTo])
-                    ->count();
-                $previousCount = Lead::where('deleted', 0)
-                    ->whereBetween('date_entered', [$prevDateFrom, $prevDateTo])
-                    ->count();
-                break;
-                
-            case 'opportunities':
-                $currentCount = Opportunity::where('deleted', 0)
-                    ->whereBetween('date_entered', [$dateFrom, $dateTo])
-                    ->count();
-                $previousCount = Opportunity::where('deleted', 0)
-                    ->whereBetween('date_entered', [$prevDateFrom, $prevDateTo])
-                    ->count();
-                break;
-                
-            case 'activities':
-                $tables = [Call::class, Meeting::class, Task::class, Note::class];
-                foreach ($tables as $model) {
-                    $currentCount += $model::where('deleted', 0)
+                ->map(function ($user) use ($dateFrom, $dateTo) {
+                    // Leads assigned
+                    $leadsAssigned = Lead::where('deleted', 0)
+                        ->where('assigned_user_id', $user->id)
                         ->whereBetween('date_entered', [$dateFrom, $dateTo])
                         ->count();
-                    $previousCount += $model::where('deleted', 0)
-                        ->whereBetween('date_entered', [$prevDateFrom, $prevDateTo])
+                    
+                    // Opportunities
+                    $oppsData = Opportunity::where('deleted', 0)
+                        ->where('assigned_user_id', $user->id)
+                        ->whereBetween('date_entered', [$dateFrom, $dateTo])
+                        ->selectRaw('COUNT(*) as count, SUM(amount) as total_value')
+                        ->first();
+                    
+                    // Won deals
+                    $wonData = Opportunity::where('deleted', 0)
+                        ->where('assigned_user_id', $user->id)
+                        ->where('sales_stage', 'Closed Won')
+                        ->whereBetween('date_closed', [$dateFrom, $dateTo])
+                        ->selectRaw('COUNT(*) as count, SUM(amount) as total_value')
+                        ->first();
+                    
+                    // Activities
+                    $activitiesCount = 0;
+                    $activitiesCount += Call::where('deleted', 0)->where('assigned_user_id', $user->id)->whereBetween('date_entered', [$dateFrom, $dateTo])->count();
+                    $activitiesCount += Meeting::where('deleted', 0)->where('assigned_user_id', $user->id)->whereBetween('date_entered', [$dateFrom, $dateTo])->count();
+                    $activitiesCount += Task::where('deleted', 0)->where('assigned_user_id', $user->id)->whereBetween('date_entered', [$dateFrom, $dateTo])->count();
+                    
+                    // Cases resolved
+                    $casesResolved = Cases::where('deleted', 0)
+                        ->where('assigned_user_id', $user->id)
+                        ->where('status', 'Closed')
+                        ->whereBetween('date_modified', [$dateFrom, $dateTo])
                         ->count();
-                }
-                break;
+                    
+                    return [
+                        'id' => $user->id,
+                        'name' => $user->first_name . ' ' . $user->last_name,
+                        'metrics' => [
+                            'leadsAssigned' => $leadsAssigned,
+                            'opportunities' => $oppsData->count,
+                            'opportunityValue' => (float)$oppsData->total_value,
+                            'wonDeals' => $wonData->count,
+                            'wonValue' => (float)$wonData->total_value,
+                            'winRate' => $oppsData->count > 0 ? round(($wonData->count / $oppsData->count) * 100, 2) : 0,
+                            'activities' => $activitiesCount,
+                            'casesResolved' => $casesResolved
+                        ]
+                    ];
+                })
+                ->filter(function ($user) {
+                    // Only include users with activity
+                    return array_sum(array_values($user['metrics'])) > 0;
+                })
+                ->values();
+            
+            // Calculate team totals
+            $teamTotals = [
+                'totalLeads' => $teamMetrics->sum('metrics.leadsAssigned'),
+                'totalOpportunities' => $teamMetrics->sum('metrics.opportunities'),
+                'totalOpportunityValue' => $teamMetrics->sum('metrics.opportunityValue'),
+                'totalWonDeals' => $teamMetrics->sum('metrics.wonDeals'),
+                'totalWonValue' => $teamMetrics->sum('metrics.wonValue'),
+                'totalActivities' => $teamMetrics->sum('metrics.activities'),
+                'totalCasesResolved' => $teamMetrics->sum('metrics.casesResolved')
+            ];
+            
+            // Get top performers
+            $topByRevenue = $teamMetrics->sortByDesc('metrics.wonValue')->take(5)->values();
+            $topByDeals = $teamMetrics->sortByDesc('metrics.wonDeals')->take(5)->values();
+            $topByActivities = $teamMetrics->sortByDesc('metrics.activities')->take(5)->values();
+            
+            return $this->json($response, [
+                'team' => $teamMetrics,
+                'totals' => $teamTotals,
+                'topPerformers' => [
+                    'byRevenue' => $topByRevenue,
+                    'byDeals' => $topByDeals,
+                    'byActivities' => $topByActivities
+                ],
+                'period' => [
+                    'from' => $dateFrom,
+                    'to' => $dateTo
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->error($response, 'Failed to fetch team performance: ' . $e->getMessage(), 500);
         }
-        
-        $trend = $previousCount > 0 ? round((($currentCount - $previousCount) / $previousCount) * 100, 2) : 0;
-        
-        return [
-            'value' => $trend,
-            'direction' => $trend > 0 ? 'up' : ($trend < 0 ? 'down' : 'flat')
-        ];
     }
     
     /**
-     * Get average lead qualification time
+     * Helper: Get sales trends
      */
-    private function getAverageLeadTime(string $dateFrom, string $dateTo): float
+    private function getSalesTrends(string $dateFrom, string $dateTo): array
     {
-        $avgDays = Lead::where('deleted', 0)
-            ->where('status', 'Qualified')
-            ->whereBetween('date_modified', [$dateFrom, $dateTo])
-            ->selectRaw('AVG(DATEDIFF(date_modified, date_entered)) as avg_days')
-            ->first()
-            ->avg_days ?? 0;
+        $interval = $this->getDateInterval($dateFrom, $dateTo);
         
-        return round($avgDays, 1);
-    }
-    
-    /**
-     * Get average sales cycle time
-     */
-    private function getAverageSalesTime(string $dateFrom, string $dateTo): float
-    {
-        $avgDays = Opportunity::where('deleted', 0)
+        return Opportunity::where('deleted', 0)
             ->where('sales_stage', 'Closed Won')
             ->whereBetween('date_closed', [$dateFrom, $dateTo])
-            ->selectRaw('AVG(DATEDIFF(date_closed, date_entered)) as avg_days')
-            ->first()
-            ->avg_days ?? 0;
+            ->selectRaw("DATE_FORMAT(date_closed, '{$interval['format']}') as period")
+            ->selectRaw('COUNT(*) as deals')
+            ->selectRaw('SUM(amount) as revenue')
+            ->groupBy('period')
+            ->orderBy('period')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'period' => $item->period,
+                    'deals' => $item->deals,
+                    'revenue' => (float)$item->revenue
+                ];
+            })
+            ->toArray();
+    }
+    
+    /**
+     * Helper: Get lead trends
+     */
+    private function getLeadTrends(string $dateFrom, string $dateTo): array
+    {
+        $interval = $this->getDateInterval($dateFrom, $dateTo);
+        
+        return Lead::where('deleted', 0)
+            ->whereBetween('date_entered', [$dateFrom, $dateTo])
+            ->selectRaw("DATE_FORMAT(date_entered, '{$interval['format']}') as period")
+            ->selectRaw('COUNT(*) as count')
+            ->groupBy('period')
+            ->orderBy('period')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'period' => $item->period,
+                    'count' => $item->count
+                ];
+            })
+            ->toArray();
+    }
+    
+    /**
+     * Helper: Get activity trends
+     */
+    private function getActivityTrends(string $dateFrom, string $dateTo): array
+    {
+        $interval = $this->getDateInterval($dateFrom, $dateTo);
+        $trends = [];
+        
+        // Aggregate from all activity tables
+        $tables = [
+            'calls' => Call::class,
+            'meetings' => Meeting::class,
+            'tasks' => Task::class,
+            'notes' => Note::class
+        ];
+        
+        foreach ($tables as $type => $model) {
+            $data = $model::where('deleted', 0)
+                ->whereBetween('date_entered', [$dateFrom, $dateTo])
+                ->selectRaw("DATE_FORMAT(date_entered, '{$interval['format']}') as period")
+                ->selectRaw('COUNT(*) as count')
+                ->groupBy('period')
+                ->orderBy('period')
+                ->get();
+                
+            foreach ($data as $item) {
+                if (!isset($trends[$item->period])) {
+                    $trends[$item->period] = [
+                        'period' => $item->period,
+                        'calls' => 0,
+                        'meetings' => 0,
+                        'tasks' => 0,
+                        'notes' => 0,
+                        'total' => 0
+                    ];
+                }
+                $trends[$item->period][$type] = $item->count;
+                $trends[$item->period]['total'] += $item->count;
+            }
+        }
+        
+        return array_values($trends);
+    }
+    
+    /**
+     * Helper: Get average lead response time
+     */
+    private function getAverageLeadResponseTime(string $dateFrom, string $dateTo): float
+    {
+        // This would typically calculate the time between lead creation and first activity
+        // For now, return a placeholder
+        return 2.5; // hours
+    }
+    
+    /**
+     * Helper: Get average conversion time
+     */
+    private function getAverageConversionTime(string $type, string $dateFrom, string $dateTo): float
+    {
+        if ($type === 'lead_to_opp') {
+            $avgDays = Lead::where('deleted', 0)
+                ->where('converted', 1)
+                ->whereNotNull('converted_opp_id')
+                ->whereBetween('date_modified', [$dateFrom, $dateTo])
+                ->selectRaw('AVG(DATEDIFF(date_modified, date_entered)) as avg_days')
+                ->first()
+                ->avg_days ?? 0;
+        } else {
+            $avgDays = Opportunity::where('deleted', 0)
+                ->where('sales_stage', 'Closed Won')
+                ->whereBetween('date_closed', [$dateFrom, $dateTo])
+                ->selectRaw('AVG(DATEDIFF(date_closed, date_entered)) as avg_days')
+                ->first()
+                ->avg_days ?? 0;
+        }
         
         return round($avgDays, 1);
+    }
+    
+    /**
+     * Helper: Get conversion rates by source
+     */
+    private function getConversionRatesBySource(string $dateFrom, string $dateTo): array
+    {
+        $sources = Lead::where('deleted', 0)
+            ->whereBetween('date_entered', [$dateFrom, $dateTo])
+            ->select('lead_source')
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw('SUM(converted) as converted')
+            ->groupBy('lead_source')
+            ->having('total', '>', 5) // Only sources with meaningful data
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'source' => $item->lead_source ?: 'Unknown',
+                    'leads' => $item->total,
+                    'converted' => $item->converted,
+                    'conversionRate' => round(($item->converted / $item->total) * 100, 2)
+                ];
+            })
+            ->sortByDesc('conversionRate')
+            ->values()
+            ->toArray();
+            
+        return $sources;
+    }
+    
+    /**
+     * Helper: Determine appropriate date interval for grouping
+     */
+    private function getDateInterval(string $dateFrom, string $dateTo): array
+    {
+        $days = (new \DateTime($dateTo))->diff(new \DateTime($dateFrom))->days;
+        
+        if ($days <= 7) {
+            return ['interval' => 'day', 'format' => '%Y-%m-%d'];
+        } elseif ($days <= 31) {
+            return ['interval' => 'day', 'format' => '%Y-%m-%d'];
+        } elseif ($days <= 90) {
+            return ['interval' => 'week', 'format' => '%Y-%u'];
+        } else {
+            return ['interval' => 'month', 'format' => '%Y-%m'];
+        }
     }
 }

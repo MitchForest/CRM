@@ -6,9 +6,10 @@ use App\Models\Call;
 use App\Models\Meeting;
 use App\Models\Task;
 use App\Models\Note;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use App\Models\User;
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Illuminate\Database\Capsule\Manager as DB;
 
 class ActivitiesController extends Controller
 {
@@ -16,10 +17,11 @@ class ActivitiesController extends Controller
      * Get all activities
      * GET /api/crm/activities
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, Response $response, array $args): Response
     {
         try {
-            $request->validate([
+            $params = $request->getQueryParams();
+            $data = $this->validate($request, [
                 'page' => 'sometimes|integer|min:1',
                 'limit' => 'sometimes|integer|min:1|max:100',
                 'type' => 'sometimes|string|in:all,call,meeting,task,note',
@@ -30,14 +32,14 @@ class ActivitiesController extends Controller
                 'date_to' => 'sometimes|date|after_or_equal:date_from'
             ]);
             
-            $page = $request->input('page', 1);
-            $limit = $request->input('limit', 20);
-            $type = $request->input('type', 'all');
-            $parentType = $request->input('parent_type');
-            $parentId = $request->input('parent_id');
-            $assignedUserId = $request->input('assigned_user_id');
-            $dateFrom = $request->input('date_from');
-            $dateTo = $request->input('date_to');
+            $page = intval($data['page'] ?? 1);
+            $limit = intval($data['limit'] ?? 20);
+            $type = $data['type'] ?? 'all';
+            $parentType = $data['parent_type'] ?? null;
+            $parentId = $data['parent_id'] ?? null;
+            $assignedUserId = $data['assigned_user_id'] ?? null;
+            $dateFrom = $data['date_from'] ?? null;
+            $dateTo = $data['date_to'] ?? null;
             
             $activities = collect();
             
@@ -64,7 +66,7 @@ class ActivitiesController extends Controller
             $offset = ($page - 1) * $limit;
             $activities = $activities->slice($offset, $limit)->values();
             
-            return response()->json([
+            return $this->json($response, [
                 'data' => $activities,
                 'pagination' => [
                     'page' => $page,
@@ -77,256 +79,455 @@ class ActivitiesController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to fetch activities',
-                'message' => $e->getMessage()
-            ], 500);
+            return $this->error($response, 'Failed to fetch activities: ' . $e->getMessage(), 500);
         }
     }
     
     /**
-     * Get single activity
-     * GET /api/crm/activities/{id}
+     * Get upcoming activities
+     * GET /api/crm/activities/upcoming
      */
-    public function show(Request $request, string $id): JsonResponse
+    public function upcoming(Request $request, Response $response, array $args): Response
     {
         try {
-            // Try to find the activity in different models
-            $models = [
-                ['model' => Call::class, 'type' => 'call'],
-                ['model' => Meeting::class, 'type' => 'meeting'],
-                ['model' => Task::class, 'type' => 'task'],
-                ['model' => Note::class, 'type' => 'note']
-            ];
+            $params = $request->getQueryParams();
+            $data = $this->validate($request, [
+                'limit' => 'sometimes|integer|min:1|max:100',
+                'assigned_user_id' => 'sometimes|string'
+            ]);
             
-            foreach ($models as $item) {
-                $activity = $item['model']::find($id);
-                if ($activity) {
-                    return response()->json([
-                        'data' => $this->formatActivity($activity, $item['type'])
-                    ]);
-                }
-            }
+            $limit = intval($data['limit'] ?? 10);
+            $assignedUserId = $data['assigned_user_id'] ?? $request->getAttribute('user_id');
             
-            return response()->json(['error' => 'Activity not found'], 404);
+            $currentDate = (new \DateTime())->format('Y-m-d H:i:s');
+            $activities = collect();
+            
+            // Get upcoming calls
+            $calls = Call::where('deleted', 0)
+                ->where('status', 'Planned')
+                ->where('date_start', '>=', $currentDate)
+                ->when($assignedUserId, function ($query) use ($assignedUserId) {
+                    return $query->where('assigned_user_id', $assignedUserId);
+                })
+                ->orderBy('date_start')
+                ->limit($limit)
+                ->get()
+                ->map(function ($call) {
+                    return $this->formatActivity($call, 'call');
+                });
+            
+            // Get upcoming meetings
+            $meetings = Meeting::where('deleted', 0)
+                ->where('status', 'Planned')
+                ->where('date_start', '>=', $currentDate)
+                ->when($assignedUserId, function ($query) use ($assignedUserId) {
+                    return $query->where('assigned_user_id', $assignedUserId);
+                })
+                ->orderBy('date_start')
+                ->limit($limit)
+                ->get()
+                ->map(function ($meeting) {
+                    return $this->formatActivity($meeting, 'meeting');
+                });
+            
+            // Get upcoming tasks
+            $tasks = Task::where('deleted', 0)
+                ->whereIn('status', ['Not Started', 'In Progress'])
+                ->where('date_due', '>=', $currentDate)
+                ->when($assignedUserId, function ($query) use ($assignedUserId) {
+                    return $query->where('assigned_user_id', $assignedUserId);
+                })
+                ->orderBy('date_due')
+                ->limit($limit)
+                ->get()
+                ->map(function ($task) {
+                    return $this->formatActivity($task, 'task');
+                });
+            
+            // Merge and sort by date
+            $activities = $activities->merge($calls)->merge($meetings)->merge($tasks);
+            $activities = $activities->sortBy('date')->take($limit)->values();
+            
+            return $this->json($response, [
+                'data' => $activities
+            ]);
             
         } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to fetch activity',
-                'message' => $e->getMessage()
-            ], 500);
+            return $this->error($response, 'Failed to fetch upcoming activities: ' . $e->getMessage(), 500);
         }
     }
     
     /**
-     * Create new activity
-     * POST /api/crm/activities
+     * Get overdue activities
+     * GET /api/crm/activities/overdue
      */
-    public function store(Request $request): JsonResponse
+    public function overdue(Request $request, Response $response, array $args): Response
     {
-        $request->validate([
-            'type' => 'required|string|in:call,meeting,task,note',
-            'name' => 'required|string|max:255',
-            'description' => 'sometimes|string',
-            'assigned_user_id' => 'sometimes|string|exists:users,id',
-            'parent_type' => 'sometimes|string',
-            'parent_id' => 'sometimes|string',
-            'contact_ids' => 'sometimes|array',
-            'contact_ids.*' => 'string|exists:contacts,id'
-        ]);
-        
+        try {
+            $params = $request->getQueryParams();
+            $data = $this->validate($request, [
+                'limit' => 'sometimes|integer|min:1|max:100',
+                'assigned_user_id' => 'sometimes|string'
+            ]);
+            
+            $limit = intval($data['limit'] ?? 20);
+            $assignedUserId = $data['assigned_user_id'] ?? $request->getAttribute('user_id');
+            
+            $currentDate = (new \DateTime())->format('Y-m-d H:i:s');
+            $activities = collect();
+            
+            // Get overdue calls
+            $calls = Call::where('deleted', 0)
+                ->where('status', 'Planned')
+                ->where('date_start', '<', $currentDate)
+                ->when($assignedUserId, function ($query) use ($assignedUserId) {
+                    return $query->where('assigned_user_id', $assignedUserId);
+                })
+                ->orderBy('date_start', 'desc')
+                ->limit($limit)
+                ->get()
+                ->map(function ($call) {
+                    return $this->formatActivity($call, 'call');
+                });
+            
+            // Get overdue meetings
+            $meetings = Meeting::where('deleted', 0)
+                ->where('status', 'Planned')
+                ->where('date_start', '<', $currentDate)
+                ->when($assignedUserId, function ($query) use ($assignedUserId) {
+                    return $query->where('assigned_user_id', $assignedUserId);
+                })
+                ->orderBy('date_start', 'desc')
+                ->limit($limit)
+                ->get()
+                ->map(function ($meeting) {
+                    return $this->formatActivity($meeting, 'meeting');
+                });
+            
+            // Get overdue tasks
+            $tasks = Task::where('deleted', 0)
+                ->whereIn('status', ['Not Started', 'In Progress'])
+                ->where('date_due', '<', $currentDate)
+                ->when($assignedUserId, function ($query) use ($assignedUserId) {
+                    return $query->where('assigned_user_id', $assignedUserId);
+                })
+                ->orderBy('date_due', 'desc')
+                ->limit($limit)
+                ->get()
+                ->map(function ($task) {
+                    return $this->formatActivity($task, 'task');
+                });
+            
+            // Merge all overdue activities
+            $activities = $activities->merge($calls)->merge($meetings)->merge($tasks);
+            $activities = $activities->sortByDesc('date')->take($limit)->values();
+            
+            return $this->json($response, [
+                'data' => $activities,
+                'summary' => [
+                    'totalOverdue' => $activities->count(),
+                    'overdueCalls' => $calls->count(),
+                    'overdueMeetings' => $meetings->count(),
+                    'overdueTasks' => $tasks->count()
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->error($response, 'Failed to fetch overdue activities: ' . $e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * Create task
+     * POST /api/crm/activities/tasks
+     */
+    public function createTask(Request $request, Response $response, array $args): Response
+    {
         DB::beginTransaction();
         
         try {
-            $data = $request->all();
-            $activity = null;
+            $data = $this->validate($request, [
+                'name' => 'required|string|max:255',
+                'description' => 'sometimes|string',
+                'status' => 'sometimes|string|in:Not Started,In Progress,Completed,Pending Input,Deferred',
+                'priority' => 'sometimes|string|in:High,Medium,Low',
+                'date_due' => 'sometimes|date',
+                'assigned_user_id' => 'sometimes|string|exists:users,id',
+                'parent_type' => 'sometimes|string',
+                'parent_id' => 'sometimes|string'
+            ]);
             
-            switch ($data['type']) {
-                case 'call':
-                    $request->validate([
-                        'status' => 'sometimes|string',
-                        'direction' => 'sometimes|string|in:Inbound,Outbound',
-                        'duration_hours' => 'sometimes|integer|min:0',
-                        'duration_minutes' => 'sometimes|integer|min:0|max:59',
-                        'date_start' => 'sometimes|date'
-                    ]);
-                    
-                    $activity = Call::create([
-                        'name' => $data['name'],
-                        'description' => $data['description'] ?? '',
-                        'status' => $data['status'] ?? 'Planned',
-                        'direction' => $data['direction'] ?? 'Outbound',
-                        'duration_hours' => $data['duration_hours'] ?? 0,
-                        'duration_minutes' => $data['duration_minutes'] ?? 15,
-                        'date_start' => $data['date_start'] ?? now(),
-                        'assigned_user_id' => $data['assigned_user_id'] ?? $request->user()->id,
-                        'parent_type' => $data['parent_type'] ?? null,
-                        'parent_id' => $data['parent_id'] ?? null
-                    ]);
-                    break;
-                    
-                case 'meeting':
-                    $request->validate([
-                        'status' => 'sometimes|string',
-                        'location' => 'sometimes|string',
-                        'duration_hours' => 'sometimes|integer|min:0',
-                        'duration_minutes' => 'sometimes|integer|min:0|max:59',
-                        'date_start' => 'sometimes|date'
-                    ]);
-                    
-                    $activity = Meeting::create([
-                        'name' => $data['name'],
-                        'description' => $data['description'] ?? '',
-                        'status' => $data['status'] ?? 'Planned',
-                        'location' => $data['location'] ?? '',
-                        'duration_hours' => $data['duration_hours'] ?? 1,
-                        'duration_minutes' => $data['duration_minutes'] ?? 0,
-                        'date_start' => $data['date_start'] ?? now(),
-                        'assigned_user_id' => $data['assigned_user_id'] ?? $request->user()->id,
-                        'parent_type' => $data['parent_type'] ?? null,
-                        'parent_id' => $data['parent_id'] ?? null
-                    ]);
-                    break;
-                    
-                case 'task':
-                    $request->validate([
-                        'status' => 'sometimes|string',
-                        'priority' => 'sometimes|string|in:High,Medium,Low',
-                        'date_due' => 'sometimes|date'
-                    ]);
-                    
-                    $activity = Task::create([
-                        'name' => $data['name'],
-                        'description' => $data['description'] ?? '',
-                        'status' => $data['status'] ?? 'Not Started',
-                        'priority' => $data['priority'] ?? 'Medium',
-                        'date_due' => $data['date_due'] ?? now()->addDays(7),
-                        'assigned_user_id' => $data['assigned_user_id'] ?? $request->user()->id,
-                        'parent_type' => $data['parent_type'] ?? null,
-                        'parent_id' => $data['parent_id'] ?? null
-                    ]);
-                    break;
-                    
-                case 'note':
-                    $activity = Note::create([
-                        'name' => $data['name'],
-                        'description' => $data['description'] ?? '',
-                        'assigned_user_id' => $data['assigned_user_id'] ?? $request->user()->id,
-                        'parent_type' => $data['parent_type'] ?? null,
-                        'parent_id' => $data['parent_id'] ?? null
-                    ]);
-                    break;
-            }
-            
-            // Add related contacts if provided
-            if (!empty($data['contact_ids']) && in_array($data['type'], ['call', 'meeting'])) {
-                $activity->contacts()->attach($data['contact_ids']);
-            }
+            $task = Task::create([
+                'name' => $data['name'],
+                'description' => $data['description'] ?? '',
+                'status' => $data['status'] ?? 'Not Started',
+                'priority' => $data['priority'] ?? 'Medium',
+                'date_due' => $data['date_due'] ?? (new \DateTime())->modify('+7 days')->format('Y-m-d'),
+                'assigned_user_id' => $data['assigned_user_id'] ?? $request->getAttribute('user_id'),
+                'parent_type' => $data['parent_type'] ?? null,
+                'parent_id' => $data['parent_id'] ?? null,
+                'created_by' => $request->getAttribute('user_id'),
+                'modified_user_id' => $request->getAttribute('user_id')
+            ]);
             
             DB::commit();
             
-            return response()->json([
-                'data' => [
-                    'id' => $activity->id
-                ],
-                'message' => 'Activity created successfully'
+            return $this->json($response, [
+                'data' => ['id' => $task->id],
+                'message' => 'Task created successfully'
             ], 201);
             
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'error' => 'Failed to create activity',
-                'message' => $e->getMessage()
-            ], 500);
+            return $this->error($response, 'Failed to create task: ' . $e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * Create call
+     * POST /api/crm/activities/calls
+     */
+    public function createCall(Request $request, Response $response, array $args): Response
+    {
+        DB::beginTransaction();
+        
+        try {
+            $data = $this->validate($request, [
+                'name' => 'required|string|max:255',
+                'description' => 'sometimes|string',
+                'status' => 'sometimes|string|in:Planned,Held,Not Held',
+                'direction' => 'sometimes|string|in:Inbound,Outbound',
+                'duration_hours' => 'sometimes|integer|min:0',
+                'duration_minutes' => 'sometimes|integer|min:0|max:59',
+                'date_start' => 'sometimes|date',
+                'assigned_user_id' => 'sometimes|string|exists:users,id',
+                'parent_type' => 'sometimes|string',
+                'parent_id' => 'sometimes|string',
+                'contact_ids' => 'sometimes|array',
+                'contact_ids.*' => 'string|exists:contacts,id'
+            ]);
+            
+            $call = Call::create([
+                'name' => $data['name'],
+                'description' => $data['description'] ?? '',
+                'status' => $data['status'] ?? 'Planned',
+                'direction' => $data['direction'] ?? 'Outbound',
+                'duration_hours' => $data['duration_hours'] ?? 0,
+                'duration_minutes' => $data['duration_minutes'] ?? 15,
+                'date_start' => $data['date_start'] ?? (new \DateTime())->format('Y-m-d H:i:s'),
+                'assigned_user_id' => $data['assigned_user_id'] ?? $request->getAttribute('user_id'),
+                'parent_type' => $data['parent_type'] ?? null,
+                'parent_id' => $data['parent_id'] ?? null,
+                'created_by' => $request->getAttribute('user_id'),
+                'modified_user_id' => $request->getAttribute('user_id')
+            ]);
+            
+            // Add related contacts if provided
+            if (!empty($data['contact_ids'])) {
+                $call->contacts()->attach($data['contact_ids']);
+            }
+            
+            DB::commit();
+            
+            return $this->json($response, [
+                'data' => ['id' => $call->id],
+                'message' => 'Call created successfully'
+            ], 201);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->error($response, 'Failed to create call: ' . $e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * Create meeting
+     * POST /api/crm/activities/meetings
+     */
+    public function createMeeting(Request $request, Response $response, array $args): Response
+    {
+        DB::beginTransaction();
+        
+        try {
+            $data = $this->validate($request, [
+                'name' => 'required|string|max:255',
+                'description' => 'sometimes|string',
+                'status' => 'sometimes|string|in:Planned,Held,Not Held',
+                'location' => 'sometimes|string',
+                'duration_hours' => 'sometimes|integer|min:0',
+                'duration_minutes' => 'sometimes|integer|min:0|max:59',
+                'date_start' => 'sometimes|date',
+                'assigned_user_id' => 'sometimes|string|exists:users,id',
+                'parent_type' => 'sometimes|string',
+                'parent_id' => 'sometimes|string',
+                'contact_ids' => 'sometimes|array',
+                'contact_ids.*' => 'string|exists:contacts,id'
+            ]);
+            
+            $meeting = Meeting::create([
+                'name' => $data['name'],
+                'description' => $data['description'] ?? '',
+                'status' => $data['status'] ?? 'Planned',
+                'location' => $data['location'] ?? '',
+                'duration_hours' => $data['duration_hours'] ?? 1,
+                'duration_minutes' => $data['duration_minutes'] ?? 0,
+                'date_start' => $data['date_start'] ?? (new \DateTime())->format('Y-m-d H:i:s'),
+                'assigned_user_id' => $data['assigned_user_id'] ?? $request->getAttribute('user_id'),
+                'parent_type' => $data['parent_type'] ?? null,
+                'parent_id' => $data['parent_id'] ?? null,
+                'created_by' => $request->getAttribute('user_id'),
+                'modified_user_id' => $request->getAttribute('user_id')
+            ]);
+            
+            // Add related contacts if provided
+            if (!empty($data['contact_ids'])) {
+                $meeting->contacts()->attach($data['contact_ids']);
+            }
+            
+            DB::commit();
+            
+            return $this->json($response, [
+                'data' => ['id' => $meeting->id],
+                'message' => 'Meeting created successfully'
+            ], 201);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->error($response, 'Failed to create meeting: ' . $e->getMessage(), 500);
         }
     }
     
     /**
      * Update activity
-     * PUT /api/crm/activities/{id}
+     * PUT /api/crm/activities/{type}/{id}
      */
-    public function update(Request $request, string $id): JsonResponse
+    public function update(Request $request, Response $response, array $args): Response
     {
         DB::beginTransaction();
         
         try {
-            // Find the activity
-            $activity = null;
-            $type = null;
+            $type = $args['type'];
+            $id = $args['id'];
             
-            if ($activity = Call::find($id)) {
-                $type = 'call';
-            } elseif ($activity = Meeting::find($id)) {
-                $type = 'meeting';
-            } elseif ($activity = Task::find($id)) {
-                $type = 'task';
-            } elseif ($activity = Note::find($id)) {
-                $type = 'note';
+            // Find the activity based on type
+            $activity = null;
+            
+            switch ($type) {
+                case 'call':
+                    $activity = Call::find($id);
+                    break;
+                case 'meeting':
+                    $activity = Meeting::find($id);
+                    break;
+                case 'task':
+                    $activity = Task::find($id);
+                    break;
+                case 'note':
+                    $activity = Note::find($id);
+                    break;
+                default:
+                    return $this->error($response, 'Invalid activity type', 400);
             }
             
             if (!$activity) {
-                return response()->json(['error' => 'Activity not found'], 404);
+                return $this->error($response, 'Activity not found', 404);
             }
             
+            $data = $request->getParsedBody();
+            
             // Update common fields
-            $activity->fill($request->only(['name', 'description', 'assigned_user_id']));
+            if (isset($data['name'])) $activity->name = $data['name'];
+            if (isset($data['description'])) $activity->description = $data['description'];
+            if (isset($data['assigned_user_id'])) $activity->assigned_user_id = $data['assigned_user_id'];
             
             // Update type-specific fields
             switch ($type) {
                 case 'call':
-                    $activity->fill($request->only(['status', 'direction', 'duration_hours', 'duration_minutes', 'date_start']));
+                    if (isset($data['status'])) $activity->status = $data['status'];
+                    if (isset($data['direction'])) $activity->direction = $data['direction'];
+                    if (isset($data['duration_hours'])) $activity->duration_hours = $data['duration_hours'];
+                    if (isset($data['duration_minutes'])) $activity->duration_minutes = $data['duration_minutes'];
+                    if (isset($data['date_start'])) $activity->date_start = $data['date_start'];
                     break;
+                    
                 case 'meeting':
-                    $activity->fill($request->only(['status', 'location', 'duration_hours', 'duration_minutes', 'date_start']));
+                    if (isset($data['status'])) $activity->status = $data['status'];
+                    if (isset($data['location'])) $activity->location = $data['location'];
+                    if (isset($data['duration_hours'])) $activity->duration_hours = $data['duration_hours'];
+                    if (isset($data['duration_minutes'])) $activity->duration_minutes = $data['duration_minutes'];
+                    if (isset($data['date_start'])) $activity->date_start = $data['date_start'];
                     break;
+                    
                 case 'task':
-                    $activity->fill($request->only(['status', 'priority', 'date_due']));
+                    if (isset($data['status'])) $activity->status = $data['status'];
+                    if (isset($data['priority'])) $activity->priority = $data['priority'];
+                    if (isset($data['date_due'])) $activity->date_due = $data['date_due'];
                     break;
             }
             
+            $activity->modified_user_id = $request->getAttribute('user_id');
             $activity->save();
+            
+            // Update related contacts if provided (for calls and meetings)
+            if (in_array($type, ['call', 'meeting']) && isset($data['contact_ids'])) {
+                $activity->contacts()->sync($data['contact_ids']);
+            }
             
             DB::commit();
             
-            return response()->json([
+            return $this->json($response, [
                 'data' => ['id' => $activity->id],
-                'message' => 'Activity updated successfully'
+                'message' => ucfirst($type) . ' updated successfully'
             ]);
             
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'error' => 'Failed to update activity',
-                'message' => $e->getMessage()
-            ], 500);
+            return $this->error($response, 'Failed to update activity: ' . $e->getMessage(), 500);
         }
     }
     
     /**
      * Delete activity
-     * DELETE /api/crm/activities/{id}
+     * DELETE /api/crm/activities/{type}/{id}
      */
-    public function destroy(Request $request, string $id): JsonResponse
+    public function delete(Request $request, Response $response, array $args): Response
     {
         try {
-            // Find and delete the activity
-            $models = [Call::class, Meeting::class, Task::class, Note::class];
+            $type = $args['type'];
+            $id = $args['id'];
             
-            foreach ($models as $model) {
-                $activity = $model::find($id);
-                if ($activity) {
-                    $activity->delete();
-                    return response()->json(['message' => 'Activity deleted successfully']);
-                }
+            // Find the activity based on type
+            $activity = null;
+            
+            switch ($type) {
+                case 'call':
+                    $activity = Call::find($id);
+                    break;
+                case 'meeting':
+                    $activity = Meeting::find($id);
+                    break;
+                case 'task':
+                    $activity = Task::find($id);
+                    break;
+                case 'note':
+                    $activity = Note::find($id);
+                    break;
+                default:
+                    return $this->error($response, 'Invalid activity type', 400);
             }
             
-            return response()->json(['error' => 'Activity not found'], 404);
+            if (!$activity) {
+                return $this->error($response, 'Activity not found', 404);
+            }
+            
+            // Soft delete
+            $activity->deleted = 1;
+            $activity->save();
+            
+            return $this->json($response, ['message' => ucfirst($type) . ' deleted successfully']);
             
         } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to delete activity',
-                'message' => $e->getMessage()
-            ], 500);
+            return $this->error($response, 'Failed to delete activity: ' . $e->getMessage(), 500);
         }
     }
     
@@ -453,7 +654,7 @@ class ActivitiesController extends Controller
             'name' => $activity->name,
             'description' => $activity->description ?? '',
             'assignedUserId' => $activity->assigned_user_id,
-            'assignedUserName' => $activity->assignedUser->full_name ?? null,
+            'assignedUserName' => $activity->assignedUser ? $activity->assignedUser->first_name . ' ' . $activity->assignedUser->last_name : null,
             'parentType' => $activity->parent_type ?? '',
             'parentId' => $activity->parent_id ?? '',
             'dateEntered' => $activity->date_entered,

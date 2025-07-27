@@ -10,31 +10,29 @@ import type {
   LoginResponse, 
   ApiResponse,
   ListResponse,
-  QueryParams
-} from '@/types/api.generated'
+  QueryParams,
+  DashboardMetrics,
+  PipelineData,
+  ActivityMetrics,
+  CaseMetrics
+} from '@/types/api.types'
 
 import type {
-  Lead,
-  Contact,
-  Opportunity,
-  Case,
-  Account,
-  Task,
-  Call,
-  Meeting,
-  Note
-} from '@/types/api.generated'
+  LeadDB,
+  ContactDB,
+  OpportunityDB,
+  CaseDB,
+  AccountDB,
+  TaskDB,
+  CallDB,
+  MeetingDB,
+  NoteDB
+} from '@/types/database.types'
 
 // Extended login response to handle dual authentication
 // interface ExtendedLoginResponse extends LoginResponse {
 //   suiteOAuthToken?: string | null
 // }
-import type {
-  DashboardMetrics,
-  PipelineData,
-  ActivityMetrics,
-  CaseMetrics
-} from '@/types/phase2.types'
 // JSON:API utilities removed - using direct REST API
 import { getStoredAuth, setStoredAuth, clearStoredAuth } from '@/stores/auth-store'
 
@@ -247,8 +245,8 @@ class ApiClient {
           data: {
             accessToken: data.accessToken,
             refreshToken: data.refreshToken,
-            expiresIn: data.expiresIn || 900, // 15 minutes default
-            tokenType: data.tokenType || 'Bearer',
+            // expiresIn: data.expiresIn || 900, // Not included in LoginResponse type
+            // tokenType: data.tokenType || 'Bearer',
             user: data.user
           }
         }
@@ -287,7 +285,7 @@ class ApiClient {
       const response = await this.customClient.get('/accounts', { 
         params: {
           page: params?.page || 1,
-          pageSize: params?.pageSize || 10,
+          limit: params?.limit || 10,
           search: params?.search
         }
       })
@@ -296,7 +294,7 @@ class ApiClient {
         data: response.data.data || [],
         pagination: response.data.pagination || {
           page: 1,
-          pageSize: 10,
+          limit: 10,
           totalPages: 1,
           totalCount: response.data.data?.length || 0
         }
@@ -307,7 +305,7 @@ class ApiClient {
         data: [],
         pagination: {
           page: 1,
-          pageSize: 10,
+          limit: 10,
           totalPages: 0,
           totalCount: 0,
           hasNext: false,
@@ -359,7 +357,7 @@ class ApiClient {
       const response = await this.customClient.get('/contacts', { 
         params: {
           page: params?.page || 1,
-          pageSize: params?.pageSize || 10,
+          limit: params?.limit || 10,
           search: params?.search
         }
       })
@@ -368,7 +366,7 @@ class ApiClient {
         data: response.data.data || [],
         pagination: response.data.pagination || {
           page: 1,
-          pageSize: 10,
+          limit: 10,
           totalPages: 1,
           totalCount: response.data.data?.length || 0
         }
@@ -379,7 +377,7 @@ class ApiClient {
         data: [],
         pagination: {
           page: 1,
-          pageSize: 10,
+          limit: 10,
           totalPages: 0,
           totalCount: 0,
           hasNext: false,
@@ -432,7 +430,7 @@ class ApiClient {
       const response = await this.customClient.get('/leads', { 
         params: {
           page: params?.page || 1,
-          pageSize: params?.pageSize || 10,
+          limit: params?.limit || 10,
           search: params?.search
         }
       })
@@ -441,7 +439,7 @@ class ApiClient {
         data: response.data.data || [],
         pagination: response.data.pagination || {
           page: 1,
-          pageSize: 10,
+          limit: 10,
           totalPages: 1,
           totalCount: response.data.data?.length || 0
         }
@@ -452,7 +450,7 @@ class ApiClient {
         data: [],
         pagination: {
           page: 1,
-          pageSize: 10,
+          limit: 10,
           totalPages: 0,
           totalCount: 0,
           hasNext: false,
@@ -567,7 +565,7 @@ class ApiClient {
       const response = await this.customClient.get('/tasks', { 
         params: {
           page: params?.page || 1,
-          pageSize: params?.pageSize || 10,
+          limit: params?.limit || 10,
           search: params?.search
         }
       })
@@ -576,7 +574,7 @@ class ApiClient {
         data: response.data.data || [],
         pagination: response.data.pagination || {
           page: 1,
-          pageSize: 10,
+          limit: 10,
           totalPages: 1,
           totalCount: response.data.data?.length || 0
         }
@@ -587,7 +585,7 @@ class ApiClient {
         data: [],
         pagination: {
           page: 1,
-          pageSize: 10,
+          limit: 10,
           totalPages: 0,
           totalCount: 0,
           hasNext: false,
@@ -630,7 +628,7 @@ class ApiClient {
       const response = await this.customClient.get('/opportunities', { 
         params: {
           page: params?.page || 1,
-          pageSize: params?.pageSize || 10,
+          limit: params?.limit || 10,
           search: params?.search
         }
       })
@@ -639,7 +637,7 @@ class ApiClient {
         data: response.data.data || [],
         pagination: response.data.pagination || {
           page: 1,
-          pageSize: 10,
+          limit: 10,
           totalPages: 1,
           totalCount: response.data.data?.length || 0
         }
@@ -650,7 +648,7 @@ class ApiClient {
         data: [],
         pagination: {
           page: 1,
-          pageSize: 10,
+          limit: 10,
           totalPages: 0,
           totalCount: 0,
           hasNext: false,
@@ -749,7 +747,7 @@ class ApiClient {
       const response = await this.customClient.get('/calls', { 
         params: {
           page: params?.page || 1,
-          pageSize: params?.pageSize || 10,
+          limit: params?.limit || 10,
           search: params?.search
         }
       })
@@ -758,7 +756,7 @@ class ApiClient {
         data: response.data.data || [],
         pagination: response.data.pagination || {
           page: 1,
-          pageSize: 10,
+          limit: 10,
           totalPages: 1,
           totalCount: response.data.data?.length || 0
         }
@@ -769,7 +767,7 @@ class ApiClient {
         data: [],
         pagination: {
           page: 1,
-          pageSize: 10,
+          limit: 10,
           totalPages: 0,
           totalCount: 0,
           hasNext: false,
@@ -821,7 +819,7 @@ class ApiClient {
       const response = await this.customClient.get('/meetings', { 
         params: {
           page: params?.page || 1,
-          pageSize: params?.pageSize || 10,
+          limit: params?.limit || 10,
           search: params?.search
         }
       })
@@ -830,7 +828,7 @@ class ApiClient {
         data: response.data.data || [],
         pagination: response.data.pagination || {
           page: 1,
-          pageSize: 10,
+          limit: 10,
           totalPages: 1,
           totalCount: response.data.data?.length || 0
         }
@@ -841,7 +839,7 @@ class ApiClient {
         data: [],
         pagination: {
           page: 1,
-          pageSize: 10,
+          limit: 10,
           totalPages: 0,
           totalCount: 0,
           hasNext: false,
@@ -893,7 +891,7 @@ class ApiClient {
       const response = await this.customClient.get('/notes', { 
         params: {
           page: params?.page || 1,
-          pageSize: params?.pageSize || 10,
+          limit: params?.limit || 10,
           search: params?.search
         }
       })
@@ -902,7 +900,7 @@ class ApiClient {
         data: response.data.data || [],
         pagination: response.data.pagination || {
           page: 1,
-          pageSize: 10,
+          limit: 10,
           totalPages: 1,
           totalCount: response.data.data?.length || 0
         }
@@ -913,7 +911,7 @@ class ApiClient {
         data: [],
         pagination: {
           page: 1,
-          pageSize: 10,
+          limit: 10,
           totalPages: 0,
           totalCount: 0,
           hasNext: false,
@@ -965,7 +963,7 @@ class ApiClient {
       const response = await this.customClient.get('/cases', { 
         params: {
           page: params?.page || 1,
-          pageSize: params?.pageSize || 10,
+          limit: params?.limit || 10,
           search: params?.search,
           status: params?.status,
           priority: params?.priority
@@ -976,7 +974,7 @@ class ApiClient {
         data: response.data.data || [],
         pagination: response.data.pagination || {
           page: 1,
-          pageSize: 10,
+          limit: 10,
           totalPages: 1,
           totalCount: response.data.data?.length || 0
         }
@@ -987,7 +985,7 @@ class ApiClient {
         data: [],
         pagination: {
           page: 1,
-          pageSize: 10,
+          limit: 10,
           totalPages: 0,
           totalCount: 0,
           hasNext: false,

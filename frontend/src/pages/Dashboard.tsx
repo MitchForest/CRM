@@ -103,21 +103,21 @@ export function DashboardPage() {
   }
 
   const dashboardData = {
-    totalLeads: stats?.data?.data?.totalLeads || 0,
-    totalAccounts: stats?.data?.data?.totalAccounts || 0,
-    newLeadsToday: stats?.data?.data?.newLeadsToday || 0,
-    pipelineValue: stats?.data?.data?.pipelineValue || 0,
+    totalLeads: stats?.data?.totalLeads || 0,
+    totalAccounts: stats?.data?.totalAccounts || 0,
+    newLeadsToday: stats?.data?.newLeadsToday || 0,
+    pipelineValue: stats?.data?.pipelineValue || 0,
   }
 
   // Calculate pipeline metrics
-  const totalPipelineValue = pipeline?.data?.reduce((sum, stage) => {
+  const totalPipelineValue = pipeline?.reduce((sum, stage) => {
     if (stage.stage !== 'Lost') {
       return sum + stage.value
     }
     return sum
   }, 0) || 0
 
-  const wonValue = pipeline?.data?.find(s => s.stage === 'Won')?.value || 0
+  const wonValue = pipeline?.find(s => s.stage === 'Won')?.value || 0
 
   return (
     <div className="space-y-6">
@@ -162,25 +162,25 @@ export function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <MetricCard
           title="Today's Calls"
-          value={activityMetrics?.data?.data?.callsToday || 0}
+          value={activityMetrics?.data?.callsToday || 0}
           icon={Phone}
           color="text-blue-600"
         />
         <MetricCard
           title="Today's Meetings"
-          value={activityMetrics?.data?.data?.meetingsToday || 0}
+          value={activityMetrics?.data?.meetingsToday || 0}
           icon={Calendar}
           color="text-green-600"
         />
         <MetricCard
           title="Overdue Tasks"
-          value={activityMetrics?.data?.data?.tasksOverdue || 0}
+          value={activityMetrics?.data?.tasksOverdue || 0}
           icon={CheckSquare}
           color="text-red-600"
         />
         <MetricCard
           title="Open Cases"
-          value={caseMetrics?.data?.data?.openCases || 0}
+          value={caseMetrics?.data?.openCases || 0}
           icon={AlertCircle}
           color="text-orange-600"
         />
@@ -194,9 +194,9 @@ export function DashboardPage() {
             <CardTitle>Sales Pipeline</CardTitle>
           </CardHeader>
           <CardContent>
-            {pipeline?.data && pipeline.data.length > 0 ? (
+            {pipeline && pipeline.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={pipeline.data.filter(s => s.stage !== 'Lost' && s.stage !== 'Won')}>
+                <BarChart data={pipeline.filter(s => s.stage !== 'Lost' && s.stage !== 'Won')}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="stage" angle={-45} textAnchor="end" height={80} />
                   <YAxis tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} />

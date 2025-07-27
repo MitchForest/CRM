@@ -119,11 +119,11 @@ export function LeadDetailPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-2xl">
-                    {lead.firstName} {lead.lastName}
+                    {lead.first_name} {lead.last_name}
                   </CardTitle>
                   <CardDescription>
                     {lead.title && `${lead.title} at `}
-                    {lead.company || 'No company'}
+                    {lead.account_name || 'No company'}
                   </CardDescription>
                 </div>
                 <Badge className={`${statusColors[lead.status as keyof typeof statusColors] || ''} border-transparent`}>
@@ -135,26 +135,26 @@ export function LeadDetailPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Email</p>
-                  <a href={`mailto:${lead.email}`} className="flex items-center gap-2 text-sm hover:underline">
+                  <a href={`mailto:${lead.email1}`} className="flex items-center gap-2 text-sm hover:underline">
                     <Mail className="h-4 w-4" />
-                    {lead.email}
+                    {lead.email1}
                   </a>
                 </div>
-                {lead.phone && (
+                {lead.phone_work && (
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Phone</p>
-                    <a href={`tel:${lead.phone}`} className="flex items-center gap-2 text-sm hover:underline">
+                    <a href={`tel:${lead.phone_work}`} className="flex items-center gap-2 text-sm hover:underline">
                       <Phone className="h-4 w-4" />
-                      {lead.phone}
+                      {lead.phone_work}
                     </a>
                   </div>
                 )}
-                {lead.mobile && (
+                {lead.phone_mobile && (
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Mobile</p>
-                    <a href={`tel:${lead.mobile}`} className="flex items-center gap-2 text-sm hover:underline">
+                    <a href={`tel:${lead.phone_mobile}`} className="flex items-center gap-2 text-sm hover:underline">
                       <Phone className="h-4 w-4" />
-                      {lead.mobile}
+                      {lead.phone_mobile}
                     </a>
                   </div>
                 )}
@@ -171,22 +171,22 @@ export function LeadDetailPage() {
                     </a>
                   </div>
                 )}
-                {lead.source && (
+                {lead.lead_source && (
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Source</p>
-                    <p className="text-sm">{lead.source}</p>
+                    <p className="text-sm">{lead.lead_source}</p>
                   </div>
                 )}
-                {lead.accountName && (
+                {lead.account_name && (
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Account Name</p>
-                    <p className="text-sm">{lead.accountName}</p>
+                    <p className="text-sm">{lead.account_name}</p>
                   </div>
                 )}
-                {lead.assignedUserName && (
+                {lead.assigned_user_id && (
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Assigned To</p>
-                    <p className="text-sm">{lead.assignedUserName}</p>
+                    <p className="text-sm">{lead.assigned_user_id}</p>
                   </div>
                 )}
               </div>
@@ -264,24 +264,24 @@ export function LeadDetailPage() {
             <CardContent className="space-y-2 text-sm">
               <div>
                 <p className="text-muted-foreground">Created</p>
-                <p>{lead.dateEntered ? formatDateTime(lead.dateEntered) : 'Unknown'}</p>
+                <p>{lead.date_entered ? formatDateTime(lead.date_entered) : 'Unknown'}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Last Updated</p>
-                <p>{lead.dateModified ? formatDateTime(lead.dateModified) : 'Unknown'}</p>
+                <p>{lead.date_modified ? formatDateTime(lead.date_modified) : 'Unknown'}</p>
               </div>
-              {lead.convertedContactId && (
+              {lead.contact_id && (
                 <div>
                   <p className="text-muted-foreground">Converted To</p>
-                  <Link to={`/contacts/${lead.convertedContactId}`} className="hover:underline">
+                  <Link to={`/contacts/${lead.contact_id}`} className="hover:underline">
                     View Contact
                   </Link>
                 </div>
               )}
-              {lead.convertedAt && (
+              {lead.converted && (
                 <div>
                   <p className="text-muted-foreground">Converted On</p>
-                  <p>{formatDateTime(lead.convertedAt)}</p>
+                  <p>{formatDateTime(lead.date_modified)}</p>
                 </div>
               )}
             </CardContent>
@@ -295,7 +295,7 @@ export function LeadDetailPage() {
           <DialogHeader>
             <DialogTitle>Convert Lead to Contact</DialogTitle>
             <DialogDescription>
-              Convert {lead.firstName} {lead.lastName} to a contact.
+              Convert {lead.first_name} {lead.last_name} to a contact.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">

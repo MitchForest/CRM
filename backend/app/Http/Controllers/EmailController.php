@@ -2,393 +2,434 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Email;
-use App\Models\EmailText;
-use App\Models\EmailBean;
-use App\Models\Note;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
+use App\Models\EmailTemplate;
+use App\Services\EmailService;
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Illuminate\Database\Capsule\Manager as DB;
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
 
 class EmailController extends Controller
 {
-    /**
-     * List emails
-     * GET /api/crm/emails
-     */
-    public function index(Request $request): JsonResponse
+    private EmailService $emailService;
+    
+    public function __construct()
     {
-        $request->validate([
-            'page' => 'sometimes|integer|min:1',
-            'limit' => 'sometimes|integer|min:1|max:100',
-            'folder' => 'sometimes|string|in:inbox,sent,draft,trash',
-            'parent_type' => 'sometimes|string',
-            'parent_id' => 'sometimes|string',
-            'search' => 'sometimes|string',
-            'date_from' => 'sometimes|date',
-            'date_to' => 'sometimes|date|after_or_equal:date_from'
-        ]);
-        
-        $query = Email::with(['emailText', 'assignedUser'])
-            ->where('deleted', 0);
-        
-        // Apply folder filter
-        $folder = $request->input('folder', 'inbox');
-        switch ($folder) {
-            case 'sent':
-                $query->where('type', 'out');
-                break;
-            case 'draft':
-                $query->where('type', 'draft');
-                break;
-            case 'trash':
-                $query->where('deleted', 1);
-                break;
-            default: // inbox
-                $query->where('type', 'inbound');
-                break;
-        }
-        
-        // Apply filters
-        if ($request->has('parent_type') && $request->has('parent_id')) {
-            $query->where('parent_type', $request->input('parent_type'))
-                  ->where('parent_id', $request->input('parent_id'));
-        }
-        
-        if ($request->has('search')) {
-            $search = $request->input('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhereHas('emailText', function ($q) use ($search) {
-                      $q->where('from_addr_name', 'like', "%{$search}%")
-                        ->orWhere('to_addrs_names', 'like', "%{$search}%")
-                        ->orWhere('description', 'like', "%{$search}%");
-                  });
+        parent::__construct();
+        $this->emailService = new EmailService();
+    }
+    
+    /**
+     * Get email templates
+     * GET /api/admin/emails/templates
+     */
+    public function getTemplates(Request $request, Response $response, array $args): Response
+    {
+        try {
+            $params = $request->getQueryParams();
+            $data = $this->validate($request, [
+                'page' => 'sometimes|integer|min:1',
+                'limit' => 'sometimes|integer|min:1|max:100',
+                'type' => 'sometimes|string|in:lead,opportunity,case,general',
+                'search' => 'sometimes|string'
+            ]);
+            
+            $page = intval($data['page'] ?? 1);
+            $limit = intval($data['limit'] ?? 20);
+            
+            $query = EmailTemplate::where('deleted', 0);
+            
+            // Apply filters
+            if (isset($data['type'])) {
+                $query->where('type', $data['type']);
+            }
+            
+            if (isset($data['search'])) {
+                $search = $data['search'];
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('subject', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%");
+                });
+            }
+            
+            // Order by name
+            $query->orderBy('name');
+            
+            // Get total count
+            $totalCount = $query->count();
+            
+            // Apply pagination
+            $offset = ($page - 1) * $limit;
+            $templates = $query->offset($offset)->limit($limit)->get();
+            
+            // Format templates
+            $formattedTemplates = $templates->map(function ($template) {
+                return [
+                    'id' => $template->id,
+                    'name' => $template->name,
+                    'subject' => $template->subject,
+                    'type' => $template->type,
+                    'description' => $template->description,
+                    'body' => $template->body,
+                    'body_html' => $template->body_html,
+                    'variables' => $this->getTemplateVariables($template->type),
+                    'date_entered' => $template->date_entered,
+                    'date_modified' => $template->date_modified
+                ];
             });
+            
+            return $this->json($response, [
+                'data' => $formattedTemplates,
+                'pagination' => [
+                    'page' => $page,
+                    'limit' => $limit,
+                    'total' => $totalCount,
+                    'totalPages' => ceil($totalCount / $limit)
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->error($response, 'Failed to fetch email templates: ' . $e->getMessage(), 500);
         }
-        
-        if ($request->has('date_from')) {
-            $query->where('date_sent', '>=', $request->input('date_from'));
-        }
-        
-        if ($request->has('date_to')) {
-            $query->where('date_sent', '<=', $request->input('date_to'));
-        }
-        
-        // Order by date
-        $query->orderBy('date_sent', 'desc');
-        
-        // Paginate
-        $limit = $request->input('limit', 20);
-        $emails = $query->paginate($limit);
-        
-        // Format emails
-        $formattedEmails = $emails->map(function ($email) {
-            return $this->formatEmail($email);
-        });
-        
-        return response()->json([
-            'data' => $formattedEmails,
-            'pagination' => [
-                'page' => $emails->currentPage(),
-                'limit' => $emails->perPage(),
-                'total' => $emails->total(),
-                'totalPages' => $emails->lastPage()
-            ]
-        ]);
     }
     
     /**
-     * Get email details
-     * GET /api/crm/emails/{id}
+     * Create email template
+     * POST /api/admin/emails/templates
      */
-    public function show(Request $request, string $id): JsonResponse
+    public function createTemplate(Request $request, Response $response, array $args): Response
     {
-        $email = Email::with(['emailText', 'attachments'])
-            ->where('deleted', 0)
-            ->find($id);
-        
-        if (!$email) {
-            return response()->json(['error' => 'Email not found'], 404);
-        }
-        
-        // Mark as read
-        if ($email->status === 'unread') {
-            $email->status = 'read';
-            $email->save();
-        }
-        
-        return response()->json(['data' => $this->formatEmailDetail($email)]);
-    }
-    
-    /**
-     * Create/send email
-     * POST /api/crm/emails
-     */
-    public function store(Request $request): JsonResponse
-    {
-        $request->validate([
-            'to' => 'required|array|min:1',
-            'to.*' => 'email',
-            'cc' => 'sometimes|array',
-            'cc.*' => 'email',
-            'bcc' => 'sometimes|array',
-            'bcc.*' => 'email',
-            'subject' => 'required|string|max:255',
-            'body' => 'required|string',
-            'body_html' => 'sometimes|string',
-            'parent_type' => 'sometimes|string',
-            'parent_id' => 'sometimes|string',
-            'is_draft' => 'sometimes|boolean',
-            'attachments' => 'sometimes|array',
-            'attachments.*' => 'file|max:10240' // 10MB max
-        ]);
-        
         DB::beginTransaction();
         
         try {
-            $user = $request->user();
-            $isDraft = $request->boolean('is_draft', false);
-            
-            // Create email record
-            $email = Email::create([
-                'name' => $request->input('subject'),
-                'type' => $isDraft ? 'draft' : 'out',
-                'status' => $isDraft ? 'draft' : 'sent',
-                'date_sent' => $isDraft ? null : now(),
-                'assigned_user_id' => $user->id,
-                'parent_type' => $request->input('parent_type'),
-                'parent_id' => $request->input('parent_id'),
-                'from_addr' => $user->email1,
-                'from_addr_name' => $user->full_name,
-                'to_addrs' => implode(';', $request->input('to')),
-                'cc_addrs' => $request->has('cc') ? implode(';', $request->input('cc')) : null,
-                'bcc_addrs' => $request->has('bcc') ? implode(';', $request->input('bcc')) : null
+            $data = $this->validate($request, [
+                'name' => 'required|string|max:255',
+                'subject' => 'required|string|max:255',
+                'type' => 'required|string|in:lead,opportunity,case,general',
+                'description' => 'sometimes|string',
+                'body' => 'required|string',
+                'body_html' => 'sometimes|string'
             ]);
             
-            // Create email text
-            EmailText::create([
-                'email_id' => $email->id,
-                'from_addr_name' => $user->full_name,
-                'to_addrs_names' => implode(', ', $request->input('to')),
-                'cc_addrs_names' => $request->has('cc') ? implode(', ', $request->input('cc')) : null,
-                'bcc_addrs_names' => $request->has('bcc') ? implode(', ', $request->input('bcc')) : null,
-                'description' => $request->input('body'),
-                'description_html' => $request->input('body_html', $request->input('body'))
+            // Check for duplicate name
+            $exists = EmailTemplate::where('deleted', 0)
+                ->where('name', $data['name'])
+                ->exists();
+                
+            if ($exists) {
+                return $this->error($response, 'Template with this name already exists', 400);
+            }
+            
+            $template = EmailTemplate::create([
+                'name' => $data['name'],
+                'subject' => $data['subject'],
+                'type' => $data['type'],
+                'description' => $data['description'] ?? '',
+                'body' => $data['body'],
+                'body_html' => $data['body_html'] ?? $data['body'],
+                'text_only' => empty($data['body_html']) ? 1 : 0,
+                'published' => 'yes',
+                'created_by' => $request->getAttribute('user_id'),
+                'modified_user_id' => $request->getAttribute('user_id')
             ]);
-            
-            // Handle attachments
-            if ($request->hasFile('attachments')) {
-                foreach ($request->file('attachments') as $file) {
-                    $note = Note::create([
-                        'name' => $file->getClientOriginalName(),
-                        'file_mime_type' => $file->getMimeType(),
-                        'filename' => $file->getClientOriginalName(),
-                        'parent_type' => 'Emails',
-                        'parent_id' => $email->id,
-                        'assigned_user_id' => $user->id
-                    ]);
-                    
-                    // Store file
-                    $uploadDir = env('UPLOAD_DIR', 'uploads');
-                    $file->storeAs($uploadDir, $note->id);
-                    
-                    // Link to email
-                    EmailBean::create([
-                        'email_id' => $email->id,
-                        'bean_id' => $note->id,
-                        'bean_module' => 'Notes'
-                    ]);
-                }
-            }
-            
-            // Send email if not draft
-            if (!$isDraft) {
-                // In real implementation, you would send via SMTP
-                // Mail::send(...);
-            }
             
             DB::commit();
             
-            return response()->json([
-                'data' => $email->load('emailText'),
-                'message' => $isDraft ? 'Draft saved successfully' : 'Email sent successfully'
+            return $this->json($response, [
+                'data' => ['id' => $template->id],
+                'message' => 'Email template created successfully'
             ], 201);
             
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'error' => 'Failed to create email',
-                'message' => $e->getMessage()
-            ], 500);
+            return $this->error($response, 'Failed to create email template: ' . $e->getMessage(), 500);
         }
     }
     
     /**
-     * Update draft email
-     * PUT /api/crm/emails/{id}
+     * Update email template
+     * PUT /api/admin/emails/templates/{id}
      */
-    public function update(Request $request, string $id): JsonResponse
+    public function updateTemplate(Request $request, Response $response, array $args): Response
     {
-        $email = Email::where('deleted', 0)
-            ->where('type', 'draft')
-            ->find($id);
+        $id = $args['id'];
         
-        if (!$email) {
-            return response()->json(['error' => 'Draft not found'], 404);
+        $template = EmailTemplate::where('deleted', 0)->find($id);
+        if (!$template) {
+            return $this->error($response, 'Email template not found', 404);
         }
-        
-        $request->validate([
-            'to' => 'sometimes|array|min:1',
-            'to.*' => 'email',
-            'cc' => 'sometimes|array',
-            'cc.*' => 'email',
-            'bcc' => 'sometimes|array',
-            'bcc.*' => 'email',
-            'subject' => 'sometimes|string|max:255',
-            'body' => 'sometimes|string',
-            'body_html' => 'sometimes|string'
-        ]);
         
         DB::beginTransaction();
         
         try {
-            // Update email
-            if ($request->has('subject')) {
-                $email->name = $request->input('subject');
+            $data = $this->validate($request, [
+                'name' => 'sometimes|string|max:255',
+                'subject' => 'sometimes|string|max:255',
+                'type' => 'sometimes|string|in:lead,opportunity,case,general',
+                'description' => 'sometimes|string',
+                'body' => 'sometimes|string',
+                'body_html' => 'sometimes|string'
+            ]);
+            
+            // Check for duplicate name if name is being changed
+            if (isset($data['name']) && $data['name'] !== $template->name) {
+                $exists = EmailTemplate::where('deleted', 0)
+                    ->where('name', $data['name'])
+                    ->where('id', '!=', $id)
+                    ->exists();
+                    
+                if ($exists) {
+                    return $this->error($response, 'Template with this name already exists', 400);
+                }
             }
             
-            if ($request->has('to')) {
-                $email->to_addrs = implode(';', $request->input('to'));
+            // Update fields
+            if (isset($data['name'])) $template->name = $data['name'];
+            if (isset($data['subject'])) $template->subject = $data['subject'];
+            if (isset($data['type'])) $template->type = $data['type'];
+            if (isset($data['description'])) $template->description = $data['description'];
+            if (isset($data['body'])) $template->body = $data['body'];
+            if (isset($data['body_html'])) {
+                $template->body_html = $data['body_html'];
+                $template->text_only = 0;
             }
             
-            if ($request->has('cc')) {
-                $email->cc_addrs = implode(';', $request->input('cc'));
-            }
-            
-            if ($request->has('bcc')) {
-                $email->bcc_addrs = implode(';', $request->input('bcc'));
-            }
-            
-            $email->save();
-            
-            // Update email text
-            if ($email->emailText) {
-                $emailText = $email->emailText;
-                
-                if ($request->has('to')) {
-                    $emailText->to_addrs_names = implode(', ', $request->input('to'));
-                }
-                
-                if ($request->has('cc')) {
-                    $emailText->cc_addrs_names = implode(', ', $request->input('cc'));
-                }
-                
-                if ($request->has('bcc')) {
-                    $emailText->bcc_addrs_names = implode(', ', $request->input('bcc'));
-                }
-                
-                if ($request->has('body')) {
-                    $emailText->description = $request->input('body');
-                }
-                
-                if ($request->has('body_html')) {
-                    $emailText->description_html = $request->input('body_html');
-                }
-                
-                $emailText->save();
-            }
+            $template->modified_user_id = $request->getAttribute('user_id');
+            $template->save();
             
             DB::commit();
             
-            return response()->json([
-                'data' => $email->load('emailText'),
-                'message' => 'Draft updated successfully'
+            return $this->json($response, [
+                'data' => ['id' => $template->id],
+                'message' => 'Email template updated successfully'
             ]);
             
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'error' => 'Failed to update draft',
-                'message' => $e->getMessage()
-            ], 500);
+            return $this->error($response, 'Failed to update email template: ' . $e->getMessage(), 500);
         }
     }
     
     /**
-     * Delete email
-     * DELETE /api/crm/emails/{id}
+     * Delete email template
+     * DELETE /api/admin/emails/templates/{id}
      */
-    public function destroy(Request $request, string $id): JsonResponse
+    public function deleteTemplate(Request $request, Response $response, array $args): Response
     {
-        $email = Email::where('deleted', 0)->find($id);
+        $id = $args['id'];
         
-        if (!$email) {
-            return response()->json(['error' => 'Email not found'], 404);
+        $template = EmailTemplate::where('deleted', 0)->find($id);
+        if (!$template) {
+            return $this->error($response, 'Email template not found', 404);
         }
         
-        $email->deleted = 1;
-        $email->save();
-        
-        return response()->json(['message' => 'Email deleted successfully']);
+        try {
+            $template->deleted = 1;
+            $template->save();
+            
+            return $this->json($response, ['message' => 'Email template deleted successfully']);
+            
+        } catch (\Exception $e) {
+            return $this->error($response, 'Failed to delete email template: ' . $e->getMessage(), 500);
+        }
     }
     
     /**
-     * Format email for list view
+     * Send test email
+     * POST /api/admin/emails/test
      */
-    private function formatEmail(Email $email): array
+    public function sendTestEmail(Request $request, Response $response, array $args): Response
     {
-        return [
-            'id' => $email->id,
-            'subject' => $email->name,
-            'from' => [
-                'address' => $email->from_addr,
-                'name' => $email->emailText->from_addr_name ?? $email->from_addr_name
-            ],
-            'to' => $email->emailText->to_addrs_names ?? '',
-            'date_sent' => $email->date_sent,
-            'status' => $email->status,
-            'type' => $email->type,
-            'has_attachments' => $email->attachments()->exists(),
-            'parent_type' => $email->parent_type,
-            'parent_id' => $email->parent_id,
-            'preview' => substr($email->emailText->description ?? '', 0, 100) . '...'
-        ];
+        try {
+            $data = $this->validate($request, [
+                'to' => 'required|email',
+                'template_id' => 'sometimes|string',
+                'subject' => 'required_without:template_id|string|max:255',
+                'body' => 'required_without:template_id|string',
+                'body_html' => 'sometimes|string',
+                'test_data' => 'sometimes|array'
+            ]);
+            
+            $subject = '';
+            $bodyText = '';
+            $bodyHtml = '';
+            
+            // Use template if provided
+            if (isset($data['template_id'])) {
+                $template = EmailTemplate::where('deleted', 0)->find($data['template_id']);
+                if (!$template) {
+                    return $this->error($response, 'Email template not found', 404);
+                }
+                
+                $testData = $data['test_data'] ?? $this->getTestData($template->type);
+                
+                $subject = $this->processTemplate($template->subject, $testData);
+                $bodyText = $this->processTemplate($template->body, $testData);
+                $bodyHtml = $this->processTemplate($template->body_html, $testData);
+            } else {
+                $subject = $data['subject'];
+                $bodyText = $data['body'];
+                $bodyHtml = $data['body_html'] ?? $data['body'];
+            }
+            
+            // Send email using PHPMailer
+            $mail = new PHPMailer(true);
+            
+            try {
+                // Server settings
+                $mail->isSMTP();
+                $mail->Host       = $_ENV['SMTP_HOST'] ?? 'localhost';
+                $mail->SMTPAuth   = true;
+                $mail->Username   = $_ENV['SMTP_USERNAME'] ?? '';
+                $mail->Password   = $_ENV['SMTP_PASSWORD'] ?? '';
+                $mail->SMTPSecure = $_ENV['SMTP_ENCRYPTION'] ?? PHPMailer::ENCRYPTION_STARTTLS;
+                $mail->Port       = intval($_ENV['SMTP_PORT'] ?? 587);
+                
+                // Recipients
+                $mail->setFrom($_ENV['MAIL_FROM_ADDRESS'] ?? 'noreply@example.com', $_ENV['MAIL_FROM_NAME'] ?? 'CRM System');
+                $mail->addAddress($data['to']);
+                
+                // Content
+                $mail->isHTML(true);
+                $mail->Subject = $subject;
+                $mail->Body    = $bodyHtml;
+                $mail->AltBody = $bodyText;
+                
+                $mail->send();
+                
+                return $this->json($response, [
+                    'message' => 'Test email sent successfully to ' . $data['to']
+                ]);
+                
+            } catch (Exception $e) {
+                return $this->error($response, 'Failed to send email: ' . $mail->ErrorInfo, 500);
+            }
+            
+        } catch (\Exception $e) {
+            return $this->error($response, 'Failed to send test email: ' . $e->getMessage(), 500);
+        }
     }
     
     /**
-     * Format email with full details
+     * Get available template variables by type
      */
-    private function formatEmailDetail(Email $email): array
+    private function getTemplateVariables(string $type): array
     {
-        $attachments = $email->attachments->map(function ($note) {
-            return [
-                'id' => $note->id,
-                'name' => $note->name,
-                'filename' => $note->filename,
-                'mime_type' => $note->file_mime_type
-            ];
-        });
-        
-        return [
-            'id' => $email->id,
-            'subject' => $email->name,
-            'date_sent' => $email->date_sent,
-            'from' => [
-                'address' => $email->from_addr,
-                'name' => $email->emailText->from_addr_name ?? $email->from_addr_name
-            ],
-            'to' => $email->emailText->to_addrs_names ?? '',
-            'cc' => $email->emailText->cc_addrs_names ?? '',
-            'bcc' => $email->emailText->bcc_addrs_names ?? '',
-            'body_text' => $email->emailText->description ?? '',
-            'body_html' => $email->emailText->description_html ?? '',
-            'attachments' => $attachments,
-            'parent_type' => $email->parent_type,
-            'parent_id' => $email->parent_id,
-            'status' => $email->status,
-            'type' => $email->type
+        $commonVars = [
+            '{user_name}' => 'Current user name',
+            '{user_email}' => 'Current user email',
+            '{company_name}' => 'Company name',
+            '{current_date}' => 'Current date',
+            '{current_year}' => 'Current year'
         ];
+        
+        switch ($type) {
+            case 'lead':
+                return array_merge($commonVars, [
+                    '{lead_name}' => 'Lead full name',
+                    '{lead_first_name}' => 'Lead first name',
+                    '{lead_last_name}' => 'Lead last name',
+                    '{lead_email}' => 'Lead email',
+                    '{lead_phone}' => 'Lead phone',
+                    '{lead_company}' => 'Lead company',
+                    '{lead_title}' => 'Lead title',
+                    '{lead_source}' => 'Lead source',
+                    '{lead_status}' => 'Lead status'
+                ]);
+                
+            case 'opportunity':
+                return array_merge($commonVars, [
+                    '{opportunity_name}' => 'Opportunity name',
+                    '{opportunity_amount}' => 'Opportunity amount',
+                    '{opportunity_stage}' => 'Opportunity stage',
+                    '{opportunity_close_date}' => 'Expected close date',
+                    '{contact_name}' => 'Contact name',
+                    '{account_name}' => 'Account name'
+                ]);
+                
+            case 'case':
+                return array_merge($commonVars, [
+                    '{case_number}' => 'Case number',
+                    '{case_subject}' => 'Case subject',
+                    '{case_status}' => 'Case status',
+                    '{case_priority}' => 'Case priority',
+                    '{case_description}' => 'Case description',
+                    '{contact_name}' => 'Contact name',
+                    '{account_name}' => 'Account name'
+                ]);
+                
+            default:
+                return $commonVars;
+        }
+    }
+    
+    /**
+     * Get test data for template processing
+     */
+    private function getTestData(string $type): array
+    {
+        $commonData = [
+            'user_name' => 'John Doe',
+            'user_email' => 'john.doe@example.com',
+            'company_name' => 'Your Company',
+            'current_date' => (new \DateTime())->format('Y-m-d'),
+            'current_year' => (new \DateTime())->format('Y')
+        ];
+        
+        switch ($type) {
+            case 'lead':
+                return array_merge($commonData, [
+                    'lead_name' => 'Jane Smith',
+                    'lead_first_name' => 'Jane',
+                    'lead_last_name' => 'Smith',
+                    'lead_email' => 'jane.smith@example.com',
+                    'lead_phone' => '555-1234',
+                    'lead_company' => 'ABC Corp',
+                    'lead_title' => 'Marketing Manager',
+                    'lead_source' => 'Website',
+                    'lead_status' => 'New'
+                ]);
+                
+            case 'opportunity':
+                return array_merge($commonData, [
+                    'opportunity_name' => 'ABC Corp - Enterprise Deal',
+                    'opportunity_amount' => '$50,000',
+                    'opportunity_stage' => 'Proposal',
+                    'opportunity_close_date' => (new \DateTime())->modify('+30 days')->format('Y-m-d'),
+                    'contact_name' => 'Jane Smith',
+                    'account_name' => 'ABC Corp'
+                ]);
+                
+            case 'case':
+                return array_merge($commonData, [
+                    'case_number' => 'CASE-12345',
+                    'case_subject' => 'Login Issue',
+                    'case_status' => 'Open',
+                    'case_priority' => 'High',
+                    'case_description' => 'Unable to login to the system',
+                    'contact_name' => 'Jane Smith',
+                    'account_name' => 'ABC Corp'
+                ]);
+                
+            default:
+                return $commonData;
+        }
+    }
+    
+    /**
+     * Process template with variables
+     */
+    private function processTemplate(string $template, array $data): string
+    {
+        $processed = $template;
+        
+        foreach ($data as $key => $value) {
+            $processed = str_replace('{' . $key . '}', $value, $processed);
+        }
+        
+        return $processed;
     }
 }

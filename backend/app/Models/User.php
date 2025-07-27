@@ -63,7 +63,7 @@ class User extends BaseModel
     
     public function cases(): HasMany
     {
-        return $this->hasMany(Case::class, 'assigned_user_id');
+        return $this->hasMany(\App\Models\Case::class, 'assigned_user_id');
     }
     
     public function tasks(): HasMany

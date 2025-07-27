@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
-import type { QueryParams } from '@/types/api.generated'
-import type { Contact } from '@/types/api.generated'
+import type { ContactDB } from '@/types/database.types'
 
 export function useContacts(params?: QueryParams) {
   return useQuery({

@@ -1,28 +1,28 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
 import { toast } from 'sonner'
-import type { Account } from '@/types/api.generated'
+import type { AccountDB } from '@/types/database.types'
 import { getErrorMessage } from '@/lib/error-utils'
 
 // Get paginated accounts
-export function useAccounts(options?: { page?: number; pageSize?: number } | number, limit = 10, filters?: Record<string, string | number>) {
+export function useAccounts(options?: { page?: number; limit?: number } | number, limit = 10, filters?: Record<string, string | number>) {
   // Handle both object and separate parameters
   let page = 1
   let pageSize = limit
   
   if (typeof options === 'object' && options !== null) {
     page = options.page || 1
-    pageSize = options.pageSize || 10
+    pageSize = options.limit || 10
   } else if (typeof options === 'number') {
     page = options
   }
   
   return useQuery({
-    queryKey: ['accounts', page, pageSize, filters],
+    queryKey: ['accounts', page, limit, filters],
     queryFn: async () => {
       return await apiClient.getAccounts({ 
         page, 
-        pageSize,
+        limit: pageSize,
         ...filters 
       })
     },
@@ -45,7 +45,7 @@ export function useCreateAccount() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (data: Omit<Account, 'id'>) => {
+    mutationFn: async (data: Omit<AccountDB, 'id' | 'date_entered' | 'date_modified'>) => {
       return await apiClient.createAccount(data)
     },
     onSuccess: () => {
@@ -63,7 +63,7 @@ export function useUpdateAccount(id: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (data: Partial<Account>) => {
+    mutationFn: async (data: Partial<AccountDB>) => {
       return await apiClient.updateAccount(id, data)
     },
     onSuccess: () => {

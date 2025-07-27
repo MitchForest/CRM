@@ -4,7 +4,7 @@ import type {
   AIScoreHistory, 
   ChatSession,
   KBSearchResult
-} from '@/types/phase3.types';
+} from '@/types/api.types';
 
 class AIService {
   /**

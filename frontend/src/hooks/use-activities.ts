@@ -1,15 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
 import { toast } from 'sonner'
-import type { Call, Meeting, Task, Note, QueryParams, ListResponse, ApiResponse } from '@/types/api.generated'
-import type { BaseActivity, ActivityType } from '@/types/phase2.types'
+import type { CallDB, MeetingDB, TaskDB, NoteDB } from '@/types/database.types'
+import type { QueryParams, ListResponse, ApiResponse, BaseActivity, ActivityType } from '@/types/api.types'
 import { getErrorMessage } from '@/lib/error-utils'
 
 // Extended types that include BaseActivity fields
-type ExtendedCall = Call & Pick<BaseActivity, 'dateEntered' | 'dateModified'>
-type ExtendedMeeting = Meeting & Pick<BaseActivity, 'dateEntered' | 'dateModified'>
-type ExtendedTask = Task & Pick<BaseActivity, 'dateEntered' | 'dateModified'>
-type ExtendedNote = Note & Pick<BaseActivity, 'status' | 'dateEntered' | 'dateModified'>
+type ExtendedCall = CallDB & Pick<BaseActivity, 'date_entered' | 'date_modified'>
+type ExtendedMeeting = MeetingDB & Pick<BaseActivity, 'date_entered' | 'date_modified'>
+type ExtendedTask = TaskDB & Pick<BaseActivity, 'date_entered' | 'date_modified'>
+type ExtendedNote = NoteDB & Pick<BaseActivity, 'status' | 'date_entered' | 'date_modified'>
 
 interface ActivityApiMethods<T> {
   getAll: (params?: QueryParams) => Promise<ListResponse<T>>;
@@ -32,8 +32,8 @@ function createActivityHooks<T extends { id?: string }, BaseT = Record<string, u
         queryFn: async () => {
           const response = await apiMethods.getAll({ 
             page, 
-            pageSize: limit,
-            filters: filters ? Object.entries(filters).map(([field, value]) => ({
+            limit,
+            filter: filters ? Object.entries(filters).map(([field, value]) => ({
               field,
               operator: 'eq' as const,
               value
@@ -127,7 +127,7 @@ function createActivityHooks<T extends { id?: string }, BaseT = Record<string, u
 }
 
 // Call hooks
-const callHooks = createActivityHooks<ExtendedCall, Call>('calls', 'Call', {
+const callHooks = createActivityHooks<ExtendedCall, CallDB>('calls', 'Call', {
   getAll: apiClient.getCalls.bind(apiClient),
   getOne: apiClient.getCall.bind(apiClient),
   create: apiClient.createCall.bind(apiClient),
@@ -142,7 +142,7 @@ export const useUpdateCall = callHooks.useUpdate
 export const useDeleteCall = callHooks.useDelete
 
 // Meeting hooks
-const meetingHooks = createActivityHooks<ExtendedMeeting, Meeting>('meetings', 'Meeting', {
+const meetingHooks = createActivityHooks<ExtendedMeeting, MeetingDB>('meetings', 'Meeting', {
   getAll: apiClient.getMeetings.bind(apiClient),
   getOne: apiClient.getMeeting.bind(apiClient),
   create: apiClient.createMeeting.bind(apiClient),
@@ -157,7 +157,7 @@ export const useUpdateMeeting = meetingHooks.useUpdate
 export const useDeleteMeeting = meetingHooks.useDelete
 
 // Task hooks
-const taskHooks = createActivityHooks<ExtendedTask, Task>('tasks', 'Task', {
+const taskHooks = createActivityHooks<ExtendedTask, TaskDB>('tasks', 'Task', {
   getAll: apiClient.getTasks.bind(apiClient),
   getOne: apiClient.getTask.bind(apiClient),
   create: apiClient.createTask.bind(apiClient),
@@ -172,7 +172,7 @@ export const useUpdateTask = taskHooks.useUpdate
 export const useDeleteTask = taskHooks.useDelete
 
 // Note hooks
-const noteHooks = createActivityHooks<ExtendedNote, Note>('notes', 'Note', {
+const noteHooks = createActivityHooks<ExtendedNote, NoteDB>('notes', 'Note', {
   getAll: apiClient.getNotes.bind(apiClient),
   getOne: apiClient.getNote.bind(apiClient),
   create: apiClient.createNote.bind(apiClient),
@@ -193,14 +193,14 @@ export function useUpcomingActivities(limit = 10) {
     queryFn: async () => {
       const [calls, meetings, tasks] = await Promise.all([
         apiClient.getCalls({
-          pageSize: limit,
+          limit,
           // Filter for future dates would need backend support
         }),
         apiClient.getMeetings({
-          pageSize: limit,
+          limit,
         }),
         apiClient.getTasks({
-          pageSize: limit,
+          limit,
         }),
       ])
 
@@ -211,10 +211,10 @@ export function useUpcomingActivities(limit = 10) {
           name: c.name,
           status: c.status || '',
           type: 'Call' as ActivityType,
-          dateEntered: '',
-          dateModified: '',
-          parentType: c.parentType,
-          parentId: c.parentId,
+          date_entered: '',
+          date_modified: '',
+          parent_type: c.parent_type,
+          parent_id: c.parent_id,
           description: c.description
         })),
         ...meetings.data.map(m => ({ 
@@ -222,10 +222,10 @@ export function useUpcomingActivities(limit = 10) {
           name: m.name,
           status: m.status || '',
           type: 'Meeting' as ActivityType,
-          dateEntered: '',
-          dateModified: '',
-          parentType: m.parentType,
-          parentId: m.parentId,
+          date_entered: '',
+          date_modified: '',
+          parent_type: m.parent_type,
+          parent_id: m.parent_id,
           description: m.description
         })),
         ...tasks.data.map(t => ({ 
@@ -233,10 +233,10 @@ export function useUpcomingActivities(limit = 10) {
           name: t.name,
           status: t.status || '',
           type: 'Task' as ActivityType,
-          dateEntered: '',
-          dateModified: '',
-          parentType: t.parentType,
-          parentId: t.parentId,
+          date_entered: '',
+          date_modified: '',
+          parent_type: t.parent_type,
+          parent_id: t.parent_id,
           description: t.description,
           priority: t.priority
         })),
@@ -258,17 +258,17 @@ export function useOverdueTasks() {
     queryFn: async () => {
       // This would need backend support for date filtering
       const response = await apiClient.getTasks({
-        pageSize: 100,
-        // filter: `dueDate<${today} AND status!=Completed`,
+        limit: 100,
+        // filter: `date_due<${today} AND status!=Completed`,
       })
       
       // Client-side filtering for now
       return {
         ...response,
         data: response.data.filter(task => {
-          if (!task.dueDate) return false
-          if (task.status === 'Completed') return false
-          return new Date(task.dueDate) < new Date()
+          if (!t.date_due) return false
+          if (t.status === 'Completed') return false
+          return new Date(t.date_due) < new Date()
         })
       }
     },
@@ -283,31 +283,31 @@ export function useActivityMetrics() {
     queryKey: ['activities', 'metrics'],
     queryFn: async () => {
       const [calls, meetings, tasks] = await Promise.all([
-        apiClient.getCalls({ pageSize: 100 }),
-        apiClient.getMeetings({ pageSize: 100 }),
-        apiClient.getTasks({ pageSize: 100 }),
+        apiClient.getCalls({ limit: 100 }),
+        apiClient.getMeetings({ limit: 100 }),
+        apiClient.getTasks({ limit: 100 }),
       ])
 
       // Filter today's activities (would be better with backend support)
       const callsToday = calls.data.filter((c) => {
-        if (!('startDate' in c) || !(c as Call & { startDate?: string }).startDate) return false
-        const callDate = new Date((c as Call & { startDate: string }).startDate)
+        if (!c.date_start) return false
+        const callDate = new Date(c.date_start)
         callDate.setHours(0, 0, 0, 0)
         return callDate.getTime() === today.getTime()
       }).length
 
       const meetingsToday = meetings.data.filter((m) => {
-        if (!('startDate' in m) || !(m as Meeting & { startDate?: string }).startDate) return false
-        const meetingDate = new Date((m as Meeting & { startDate: string }).startDate)
+        if (!m.date_start) return false
+        const meetingDate = new Date(m.date_start)
         meetingDate.setHours(0, 0, 0, 0)
         return meetingDate.getTime() === today.getTime()
       }).length
 
       // Count overdue tasks
       const tasksOverdue = tasks.data.filter(task => {
-        if (!task.dueDate) return false
+        if (!task.date_due) return false
         if (task.status === 'Completed') return false
-        return new Date(task.dueDate) < new Date()
+        return new Date(task.date_due) < new Date()
       }).length
 
       // Get upcoming activities
@@ -317,10 +317,10 @@ export function useActivityMetrics() {
           name: c.name,
           status: c.status || '',
           type: 'Call' as ActivityType,
-          dateEntered: '',
-          dateModified: '',
-          parentType: c.parentType,
-          parentId: c.parentId,
+          date_entered: '',
+          date_modified: '',
+          parent_type: c.parent_type,
+          parent_id: c.parent_id,
           description: c.description
         })),
         ...meetings.data.slice(0, 10).map(m => ({ 
@@ -328,10 +328,10 @@ export function useActivityMetrics() {
           name: m.name,
           status: m.status || '',
           type: 'Meeting' as ActivityType,
-          dateEntered: '',
-          dateModified: '',
-          parentType: m.parentType,
-          parentId: m.parentId,
+          date_entered: '',
+          date_modified: '',
+          parent_type: m.parent_type,
+          parent_id: m.parent_id,
           description: m.description
         }))
       ]
@@ -347,21 +347,21 @@ export function useActivityMetrics() {
 }
 
 // Hook to get activities filtered by parent entity
-export function useActivitiesByParent(parentType: string, parentId: string) {
+export function useActivitiesByParent(parent_type: string, parent_id: string) {
   return useQuery({
-    queryKey: ['activities', 'byParent', parentType, parentId],
+    queryKey: ['activities', 'byParent', parent_type, parent_id],
     queryFn: async () => {
       // Fetch all activity types with parent filters
       const filters = [
-        { field: 'parent_type', operator: 'eq' as const, value: parentType },
-        { field: 'parent_id', operator: 'eq' as const, value: parentId }
+        { field: 'parent_type', operator: 'eq' as const, value: parent_type },
+        { field: 'parent_id', operator: 'eq' as const, value: parent_id }
       ]
       
       const [callsResponse, meetingsResponse, tasksResponse, notesResponse] = await Promise.all([
-        apiClient.getCalls({ pageSize: 50, filters }),
-        apiClient.getMeetings({ pageSize: 50, filters }),
-        apiClient.getTasks({ pageSize: 50, filters }),
-        apiClient.getNotes({ pageSize: 50, filters }),
+        apiClient.getCalls({ limit: 50, filters }),
+        apiClient.getMeetings({ limit: 50, filters }),
+        apiClient.getTasks({ limit: 50, filters }),
+        apiClient.getNotes({ limit: 50, filters }),
       ])
 
       // Combine all activities into a single array with type tag
@@ -392,6 +392,6 @@ export function useActivitiesByParent(parentType: string, parentId: string) {
         return dateB.getTime() - dateA.getTime()
       })
     },
-    enabled: !!parentType && !!parentId,
+    enabled: !!parent_type && !!parent_id,
   })
 }
