@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>CRM API Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        async function testAPI() {
+            const results = document.getElementById('results');
+            
+            try {
+                // First login
+                const loginResponse = await fetch('http://localhost:8080/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'john.smith@techflow.com',
+                        password: 'password123'
+                    })
+                });
+                
+                const loginData = await loginResponse.json();
+                results.innerHTML += '<p>Login: ' + (loginData.access_token ? '✅ Success' : '❌ Failed') + '</p>';
+                
+                if (loginData.access_token) {
+                    // Test opportunities
+                    const oppResponse = await fetch('http://localhost:8080/api/crm/opportunities', {
+                        headers: {
+                            'Authorization': 'Bearer ' + loginData.access_token
+                        }
+                    });
+                    
+                    const oppData = await oppResponse.json();
+                    results.innerHTML += '<p>Opportunities: ' + (oppData.data ? '✅ ' + oppData.pagination.total + ' records' : '❌ Failed') + '</p>';
+                    
+                    // Test forms
+                    const formsResponse = await fetch('http://localhost:8080/api/admin/forms', {
+                        headers: {
+                            'Authorization': 'Bearer ' + loginData.access_token
+                        }
+                    });
+                    
+                    const formsData = await formsResponse.json();
+                    results.innerHTML += '<p>Forms: ' + (formsData.data ? '✅ ' + formsData.pagination.total + ' records' : '❌ Failed') + '</p>';
+                }
+                
+            } catch (error) {
+                results.innerHTML += '<p>Error: ' + error.message + '</p>';
+            }
+        }
+        
+        testAPI();
+    </script>
+</body>
+</html>

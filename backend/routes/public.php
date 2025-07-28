@@ -111,6 +111,14 @@ return function (RouteCollectorProxy $api) {
         
         $public->get('/forms-embed.js', [FormBuilderController::class, 'getEmbedScript'])
             ->setName('public.forms-embed');
+            
+        // Public analytics endpoints for demo (normally these would be protected)
+        $public->group('/analytics', function (RouteCollectorProxy $analytics) {
+            $analytics->get('/visitors', [ActivityTrackingController::class, 'getVisitors'])
+                ->setName('public.analytics.visitors');
+            $analytics->get('/visitor-metrics', [ActivityTrackingController::class, 'getVisitorMetrics'])
+                ->setName('public.analytics.visitor-metrics');
+        });
     });
     
     // Schema API endpoints (public for frontend type generation)

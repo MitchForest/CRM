@@ -564,26 +564,66 @@ class ActivityTrackingController extends Controller
         $visitors = $query->orderBy('last_visit', 'desc')
             ->paginate($limit, ['*'], 'page', $page);
         
-        $data = $visitors->map(function ($visitor) {
-            return [
-                'visitor_id' => $visitor->visitor_id,
-                'first_visit' => $visitor->first_visit,
-                'last_activity' => $visitor->last_visit,
-                'total_visits' => $visitor->visit_count,
-                'total_page_views' => $visitor->page_view_count,
-                'engagement_score' => $visitor->engagement_score ?? 0,
-                'lead' => $visitor->lead ? [
-                    'id' => $visitor->lead->id,
-                    'name' => $visitor->lead->full_name,
-                    'email' => $visitor->lead->email1
-                ] : null,
-                'contact' => $visitor->contact ? [
-                    'id' => $visitor->contact->id,
-                    'name' => $visitor->contact->full_name,
-                    'email' => $visitor->contact->email1
-                ] : null
-            ];
-        });
+        // If active_only is true, return session data for live visitors dashboard
+        if ($activeOnly) {
+            $sessions = ActivityTrackingSession::with(['pageViews', 'visitor'])
+                ->whereHas('visitor', function($q) {
+                    $q->where('last_visit', '>', date('Y-m-d H:i:s', strtotime('-5 minutes')));
+                })
+                ->orderBy('date_entered', 'desc')
+                ->limit($limit)
+                ->get();
+                
+            $data = $sessions->map(function ($session) {
+                $pages = $session->pageViews->map(function($pv) {
+                    return [
+                        'url' => $pv->page_url,
+                        'title' => $pv->page_title ?? 'Untitled Page',
+                        'duration' => 30 // Default duration
+                    ];
+                })->toArray();
+                
+                $duration = $session->end_time && $session->start_time 
+                    ? strtotime($session->end_time) - strtotime($session->start_time)
+                    : 0;
+                    
+                return [
+                    'id' => $session->id,
+                    'visitor_id' => $session->visitor_id,
+                    'session_id' => $session->session_id,
+                    'lead_id' => $session->visitor->lead_id ?? null,
+                    'pages_viewed' => $pages,
+                    'total_time' => $duration,
+                    'date_created' => $session->date_entered,
+                    'referrer' => $session->visitor->referrer ?? null,
+                    'location' => [
+                        'city' => $session->visitor->city ?? 'Unknown',
+                        'country' => $session->visitor->country ?? 'Unknown'
+                    ]
+                ];
+            });
+        } else {
+            $data = $visitors->map(function ($visitor) {
+                return [
+                    'visitor_id' => $visitor->visitor_id,
+                    'first_visit' => $visitor->first_visit,
+                    'last_activity' => $visitor->last_visit,
+                    'total_visits' => $visitor->visit_count,
+                    'total_page_views' => $visitor->page_view_count,
+                    'engagement_score' => $visitor->engagement_score ?? 0,
+                    'lead' => $visitor->lead ? [
+                        'id' => $visitor->lead->id,
+                        'name' => $visitor->lead->full_name,
+                        'email' => $visitor->lead->email1
+                    ] : null,
+                    'contact' => $visitor->contact ? [
+                        'id' => $visitor->contact->id,
+                        'name' => $visitor->contact->full_name,
+                        'email' => $visitor->contact->email1
+                    ] : null
+                ];
+            });
+        }
         
         return $this->json($response, [
             'data' => $data,

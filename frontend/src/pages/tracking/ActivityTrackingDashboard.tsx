@@ -54,11 +54,20 @@ export function ActivityTrackingDashboard() {
   const [timeRange, setTimeRange] = useState('24h')
   const [selectedSession, setSelectedSession] = useState<WebsiteSession | null>(null)
 
-  const { data: metrics } = useQuery({
+  const { data: metrics = {
+    total_visitors: 0,
+    active_visitors: 0,
+    avg_session_duration: 0,
+    avg_pages_per_session: 0,
+    top_pages: [],
+    device_types: [],
+    referrers: [],
+    hourly_traffic: []
+  } } = useQuery({
     queryKey: ['visitor-metrics', timeRange],
     queryFn: async () => {
       try {
-        const response = await apiClient.customGet('/crm/analytics/visitor-metrics', {
+        const response = await apiClient.publicGet('/public/analytics/visitor-metrics', {
           params: { range: timeRange }
         })
         return response.data as VisitorMetrics
@@ -79,14 +88,14 @@ export function ActivityTrackingDashboard() {
     }
   })
 
-  const { data: liveVisitors, isLoading: isLoadingLive } = useQuery({
+  const { data: liveVisitors = [], isLoading: isLoadingLive } = useQuery({
     queryKey: ['live-visitors'],
     queryFn: async () => {
       try {
-        const response = await apiClient.customGet('/crm/analytics/visitors', {
+        const response = await apiClient.publicGet('/public/analytics/visitors', {
           params: { active_only: true }
         })
-        return response.data.data as any[] // Will be visitor data
+        return response.data.data || [] // Ensure we always return an array
       } catch (error) {
         console.error('Failed to fetch live visitors:', error)
         // Return empty array to prevent undefined errors

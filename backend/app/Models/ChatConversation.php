@@ -42,6 +42,9 @@ class ChatConversation extends Model
             if (empty($model->id)) {
                 $model->id = Uuid::uuid4()->toString();
             }
+            if (empty($model->date_modified)) {
+                $model->date_modified = new \DateTime();
+            }
         });
     }
     
@@ -57,7 +60,7 @@ class ChatConversation extends Model
     
     public function messages(): HasMany
     {
-        return $this->hasMany(ChatMessage::class, 'conversation_id', 'conversation_id')
+        return $this->hasMany(ChatMessage::class, 'conversation_id', 'id')
             ->orderBy('date_entered');
     }
     

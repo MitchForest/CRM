@@ -35,12 +35,15 @@ class ChatMessage extends Model
             if (empty($model->id)) {
                 $model->id = Uuid::uuid4()->toString();
             }
+            if (empty($model->date_entered)) {
+                $model->date_entered = new \DateTime();
+            }
         });
     }
     
     public function conversation(): BelongsTo
     {
-        return $this->belongsTo(ChatConversation::class, 'conversation_id', 'conversation_id');
+        return $this->belongsTo(ChatConversation::class, 'conversation_id', 'id');
     }
     
     public function isUserMessage(): bool

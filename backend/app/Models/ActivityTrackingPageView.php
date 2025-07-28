@@ -39,6 +39,9 @@ class ActivityTrackingPageView extends Model
             if (empty($model->id)) {
                 $model->id = Uuid::uuid4()->toString();
             }
+            if (empty($model->date_entered)) {
+                $model->date_entered = new \DateTime();
+            }
         });
     }
     

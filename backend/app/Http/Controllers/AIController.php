@@ -620,7 +620,7 @@ class AIController extends Controller
         }
         
         $visitor = ActivityTrackingVisitor::with(['lead', 'pageViews' => function ($query) {
-            $query->orderBy('timestamp', 'DESC')->limit(5);
+            $query->orderBy('date_entered', 'DESC')->limit(5);
         }])->where('visitor_id', $visitorId)->first();
         
         if (!$visitor) {
